@@ -9,11 +9,13 @@ routines `nest2xy` and `x2nest` for going in between these conventions. The
 previous code shared by Dale used string computations to handle these
 operations, which was probably quite slow. Here we use vectorized bit-shifting.
 """
-from earth2grid import base
 from dataclasses import dataclass
 from enum import Enum
+
 import healpy
 import numpy as np
+
+from earth2grid import base
 
 
 class PixelOrder(Enum):
@@ -57,16 +59,12 @@ class Grid(base.Grid):
 
     @property
     def lat(self):
-        _, lat = healpy.pix2ang(
-            self._nside(), self._nest_ipix(), lonlat=True, nest=True
-        )
+        _, lat = healpy.pix2ang(self._nside(), self._nest_ipix(), lonlat=True, nest=True)
         return lat
 
     @property
     def lon(self):
-        lon, _ = healpy.pix2ang(
-            self._nside(), self._nest_ipix(), lonlat=True, nest=True
-        )
+        lon, _ = healpy.pix2ang(self._nside(), self._nest_ipix(), lonlat=True, nest=True)
         return lon
 
     @property

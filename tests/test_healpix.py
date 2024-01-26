@@ -1,6 +1,7 @@
-from earth2grid import healpix
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
+from earth2grid import healpix
 
 
 def test_grid_visualize():
