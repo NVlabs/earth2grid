@@ -12,8 +12,14 @@ operations, which was probably quite slow. Here we use vectorized bit-shifting.
 from dataclasses import dataclass
 from enum import Enum
 
+import einops
 import healpy
 import numpy as np
+
+try:
+    import pyvista as pv
+except ImportError:
+    pv = None
 
 from earth2grid import base
 
@@ -73,6 +79,26 @@ class Grid(base.Grid):
 
     def visualize(self, map):
         healpy.mollview(self._reorder_to_nest(map), nest=True)
+
+    def to_pyvista(self):
+        if pv is None:
+            raise ImportError("Need to install pyvista")
+        # Make grid
+        nside = 2**self.level
+        pix = self._nest_ipix()
+        points = healpy.boundaries(nside, pix, step=1, nest=True)
+        out = einops.rearrange(points, "n d s -> (n s) d")
+        unique_points, inverse = np.unique(out, return_inverse=True, axis=0)
+        assert unique_points.ndim == 2
+        assert unique_points.shape[1] == 3
+        inverse = einops.rearrange(inverse, "(n s) -> n s", n=pix.size)
+        n, s = inverse.shape
+        cells = np.ones_like(inverse, shape=(n, s + 1))
+        cells[:, 0] = s
+        cells[:, 1:] = inverse
+        celltypes = np.full(shape=(n,), fill_value=pv.CellType.QUAD)
+        grid = pv.UnstructuredGrid(cells, celltypes, unique_points)
+        return grid
 
 
 # nside = 2^ZOOM_LEVELS

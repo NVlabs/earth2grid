@@ -18,3 +18,6 @@ class Grid(Protocol):
 
     def visualize(self, data):
         pass
+
+    def to_pyvista(self):
+        pass
