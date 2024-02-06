@@ -8,7 +8,14 @@
 
 
 
-Utilties for working geographic data defined on various grids
+Utilities for working geographic data defined on various grids.
+
+Grids currently supported:
+- regular lat lon
+- HealPIX
+
+Features:
+- regridding
 
 
 * Documentation: <https://waynerv.github.io/earth2-grid>
