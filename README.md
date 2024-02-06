@@ -16,6 +16,14 @@ Utilties for working geographic data defined on various grids
 * PyPI: <https://pypi.org/project/earth2-grid/>
 * Free software: BSD-3-Clause
 
+## Install
+
+
+```
+git clone ssh://git@gitlab-master.nvidia.com:12051/earth-2/earth2-grid.git
+pip install earth2-grid
+```
+
 ## Example
 
 ```
