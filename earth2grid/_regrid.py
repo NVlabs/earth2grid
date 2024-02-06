@@ -19,8 +19,9 @@ import netCDF4 as nc
 import numpy as np
 import pandas
 import torch
+from scipy.interpolate import interpn
 
-from earth2grid import base
+from earth2grid import base, healpix
 from earth2grid.latlon import LatLonGrid
 
 
@@ -75,8 +76,42 @@ class RegridLatLon(torch.nn.Module):
         return x[..., self._lat_index, :][..., self._lon_index]
 
 
+class _RegridFromLatLon(torch.nn.Module):
+    """Regrid from lat-lon to unstructured grid with bilinear interpolation"""
+
+    def __init__(self, src: LatLonGrid, dest: base.Grid):
+        super().__init__()
+
+        # potentially relax this
+        assert len(dest.shape) == 1
+        xi = np.stack([dest.lon, dest.lat], axis=1)
+
+        # TODO add device switching logic (maybe use torch registers for this
+        # info)
+        self.long = src.lon.ravel()
+        self.latg = src.lat.ravel()
+        self.xi = xi
+        self.src = src
+        self.dest = dest
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        z = x.numpy()
+        # implement this in pytorch for differentiability
+        # pad z in lon direction
+        # only works for a global grid
+        # TODO generalize this to local grids and add options for padding
+        z = np.concatenate([z, z[..., 0:1]], axis=-1)
+        long = np.concatenate([self.long, [360]], axis=-1)
+
+        out = interpn([long, self.latg], z.T, self.xi, method="linear")
+        return torch.as_tensor(out)
+
+
 def get_regridder(src: base.Grid, dest: base.Grid) -> torch.nn.Module:
     if src == dest:
         return Identity()
     elif isinstance(src, LatLonGrid) and isinstance(dest, LatLonGrid):
         return RegridLatLon(src, dest)
+    elif isinstance(src, LatLonGrid) and isinstance(dest, healpix.Grid):
+        return _RegridFromLatLon(src, dest)
+    raise ValueError(src, dest, "not supported.")

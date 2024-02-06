@@ -10,11 +10,11 @@ class LatLonGrid(base.Grid):
 
     @property
     def lat(self):
-        return np.array(self._lat)[None, :]
+        return np.array(self._lat)
 
     @property
     def lon(self):
-        return np.array(self._lat)[:, None]
+        return np.array(self._lon)
 
     @property
     def shape(self):
