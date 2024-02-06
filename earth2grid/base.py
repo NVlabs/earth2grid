@@ -2,6 +2,8 @@ from typing import Protocol
 
 
 class Grid(Protocol):
+    """lat and lon should be broadcastable arrays"""
+
     @property
     def lat(self):
         pass
