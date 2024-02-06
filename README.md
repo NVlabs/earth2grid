@@ -10,12 +10,18 @@
 
 Utilities for working geographic data defined on various grids.
 
+Features:
+- regridding
+
 Grids currently supported:
 - regular lat lon
 - HealPIX
 
-Features:
-- regridding
+Under construction:
+- exporting meshes to visualization software (e.g. VTK)
+- neural network primitives for different grids:
+  - convolutional layers
+  - up/downsampling
 
 
 * Documentation: <https://waynerv.github.io/earth2-grid>
