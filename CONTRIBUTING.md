@@ -33,6 +33,18 @@ Earth2 Grid Utilities could always use more documentation, whether as part of th
 official Earth2 Grid Utilities docs, in docstrings, or even on the web in blog posts,
 articles, and such.
 
+To deploy the docs run the following locally:
+
+```
+make docs
+git checkout pages
+git add docs
+git commit -m "update documentation"
+git push
+```
+
+This will then be deployed to gitlab pages.
+
 ### Submit Feedback
 
 The best way to send feedback is to file an issue at https://github.com/waynerv/earth2-grid/issues.
