@@ -30,4 +30,6 @@ clean:
 .PHONY: docs
 docs:
 	$(MAKE) -C docs html
-	rm -rf public/ && cp -r docs/_build/html public/
+
+push_docs: docs
+	docs/push_docs.sh
