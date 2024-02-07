@@ -36,11 +36,7 @@ articles, and such.
 To deploy the docs run the following locally:
 
 ```
-make docs
-git checkout pages
-git add docs
-git commit -m "update documentation"
-git push
+make push_docs
 ```
 
 This will then be deployed to gitlab pages.
