@@ -1,6 +1,6 @@
 # Earth2 Grid Utilities
 
-![](docs/img/image.jpg)
+
 
 
 [![pypi](https://img.shields.io/pypi/v/earth2-grid.svg)](https://pypi.org/project/earth2-grid/)
@@ -8,6 +8,7 @@
 [![Build Status](https://github.com/waynerv/earth2-grid/actions/workflows/dev.yml/badge.svg)](https://github.com/waynerv/earth2-grid/actions/workflows/dev.yml)
 [![codecov](https://codecov.io/gh/waynerv/earth2-grid/branch/main/graphs/badge.svg)](https://codecov.io/github/waynerv/earth2-grid)
 
+<img src="docs/img/image.jpg" width="800px"/>
 
 
 Utilities for working geographic data defined on various grids.
