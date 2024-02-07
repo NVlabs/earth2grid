@@ -28,7 +28,7 @@ Under construction:
 - staggered grids
 
 
-* Documentation: <https://waynerv.github.io/earth2-grid>
+* Documentation: <https://earth-2.gitlab-master-pages.nvidia.com/earth2grid>
 * GitHub: <https://github.com/waynerv/earth2-grid>
 * PyPI: <https://pypi.org/project/earth2-grid/>
 * Free software: BSD-3-Clause
