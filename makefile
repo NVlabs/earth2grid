@@ -25,3 +25,8 @@ clean:
 	rm -rf *.egg-info
 	rm -rf .tox dist site
 	rm -rf coverage.xml .coverage
+
+
+.PHONY: docs
+docs:
+	mkdocs build --site-dir public/
