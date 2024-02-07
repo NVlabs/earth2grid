@@ -35,4 +35,3 @@ label(latlon, pl, "Equiangular Lat/Lon")
 
 pl.camera.position = (5, 0, 5)
 pl.show()
-pl.screenshot("docs/img/image.jpg")

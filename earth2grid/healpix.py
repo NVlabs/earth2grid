@@ -32,6 +32,7 @@ class PixelOrder(Enum):
 
 @dataclass
 class Grid(base.Grid):
+    """A Healpix Grid"""
     level: int
     pixel_order: PixelOrder = PixelOrder.RING
 

@@ -108,6 +108,7 @@ class _RegridFromLatLon(torch.nn.Module):
 
 
 def get_regridder(src: base.Grid, dest: base.Grid) -> torch.nn.Module:
+    """Get a regridder from `src` to `dest`"""
     if src == dest:
         return Identity()
     elif isinstance(src, LatLonGrid) and isinstance(dest, LatLonGrid):

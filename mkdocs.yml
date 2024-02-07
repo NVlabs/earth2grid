@@ -1,75 +1,10 @@
-site_name: Earth2 Grid Utilities
-site_url: https://waynerv.github.io/earth2-grid
-repo_url: https://github.com/waynerv/earth2-grid
-repo_name: waynerv/earth2-grid
-#strict: true
-nav:
-  - Home: index.md
-  - Installation: installation.md
-  - Usage: usage.md
-  - Modules: api.md
-  - Contributing: contributing.md
-  - Changelog: changelog.md
+site_name: My Docs
 theme:
   name: material
-  language: en
-  #logo: assets/logo.png
-  palette:
-    scheme: preference
-    primary: indigo
-    accent: indigo
-  features:
-    - navigation.indexes
-    - navigation.instant
-    - navigation.tabs.sticky
-markdown_extensions:
-  - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
-  - pymdownx.critic
-  - pymdownx.caret
-  - pymdownx.mark
-  - pymdownx.tilde
-  - pymdownx.tabbed
-  - attr_list
-  - pymdownx.arithmatex:
-      generic: true
-  - pymdownx.highlight:
-      linenums: false
-  - pymdownx.superfences
-  - pymdownx.inlinehilite
-  - pymdownx.details
-  - admonition
-  - toc:
-      baselevel: 2
-      permalink: true
-      slugify: !!python/name:pymdownx.slugs.uslugify
-  - meta
+  custom_dir: overrides
 plugins:
-  - include-markdown
-  - search:
-      lang: en
-  - mkdocstrings:
-      watch:
-        - earth2-grid
-extra:
-  social:
-    - icon: fontawesome/brands/twitter
-      # replace with your own tweet link below
-      link: https://github.com/waynerv/cookiecutter-pypackage
-      name: Tweet
-    - icon: fontawesome/brands/facebook
-      # replace with your own facebook link below
-      link: https://github.com/waynerv/cookiecutter-pypackage
-      name: Facebook
-    - icon: fontawesome/brands/github
-      link: https://github.com/waynerv/earth2-grid
-      name: Github
-    - icon: material/email
-      link: "mailto:nbrenowitz@nvidia.com"
-  # to enable disqus, uncomment the following and put your disqus id below
-  # disqus: disqus_id
-# uncomment the following and put your google tracking id below to enable GA
-#google_analytics:
-  #- UA-xxx
-  #- auto
+  - mkdocstrings
+  - mkdocs-jupyter:
+      execute: true
+      include_source: true
+

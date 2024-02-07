@@ -56,7 +56,7 @@ class LatLonGrid(base.Grid):
 
 
 def equiangular_lat_lon_grid(nlat: int, nlon: int, includes_south_pole: bool = True) -> LatLonGrid:
-    """A regular lat-lon grid
+    """Return a regular lat-lon grid
 
     Lat is ordered from 90 to -90. Includes -90 and only if if includes_south_pole is True.
     Lon is ordered from 0 to 360. includes 0, but not 360.
