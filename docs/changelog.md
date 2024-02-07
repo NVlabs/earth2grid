@@ -1,3 +1,1 @@
-{%
-  include-markdown "../CHANGELOG.md"
-%}
+../CHANGELOG.md
