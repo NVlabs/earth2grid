@@ -1,3 +1,8 @@
+"""
+Plot grids with PyVista
+-----------------------
+
+"""
 # %%
 import earth2grid
 import pyvista as pv

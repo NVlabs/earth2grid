@@ -29,4 +29,5 @@ clean:
 
 .PHONY: docs
 docs:
-	mkdocs build --site-dir public/
+	$(MAKE) -C docs html
+	rm -rf public/ && cp -r docs/_build/html public/

@@ -50,14 +50,9 @@ dev = [
     "bump2version>=1.0.1"
 ]
 doc = [
-    "mkdocs>=1.1.2",
-    "mkdocs-include-markdown-plugin>=1.0.0",
-    "mkdocs-material>=6.1.7",
-    "mkdocstrings>=0.15.2",
-    "mkdocstrings[python]>=0.18",
-    "mkdocs-material-extensions>=1.0.1",
-    "mkdocs-autorefs>=0.2.1",
-    "mkdocs-jupyter>=0.24.6"
+    "sphinx",
+    "myst-parser",
+    "sphinx_gallery",
 ]
 
 [tool.black]

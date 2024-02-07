@@ -61,6 +61,11 @@ def equiangular_lat_lon_grid(nlat: int, nlon: int, includes_south_pole: bool = T
     Lat is ordered from 90 to -90. Includes -90 and only if if includes_south_pole is True.
     Lon is ordered from 0 to 360. includes 0, but not 360.
 
+    Args:
+        nlat: number of latitude points
+        nlon: number of longtidue points
+        includes_south_pole: if true the final ``nlat`` includes the south pole
+
     """  # noqa
     lat = np.linspace(90, -90, nlat, endpoint=includes_south_pole)
     lon = np.linspace(0, 360, nlon, endpoint=False)

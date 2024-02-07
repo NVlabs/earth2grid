@@ -1,14 +1,15 @@
-# -*- coding: utf-8 -*-
-# %% [markdown]
-# # HealPIX regridding
-#
-# In this notebook, I demonstrate bilinear regridding onto healpy grids in O(10)
-# ms. this is a 3 order of magnitude speed-up compared to what Dale has reported.
-#
-# Now, lets define a healpix grid with indexing in the XY convention. we convert
-# to NEST indexing in order to use the `healpy.pix2ang` to get the lat lon
-# coordinates. This operation is near instant.
-#
+"""
+HealPIX regridding
+------------------
+
+In this notebook, I demonstrate bilinear regridding onto healpy grids in O(10)
+ms. this is a 3 order of magnitude speed-up compared to what Dale has reported.
+
+Now, lets define a healpix grid with indexing in the XY convention. we convert
+to NEST indexing in order to use the `healpy.pix2ang` to get the lat lon
+coordinates. This operation is near instant.
+
+"""
 # %%
 
 import matplotlib.pyplot as plt
