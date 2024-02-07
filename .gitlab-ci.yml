@@ -1,0 +1,12 @@
+# The Docker image that will be used to build your app
+image: ubuntu
+pages:
+  script: []
+  artifacts:
+    paths:
+      # The folder that contains the files to be exposed at the Page URL
+      - public
+  rules:
+    # This ensures that only pushes to the default branch will trigger
+    # a pages deploy
+    - if: $CI_COMMIT_REF_NAME == "pages"
