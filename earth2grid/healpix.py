@@ -83,6 +83,7 @@ class Grid(base.Grid):
     def to_pyvista(self):
         if pv is None:
             raise ImportError("Need to install pyvista")
+
         # Make grid
         nside = 2**self.level
         pix = self._nest_ipix()

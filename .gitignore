@@ -113,3 +113,6 @@ ENV/
 # mkdocs build dir
 site/
 test_grid_visualize.png
+*.png
+*.jpg
+*.jpeg

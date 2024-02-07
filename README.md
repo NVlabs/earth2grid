@@ -1,5 +1,7 @@
 # Earth2 Grid Utilities
 
+![](docs/img/image.jpg)
+
 
 [![pypi](https://img.shields.io/pypi/v/earth2-grid.svg)](https://pypi.org/project/earth2-grid/)
 [![python](https://img.shields.io/pypi/pyversions/earth2-grid.svg)](https://pypi.org/project/earth2-grid/)
@@ -22,6 +24,7 @@ Under construction:
 - neural network primitives for different grids:
   - convolutional layers
   - up/downsampling
+- staggered grids
 
 
 * Documentation: <https://waynerv.github.io/earth2-grid>
