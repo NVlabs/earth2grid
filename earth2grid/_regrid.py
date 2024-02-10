@@ -19,7 +19,6 @@ import netCDF4 as nc
 import numpy as np
 import pandas
 import torch
-from scipy.interpolate import interpn
 
 from earth2grid import base, healpix
 from earth2grid.latlon import LatLonGrid
@@ -34,8 +33,8 @@ class BilinearInterpolator(torch.nn.Module):
         """
 
         Args:
-            x_coords (Tensor): X-coordinates of the input grid, shape [W].
-            y_coords (Tensor): Y-coordinates of the input grid, shape [H].
+            x_coords (Tensor): X-coordinates of the input grid, shape [W]. Must be in increasing sorted order.
+            y_coords (Tensor): Y-coordinates of the input grid, shape [H]. Must be in increasing sorted order.
             x_query (Tensor): X-coordinates for query points, shape [N].
             y_query (Tensor): Y-coordinates for query points, shape [N].
         """
@@ -149,27 +148,24 @@ class _RegridFromLatLon(torch.nn.Module):
 
         # potentially relax this
         assert len(dest.shape) == 1
-        xi = np.stack([dest.lon, dest.lat], axis=1)
 
         # TODO add device switching logic (maybe use torch registers for this
         # info)
-        self.long = src.lon.ravel()
-        self.latg = src.lat.ravel()
-        self.xi = xi
-        self.src = src
-        self.dest = dest
+        long = np.concatenate([src.lon.ravel(), [360]], axis=-1)
+        long_t = torch.from_numpy(long)
+
+        # flip the order latg since bilinear only works with increasing coordinate values
+        latg_t = -torch.from_numpy(src.lat.ravel())
+        self._bilinear = BilinearInterpolator(
+            long_t, latg_t, y_query=-torch.from_numpy(dest.lat.ravel()), x_query=torch.from_numpy(dest.lon.ravel())
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        z = x.numpy()
-        # implement this in pytorch for differentiability
         # pad z in lon direction
         # only works for a global grid
         # TODO generalize this to local grids and add options for padding
-        z = np.concatenate([z, z[..., 0:1]], axis=-1)
-        long = np.concatenate([self.long, [360]], axis=-1)
-
-        out = interpn([long, self.latg], z.T, self.xi, method="linear")
-        return torch.as_tensor(out)
+        x = torch.cat([x, x[..., 0:1]], axis=-1)
+        return self._bilinear(x)
 
 
 def get_regridder(src: base.Grid, dest: base.Grid) -> torch.nn.Module:

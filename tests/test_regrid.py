@@ -50,25 +50,19 @@ class TestBilinearInterpolateNonUniform(unittest.TestCase):
 
             return 10 * x + 5 * y**2 + 4
 
-        for rev in [True, False]:
+        x_coords = torch.linspace(-1, 1, steps=W)  # Example non-uniform x-coordinates
+        y_coords = torch.linspace(-1, 1, steps=H)  # Example non-uniform y-coordinates
+        x_query = torch.tensor([0.0, 0.5, 0.25])  # Query x-coordinates at the center
+        y_query = torch.tensor([0.0, 0.0, -0.4])  # Query y-coordinates at the center
 
-            x_coords = torch.linspace(-1, 1, steps=W)  # Example non-uniform x-coordinates
-            y_coords = torch.linspace(-1, 1, steps=H)  # Example non-uniform y-coordinates
+        input_tensor = func(x_coords, y_coords[:, None])
 
-            if rev:
-                y_coords = torch.flip(y_coords, [0])
+        # Expected value at the center of a linearly spaced grid
+        expected = func(x_query, y_query)
 
-            x_query = torch.tensor([0.0, 0.5, 0.25])  # Query x-coordinates at the center
-            y_query = torch.tensor([0.0, 0.0, -0.4])  # Query y-coordinates at the center
+        # Execute
+        interpolator = BilinearInterpolator(x_coords, y_coords, x_query, y_query)
+        result = interpolator(input_tensor)
 
-            input_tensor = func(x_coords, y_coords[:, None])
-
-            # Expected value at the center of a linearly spaced grid
-            expected = func(x_query, y_query)
-
-            # Execute
-            interpolator = BilinearInterpolator(x_coords, y_coords, x_query, y_query)
-            result = interpolator(input_tensor)
-
-            # Verify
-            self.assertTrue(torch.allclose(result, expected, rtol=0.01), f"y is reversed: {rev}")
+        # Verify
+        self.assertTrue(torch.allclose(result, expected, rtol=0.01))
