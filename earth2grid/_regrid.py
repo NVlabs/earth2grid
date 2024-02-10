@@ -25,6 +25,71 @@ from earth2grid import base, healpix
 from earth2grid.latlon import LatLonGrid
 
 
+class BilinearInterpolator(torch.nn.Module):
+    """Bilinear interpolation for a non-uniform grid"""
+
+    def __init__(
+        self, x_coords: torch.Tensor, y_coords: torch.Tensor, x_query: torch.Tensor, y_query: torch.Tensor
+    ) -> None:
+        """
+
+        Args:
+            x_coords (Tensor): X-coordinates of the input grid, shape [W].
+            y_coords (Tensor): Y-coordinates of the input grid, shape [H].
+            x_query (Tensor): X-coordinates for query points, shape [N].
+            y_query (Tensor): Y-coordinates for query points, shape [N].
+        """
+        super().__init__()
+
+        # Ensure input coordinates are float for interpolation
+        x_coords, y_coords = x_coords.float(), y_coords.float()
+
+        # Find indices for the closest lower and upper bounds in x and y directions
+        x_l_idx = torch.searchsorted(x_coords, x_query, right=True) - 1
+        x_u_idx = x_l_idx + 1
+        y_l_idx = torch.searchsorted(y_coords, y_query, right=True) - 1
+        y_u_idx = y_l_idx + 1
+
+        # Clip indices to ensure they are within the bounds of the input grid
+        x_l_idx = x_l_idx.clamp(0, x_coords.size(0) - 2)
+        x_u_idx = x_u_idx.clamp(1, x_coords.size(0) - 1)
+        y_l_idx = y_l_idx.clamp(0, y_coords.size(0) - 2)
+        y_u_idx = y_u_idx.clamp(1, y_coords.size(0) - 1)
+
+        # Compute weights
+        x_l_weight = (x_coords[x_u_idx] - x_query) / (x_coords[x_u_idx] - x_coords[x_l_idx])
+        x_u_weight = (x_query - x_coords[x_l_idx]) / (x_coords[x_u_idx] - x_coords[x_l_idx])
+        y_l_weight = (y_coords[y_u_idx] - y_query) / (y_coords[y_u_idx] - y_coords[y_l_idx])
+        y_u_weight = (y_query - y_coords[y_l_idx]) / (y_coords[y_u_idx] - y_coords[y_l_idx])
+
+        self.x_l_idx = x_l_idx
+        self.x_u_idx = x_u_idx
+        self.y_l_idx = y_l_idx
+        self.y_u_idx = y_u_idx
+
+        self.register_buffer("x_l_weight", x_l_weight)
+        self.register_buffer("x_u_weight", x_u_weight)
+        self.register_buffer("y_l_weight", y_l_weight)
+        self.register_buffer("y_u_weight", y_u_weight)
+
+    def forward(self, z: torch.Tensor):
+        """
+        Interpolate the field
+
+        Args:
+            z: shape [Y, X]
+        """
+
+        # Perform bilinear interpolation
+        interpolated_values = (
+            z[self.y_l_idx, self.x_l_idx] * self.x_l_weight * self.y_l_weight
+            + z[self.y_l_idx, self.x_u_idx] * self.x_u_weight * self.y_l_weight
+            + z[self.y_u_idx, self.x_l_idx] * self.x_l_weight * self.y_u_weight
+            + z[self.y_u_idx, self.x_u_idx] * self.x_u_weight * self.y_u_weight
+        )
+        return interpolated_values
+
+
 class TempestRegridder(torch.nn.Module):
     def __init__(self, file_path):
         super().__init__()

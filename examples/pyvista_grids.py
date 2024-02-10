@@ -3,9 +3,11 @@ Plot grids with PyVista
 -----------------------
 
 """
+import pyvista as pv
+
 # %%
 import earth2grid
-import pyvista as pv
+
 
 def label(mesh, plotter, text):
     """
@@ -20,9 +22,11 @@ def label(mesh, plotter, text):
     # Calculate the center of the mesh and the top Z-coordinate plus an offset
     center = mesh.center
     label_pos = [center[0], center[1], mesh.bounds[5] + 0.5]  # Offset to place label above the mesh
-    
+
     # Add the label using point labels for precise 3D positioning
-    plotter.add_point_labels([label_pos], [text], point_size=0, render_points_as_spheres=False, shape_opacity=0, font_size=20)
+    plotter.add_point_labels(
+        [label_pos], [text], point_size=0, render_points_as_spheres=False, shape_opacity=0, font_size=20
+    )
 
 
 grid = earth2grid.healpix.Grid(level=4)

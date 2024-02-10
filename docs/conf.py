@@ -25,9 +25,11 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # sphinx
 
+import os
+
 # pyvista
 import pyvista
-import os
+
 pyvista.BUILDING_GALLERY = True
 
 import pyvista
@@ -59,11 +61,10 @@ os.environ['PYVISTA_BUILDING_GALLERY'] = 'true'
 
 # sphinx gallery
 sphinx_gallery_conf = {
-     'examples_dirs': '../examples',   # path to your example scripts
-     'gallery_dirs': 'auto_examples',  # path to where to save gallery generated output
-     'filename_pattern': '',
-     "image_scrapers": (DynamicScraper(), "matplotlib"),
-
+    'examples_dirs': '../examples',  # path to your example scripts
+    'gallery_dirs': 'auto_examples',  # path to where to save gallery generated output
+    'filename_pattern': '',
+    "image_scrapers": (DynamicScraper(), "matplotlib"),
 }
 
 # -- Options for HTML output -------------------------------------------------
