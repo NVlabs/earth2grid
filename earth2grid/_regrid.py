@@ -43,6 +43,12 @@ class BilinearInterpolator(torch.nn.Module):
         # Ensure input coordinates are float for interpolation
         x_coords, y_coords = x_coords.float(), y_coords.float()
 
+        if torch.any(x_coords[1:] <= x_coords[:-1]):
+            raise ValueError("x_coords must be in increasing order.")
+
+        if torch.any(y_coords[1:] <= y_coords[:-1]):
+            raise ValueError("y_coords must be in increasing order.")
+
         # Find indices for the closest lower and upper bounds in x and y directions
         x_l_idx = torch.searchsorted(x_coords, x_query, right=True) - 1
         x_u_idx = x_l_idx + 1

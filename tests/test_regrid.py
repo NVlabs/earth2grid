@@ -42,6 +42,18 @@ class TestBilinearInterpolateNonUniform(unittest.TestCase):
         # Verify
         self.assertTrue(torch.allclose(result, expected), "The interpolated value does not match the expected value.")
 
+    def test_raises_error_when_coordinates_not_increasing_x(self):
+        x_coords = torch.linspace(1, -1, steps=32)  # Example non-uniform x-coordinates
+        y_coords = torch.linspace(-1, 1, steps=32)  # Example non-uniform y-coordinates
+        with self.assertRaises(ValueError):
+            BilinearInterpolator(x_coords, y_coords, [0], [0])
+
+    def test_raises_error_when_coordinates_not_increasing_y(self):
+        x_coords = torch.linspace(-1, 1, steps=32)  # Example non-uniform x-coordinates
+        y_coords = torch.linspace(1, -1, steps=32)  # Example non-uniform y-coordinates
+        with self.assertRaises(ValueError):
+            BilinearInterpolator(x_coords, y_coords, [0], [0])
+
     def test_interpolation_func(self):
         # Setup
         H, W = 32, 32  # Input tensor height and width
