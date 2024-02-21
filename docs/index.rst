@@ -9,7 +9,7 @@ Welcome to Earth2-Grid's documentation!
 .. toctree::
    :maxdepth: 1
    :caption: Contents:
-    
+
    installation.md
    usage.md
    api

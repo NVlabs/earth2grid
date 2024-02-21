@@ -38,13 +38,13 @@ class LatLonGrid(base.Grid):
 
     def visualize(self, data):
         raise NotImplementedError()
-    
+
     def to_pyvista(self):
         # TODO need to make lat the cell centers rather than boundaries
 
         if pv is None:
             raise ImportError("Need to install pyvista")
-        
+
         print(self._lonb())
 
         lon, lat = np.meshgrid(self._lonb(), self.lat)
