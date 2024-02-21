@@ -51,6 +51,10 @@ class Grid(base.Grid):
     level: int
     pixel_order: PixelOrder = PixelOrder.RING
 
+    def __post_init__(self):
+        if self.level > ZOOM_LEVELS:
+            raise ValueError(f"`level` must be less than or equal to {ZOOM_LEVELS}")
+
     def _nside(self):
         return 2**self.level
 
