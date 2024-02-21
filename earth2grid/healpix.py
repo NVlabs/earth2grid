@@ -128,9 +128,12 @@ class Grid(base.Grid):
         i_me = self._nest2me(i_nest)
         return ApplyWeights(i_me, torch.from_numpy(weights))
 
+    def approximate_grid_length_meters(self):
+        return approx_grid_length_meters(self._nside())
+
 
 # nside = 2^ZOOM_LEVELS
-ZOOM_LEVELS = 12
+ZOOM_LEVELS = 20
 
 
 def _extract_every_other_bit(binary_number):
@@ -173,3 +176,9 @@ def xy2nest(nside, i):
         extracted_bit = (y >> i) & 1
         result |= extracted_bit << (2 * i + 1)
     return result | (tile * nside**2)
+
+
+def approx_grid_length_meters(nside):
+    r_m = 6378140
+    area = 4 * np.pi * r_m**2 / (12 * nside**2)
+    return np.sqrt(area)
