@@ -161,9 +161,16 @@ class _RegridFromLatLon(torch.nn.Module):
         long_t = torch.from_numpy(long)
 
         # flip the order latg since bilinear only works with increasing coordinate values
-        latg_t = -torch.from_numpy(src.lat.ravel())
+        lat_increasing = src.lat[1] > src.lat[0]
+        latg_t = torch.from_numpy(src.lat.ravel())
+        lat_query = torch.from_numpy(dest.lat.ravel())
+
+        if not lat_increasing:
+            lat_query = -lat_query
+            latg_t = -latg_t
+
         self._bilinear = BilinearInterpolator(
-            long_t, latg_t, y_query=-torch.from_numpy(dest.lat.ravel()), x_query=torch.from_numpy(dest.lon.ravel())
+            long_t, latg_t, y_query=lat_query, x_query=torch.from_numpy(dest.lon.ravel())
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

@@ -2,6 +2,7 @@ import unittest
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pytest
 import torch
 
 import earth2grid
@@ -52,6 +53,20 @@ def test_regridder_healpix():
     z_regridded = regrid(z)
     expected = f(dest.lat, dest.lon)
     assert torch.allclose(z_regridded, expected, rtol=0.01)
+
+
+@pytest.mark.parametrize("reverse", [True, False])
+def test_latlon_to_latlon(reverse):
+    nlat = 30
+    nlon = 60
+    lon = np.linspace(0, 360, nlon)
+    lat = np.linspace(-90, 90, nlat)
+    src = earth2grid.latlon.LatLonGrid(lat[::-1] if reverse else lat, lon)
+    dest = earth2grid.latlon.LatLonGrid(lat, lon)
+    regrid = earth2grid.get_regridder(src, dest)
+
+    z = torch.zeros(src.shape)
+    regrid(z)
 
 
 class TestBilinearInterpolateNonUniform(unittest.TestCase):
