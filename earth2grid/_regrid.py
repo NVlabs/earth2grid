@@ -182,4 +182,6 @@ def get_regridder(src: base.Grid, dest: base.Grid) -> torch.nn.Module:
         return RegridLatLon(src, dest)
     elif isinstance(src, LatLonGrid) and isinstance(dest, healpix.Grid):
         return _RegridFromLatLon(src, dest)
+    elif isinstance(src, healpix.Grid) and isinstance(dest, LatLonGrid):
+        return src.get_latlon_regridder(dest.lat, dest.lon)
     raise ValueError(src, dest, "not supported.")

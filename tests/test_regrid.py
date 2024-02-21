@@ -1,9 +1,41 @@
 import unittest
 
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 
 import earth2grid
 from earth2grid._regrid import BilinearInterpolator
+
+
+def test_latlon_regridder(tmp_path):
+    nlat = 30
+    nlon = 60
+
+    src = earth2grid.healpix.Grid(level=6, pixel_order=earth2grid.healpix.PixelOrder.XY)
+
+    lat = np.linspace(-90, 90, nlat + 2)[1:-1]
+    lon = np.linspace(0, 360, nlon)
+    dest = earth2grid.latlon.LatLonGrid(lat, lon)
+    regridder = earth2grid.get_regridder(src, dest)
+
+    z = np.cos(10 * np.deg2rad(src.lat))
+    z = torch.from_numpy(z)
+    out = regridder(z)
+
+    assert out.shape[-2:] == (nlat, nlon)
+
+    expected = np.cos(10 * np.deg2rad(lat))[:, None]
+    expected = np.broadcast_to(expected, [nlat, nlon])
+    diff = np.mean(np.abs(out.numpy() - expected))
+    if diff > 1e-3 * 90 / nlat:
+        plt.figure()
+        plt.pcolormesh(lon, lat, out - expected)
+        plt.title("regridded - expected")
+        plt.colorbar()
+        image_path = tmp_path / "test_latlon_regridder.png"
+        plt.savefig(image_path)
+        raise ValueError(f"{diff} too big. See {image_path}.")
 
 
 def test_regridder_healpix():

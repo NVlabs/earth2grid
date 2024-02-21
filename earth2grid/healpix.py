@@ -15,6 +15,7 @@ from enum import Enum
 import einops
 import healpy
 import numpy as np
+import torch
 
 try:
     import pyvista as pv
@@ -30,9 +31,23 @@ class PixelOrder(Enum):
     XY = 2
 
 
+class ApplyWeights(torch.nn.Module):
+    def __init__(self, pix: torch.Tensor, weight: torch.Tensor):
+        super().__init__()
+        self._pix = pix
+        self.register_buffer("weight", weight)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        pix = self._pix
+        weight = self.weight
+        selected = x[..., pix.ravel()].reshape(*x.shape[:-1], *pix.shape)
+        return torch.sum(selected * weight, axis=0)
+
+
 @dataclass
 class Grid(base.Grid):
     """A Healpix Grid"""
+
     level: int
     pixel_order: PixelOrder = PixelOrder.RING
 
@@ -52,17 +67,16 @@ class Grid(base.Grid):
         else:
             return xy2nest(self._nside(), i)
 
-    def _reorder_to_nest(self, map):
-        """convert to nested index number"""
-        i = np.arange(self._npix())
+    def _nest2me(self, ipix: np.ndarray) -> np.ndarray:
+        """return the index in my PIXELORDER corresponding to ipix in NEST ordering"""
         if self.pixel_order == PixelOrder.RING:
-            j = healpy.nest2ring(self._nside(), i)
-            return map[j]
+            i_me = healpy.nest2ring(self._nside(), ipix)
         elif self.pixel_order == PixelOrder.NEST:
-            return map
-        else:
-            j = nest2xy(self._nside(), i)
-            return map[j]
+            i_me = ipix
+        elif self.pixel_order == PixelOrder.XY:
+            i_me = nest2xy(self._nside(), ipix)
+
+        return i_me
 
     @property
     def lat(self):
@@ -79,7 +93,9 @@ class Grid(base.Grid):
         return (self._npix(),)
 
     def visualize(self, map):
-        healpy.mollview(self._reorder_to_nest(map), nest=True)
+        i = np.arange(self._npix())
+        j = self._nest2me(i)
+        healpy.mollview(map[j], nest=True)
 
     def to_pyvista(self):
         if pv is None:
@@ -101,6 +117,12 @@ class Grid(base.Grid):
         celltypes = np.full(shape=(n,), fill_value=pv.CellType.QUAD)
         grid = pv.UnstructuredGrid(cells, celltypes, unique_points)
         return grid
+
+    def get_latlon_regridder(self, lat: np.ndarray, lon: np.ndarray):
+        latg, long = np.meshgrid(lat, lon, indexing="ij")
+        i_nest, weights = healpy.get_interp_weights(self._nside(), long, latg, nest=True, lonlat=True)
+        i_me = self._nest2me(i_nest)
+        return ApplyWeights(i_me, torch.from_numpy(weights))
 
 
 # nside = 2^ZOOM_LEVELS
