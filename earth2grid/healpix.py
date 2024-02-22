@@ -41,7 +41,8 @@ class ApplyWeights(torch.nn.Module):
         pix = self._pix
         weight = self.weight
         selected = x[..., pix.ravel()].reshape(*x.shape[:-1], *pix.shape)
-        return torch.sum(selected * weight, axis=0)
+        non_spatial_dims = x.ndim - 1
+        return torch.sum(selected * weight, axis=non_spatial_dims)
 
 
 @dataclass

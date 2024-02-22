@@ -9,7 +9,8 @@ import earth2grid
 from earth2grid._regrid import BilinearInterpolator
 
 
-def test_latlon_regridder(tmp_path):
+@pytest.mark.parametrize("with_channels", [True, False])
+def test_latlon_regridder(with_channels, tmp_path):
     nlat = 30
     nlon = 60
 
@@ -22,15 +23,19 @@ def test_latlon_regridder(tmp_path):
 
     z = np.cos(10 * np.deg2rad(src.lat))
     z = torch.from_numpy(z)
+    if with_channels:
+        z = z[None]
+
     out = regridder(z)
 
     assert out.shape[-2:] == (nlat, nlon)
 
     expected = np.cos(10 * np.deg2rad(lat))[:, None]
-    expected = np.broadcast_to(expected, [nlat, nlon])
     diff = np.mean(np.abs(out.numpy() - expected))
     if diff > 1e-3 * 90 / nlat:
         plt.figure()
+        if with_channels:
+            out = out[0]
         plt.pcolormesh(lon, lat, out - expected)
         plt.title("regridded - expected")
         plt.colorbar()
@@ -39,7 +44,8 @@ def test_latlon_regridder(tmp_path):
         raise ValueError(f"{diff} too big. See {image_path}.")
 
 
-def test_regridder_healpix():
+@pytest.mark.parametrize("with_channels", [True, False])
+def test_regridder_healpix(with_channels):
     dest = earth2grid.healpix.Grid(level=6, pixel_order=earth2grid.healpix.PixelOrder.XY)
     src = earth2grid.latlon.equiangular_lat_lon_grid(33, 64)
     regrid = earth2grid.get_regridder(src, dest)
@@ -50,6 +56,8 @@ def test_regridder_healpix():
         return torch.cos(torch.deg2rad(lat)) * torch.sin(2 * torch.deg2rad(lon))
 
     z = f(src.lat[:, None], src.lon)
+    if with_channels:
+        z = z[None]
     z_regridded = regrid(z)
     expected = f(dest.lat, dest.lon)
     assert torch.allclose(z_regridded, expected, rtol=0.01)

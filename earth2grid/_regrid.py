@@ -87,10 +87,10 @@ class BilinearInterpolator(torch.nn.Module):
 
         # Perform bilinear interpolation
         interpolated_values = (
-            z[self.y_l_idx, self.x_l_idx] * self.x_l_weight * self.y_l_weight
-            + z[self.y_l_idx, self.x_u_idx] * self.x_u_weight * self.y_l_weight
-            + z[self.y_u_idx, self.x_l_idx] * self.x_l_weight * self.y_u_weight
-            + z[self.y_u_idx, self.x_u_idx] * self.x_u_weight * self.y_u_weight
+            z[..., self.y_l_idx, self.x_l_idx] * self.x_l_weight * self.y_l_weight
+            + z[..., self.y_l_idx, self.x_u_idx] * self.x_u_weight * self.y_l_weight
+            + z[..., self.y_u_idx, self.x_l_idx] * self.x_l_weight * self.y_u_weight
+            + z[..., self.y_u_idx, self.x_u_idx] * self.x_u_weight * self.y_u_weight
         )
         return interpolated_values
 
