@@ -8,7 +8,17 @@ Healpy has two indexing conventions NEST and RING. But for convolutions we want
 routines `nest2xy` and `x2nest` for going in between these conventions. The
 previous code shared by Dale used string computations to handle these
 operations, which was probably quite slow. Here we use vectorized bit-shifting.
+
+## XY orientation
+
+For array-like indexing can have a different origin and orientation.  For
+example, the default is the origin is S and the data arr[f, y, x] follows the
+right hand rule.  In other words, (x + 1, y) being counterclockwise from (x, y)
+when looking down on the face.
+
 """
+
+from typing import Union
 from dataclasses import dataclass
 from enum import Enum
 
@@ -28,7 +38,43 @@ from earth2grid import base
 class PixelOrder(Enum):
     RING = 0
     NEST = 1
-    XY = 2
+
+
+class Compass(Enum):
+    """Cardinal directions in counter clockwise order"""
+
+    S = 0
+    E = 1
+    N = 2
+    W = 3
+
+
+@dataclass(frozen=True)
+class XY:
+    """
+    Assumes
+        - i = 12 * n * f + n * y + x
+        - the origin (x,y)=(0,0) is South
+        - if clockwise follows the hand rule:
+
+        Space
+          |
+          |
+          |  / y
+          | /
+          |/______ x
+
+        (Thumb points towards Space, index finger towards x, middle finger towards y)
+    """
+
+    origin: Compass = Compass.S
+    clockwise: bool = False
+
+
+def _convert_xyindex(nside: int, src: XY, dest: XY, i):
+    return _rotate_index(
+        nside=nside, rotations=dest.origin.value - src.origin.value, flip=dest.clockwise != src.clockwise, i=i
+    )
 
 
 class ApplyWeights(torch.nn.Module):
@@ -47,10 +93,16 @@ class ApplyWeights(torch.nn.Module):
 
 @dataclass
 class Grid(base.Grid):
-    """A Healpix Grid"""
+    """A Healpix Grid
+
+    Attrs:
+        level: 2^level = nside
+        pixel_order: the ordering convection of the data
+        xy_indexing: the orientation convection used when pixel_order = XY
+    """
 
     level: int
-    pixel_order: PixelOrder = PixelOrder.RING
+    pixel_order: Union[PixelOrder, XY] = PixelOrder.RING
 
     def __post_init__(self):
         if self.level > ZOOM_LEVELS:
@@ -65,22 +117,25 @@ class Grid(base.Grid):
     def _nest_ipix(self):
         """convert to nested index number"""
         i = np.arange(self._npix())
-        if self.pixel_order == PixelOrder.RING:
+        if isinstance(self.pixel_order, XY):
+            i_xy = _convert_xyindex(nside=self._nside(), src=self.pixel_order, dest=XY(), i=i)
+            return xy2nest(self._nside(), i_xy)
+        elif self.pixel_order == PixelOrder.RING:
             return healpy.ring2nest(self._nside(), i)
         elif self.pixel_order == PixelOrder.NEST:
             return i
         else:
-            return xy2nest(self._nside(), i)
+            raise ValueError(self.pixel_order)
 
     def _nest2me(self, ipix: np.ndarray) -> np.ndarray:
         """return the index in my PIXELORDER corresponding to ipix in NEST ordering"""
-        if self.pixel_order == PixelOrder.RING:
+        if isinstance(self.pixel_order, XY):
+            i_xy = nest2xy(self._nside(), ipix)
+            i_me = _convert_xyindex(nside=self._nside(), src=XY(), dest=self.pixel_order, i=i_xy)
+        elif self.pixel_order == PixelOrder.RING:
             i_me = healpy.nest2ring(self._nside(), ipix)
         elif self.pixel_order == PixelOrder.NEST:
             i_me = ipix
-        elif self.pixel_order == PixelOrder.XY:
-            i_me = nest2xy(self._nside(), ipix)
-
         return i_me
 
     @property
@@ -151,6 +206,41 @@ def _extract_every_other_bit(binary_number):
         shift_count += 1
 
     return result
+
+
+def _rotate_index(nside: int, rotations: int, flip: bool, i):
+    # Extract f, x, and y from i
+    # convention is arr[f, y, x] ... x is the fastest changing index
+    f = i // (12 * nside)
+    y = (i % (12 * nside)) // nside
+    x = i % nside
+
+    # Reduce k to its equivalent in the range [0, 3]
+    k = rotations % 4
+
+    assert 0 <= k < 4
+
+    # Apply the rotation based on k
+    if k == 1:  # 90 degrees counterclockwise
+        new_x, new_y = -y, x
+    elif k == 2:  # 180 degrees
+        new_x, new_y = -x, -y
+    elif k == 3:  # 270 degrees counterclockwise
+        new_x, new_y = y, -x
+    else:  # k == 0, no change
+        new_x, new_y = x, y
+
+    # Adjust for negative indices
+    new_x = new_x % nside
+    new_y = new_y % nside
+
+    # Recalculate the linear index with the rotated x and y
+    if flip:
+        new_i = 12 * nside * f + nside * new_x + new_y
+    else:
+        new_i = 12 * nside * f + nside * new_y + new_x
+
+    return new_i
 
 
 def nest2xy(nside, i):
