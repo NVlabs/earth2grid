@@ -98,7 +98,6 @@ class Grid(base.Grid):
     Attrs:
         level: 2^level = nside
         pixel_order: the ordering convection of the data
-        xy_indexing: the orientation convection used when pixel_order = XY
     """
 
     level: int
