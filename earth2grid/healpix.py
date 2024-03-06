@@ -165,12 +165,14 @@ class Grid(base.Grid):
         j = self._nest2me(i)
         healpy.mollview(map[j], nest=True)
 
-    def to_faces(self, map: torch.Tensor) -> torch.Tensor:
+    def to_faces(self, map: torch.Tensor, orientation: XY=HEALPIX_PAD_XY) -> torch.Tensor:
         """Convert the map to faces
 
         Args:
             map: shape (n, 12 * nside * nside)
             padding: the amount of padding to use
+            orientation: the orientation of the face (defaults to the healpix
+                pad convention)
 
         Returns:
             array: shape (n, 12, nside + 2*padding, nside + 2 * padding)
@@ -179,17 +181,19 @@ class Grid(base.Grid):
         n = self._nside()
 
         i_north_origin = np.arange(npix)
-        i_xy = _convert_xyindex(n, src=HEALPIX_PAD_XY, dest=XY(), i=i_north_origin)
+        i_xy = _convert_xyindex(n, src=orientation, dest=XY(), i=i_north_origin)
         i_nest = xy2nest(n, i_xy)
         i_me = self._nest2me(i_nest)
         shape = map.shape[:-1] + (12, n, n)
         return map[..., i_me].reshape(shape)
 
-    def from_faces(self, x: torch.Tensor) -> torch.Tensor:
+    def from_faces(self, x: torch.Tensor, orientation: XY = HEALPIX_PAD_XY) -> torch.Tensor:
         """Convert faced tensor in hpx pad convention into map
 
         Args:
             x: shape (..., f, nside, nside)
+            orientation: the orientation of the face (defaults to the healpix
+                pad convention)
         
         Returns:
             shape (..., f * nside * nside) in self.pixel_order convention
@@ -198,7 +202,7 @@ class Grid(base.Grid):
         """
         n = self._nside()
         i_xy = nest2xy(n, self._nest_ipix())
-        i_hpx_pad = _convert_xyindex(n, src=XY(), dest=HEALPIX_PAD_XY, i=i_xy)
+        i_hpx_pad = _convert_xyindex(n, src=XY(), dest=orientation, i=i_xy)
         shape = x.shape[:-3] + (-1,)
         x = x.reshape(shape)
         return x[..., i_hpx_pad]
