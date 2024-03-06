@@ -32,7 +32,10 @@ try:
 except ImportError:
     pv = None
 
+from earth2grid.third_party.zephyr.healpix import healpix_pad
 from earth2grid import base
+
+
 
 
 class PixelOrder(Enum):
@@ -70,11 +73,17 @@ class XY:
     origin: Compass = Compass.S
     clockwise: bool = False
 
+HEALPIX_PAD_XY = XY(origin=Compass.N, clockwise=True)
 
 def _convert_xyindex(nside: int, src: XY, dest: XY, i):
-    return _rotate_index(
-        nside=nside, rotations=dest.origin.value - src.origin.value, flip=dest.clockwise != src.clockwise, i=i
+    if src.clockwise != dest.clockwise:
+        i = _flip_xy(nside, i)
+
+    rotations = dest.origin.value - src.origin.value
+    i =_rotate_index(
+        nside=nside, rotations=- rotations if dest.clockwise else rotations, i=i
     )
+    return i
 
 
 class ApplyWeights(torch.nn.Module):
@@ -156,6 +165,44 @@ class Grid(base.Grid):
         j = self._nest2me(i)
         healpy.mollview(map[j], nest=True)
 
+    def to_faces(self, map: torch.Tensor) -> torch.Tensor:
+        """Convert the map to faces
+
+        Args:
+            map: shape (n, 12 * nside * nside)
+            padding: the amount of padding to use
+
+        Returns:
+            array: shape (n, 12, nside + 2*padding, nside + 2 * padding)
+        """
+        npix = self._npix()
+        n = self._nside()
+
+        i_north_origin = np.arange(npix)
+        i_xy = _convert_xyindex(n, src=HEALPIX_PAD_XY, dest=XY(), i=i_north_origin)
+        i_nest = xy2nest(n, i_xy)
+        i_me = self._nest2me(i_nest)
+        shape = map.shape[:-1] + (12, n, n)
+        return map[..., i_me].reshape(shape)
+
+    def from_faces(self, x: torch.Tensor) -> torch.Tensor:
+        """Convert faced tensor in hpx pad convention into map
+
+        Args:
+            x: shape (..., f, nside, nside)
+        
+        Returns:
+            shape (..., f * nside * nside) in self.pixel_order convention
+
+        
+        """
+        n = self._nside()
+        i_xy = nest2xy(n, self._nest_ipix())
+        i_hpx_pad = _convert_xyindex(n, src=XY(), dest=HEALPIX_PAD_XY, i=i_xy)
+        shape = x.shape[:-3] + (-1,)
+        x = x.reshape(shape)
+        return x[..., i_hpx_pad]
+
     def to_pyvista(self):
         if pv is None:
             raise ImportError("Need to install pyvista")
@@ -207,7 +254,14 @@ def _extract_every_other_bit(binary_number):
     return result
 
 
-def _rotate_index(nside: int, rotations: int, flip: bool, i):
+def _flip_xy(nside: int, i):
+    n2 = nside * nside
+    f = i // n2
+    y = (i % n2) // nside
+    x = i % nside
+    return n2 * f + nside * x + y
+
+def _rotate_index(nside: int, rotations: int, i):
     # Extract f, x, and y from i
     # convention is arr[f, y, x] ... x is the fastest changing index
     n2 = nside * nside
@@ -235,12 +289,7 @@ def _rotate_index(nside: int, rotations: int, flip: bool, i):
     new_y = new_y % nside
 
     # Recalculate the linear index with the rotated x and y
-    if flip:
-        new_i = n2 * f + nside * new_x + new_y
-    else:
-        new_i = n2 * f + nside * new_y + new_x
-
-    return new_i
+    return n2 * f + nside * new_y + new_x
 
 
 def nest2xy(nside, i):

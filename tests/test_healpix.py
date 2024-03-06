@@ -27,34 +27,49 @@ def test_grid_healpix_orientations(tmp_path, origin):
     for i in range(12):
         assert set(nest_lat[i]) == set(lat[i])
 
+
 @pytest.mark.parametrize("rot", range(4))
-def test_grid_healpix_plot_orientation(tmp_path, rot):
-    level = 3
-    grid = healpix.Grid(level=level, pixel_order=healpix.XY())
-    z = np.cos(np.deg2rad(grid.lat))
-    z = torch.from_numpy(z)
-    n = 2**level
+def test_rotate_index_same_values(tmp_path, rot):
+    n = 8
     i = np.arange(12*n*n)
-
-    i_rot = healpix._rotate_index(n, rot, flip=False, i=i)
-    z_rot = z[i_rot]
-    z_rot = z_rot.reshape([12, grid._nside(), grid._nside()])
-
-
+    i_rot = healpix._rotate_index(n, rot, i=i)
     i = i.reshape(12, -1)
     i_rot = i_rot.reshape(12, -1)
-
     for f in range(12):
         assert set(i[f]) == set(i_rot[f])
 
 
-def test_grid_healpix_pad(tmp_path):
-    grid = healpix.Grid(level=4, pixel_order=healpix.XY(origin=healpix.Compass.N, clockwise=True))
-    z = np.cos(np.deg2rad(grid.lat)) * np.cos(np.deg2rad(grid.lon))
-    z = z.reshape([1, 12, grid._nside(), grid._nside()])
-    z = torch.from_numpy(z)
-    padded = healpix_pad(z.clone(), 1)
+@pytest.mark.parametrize("rot", range(4))
+def test_rotate_index(rot):
+    n = 32
+    i = np.arange(12*n*n)
+    i_rot = healpix._rotate_index(n, rot, i=i)
+    i_back = healpix._rotate_index(n, 4 - rot, i=i_rot)
+    np.testing.assert_array_equal(i_back, i)
 
+
+@pytest.mark.parametrize("origin", list(healpix.Compass))
+@pytest.mark.parametrize("clockwise", [True, False])
+def test_to_from_faces(tmp_path, origin, clockwise):
+    grid = healpix.Grid(level=4, pixel_order=healpix.XY(origin=origin, clockwise=clockwise))
+    z = np.cos(np.deg2rad(grid.lat)) * np.cos(np.deg2rad(grid.lon))
+    z = torch.from_numpy(z)
+    # padded = healpix_pad(z.clone(), 1)
+    faces = grid.to_faces(z)
+    z_roundtrip = grid.from_faces(faces)
+    np.testing.assert_array_equal(z, z_roundtrip)
+
+
+@pytest.mark.parametrize("origin", list(healpix.Compass))
+@pytest.mark.parametrize("clockwise", [True, False])
+def test_grid_healpix_pad(tmp_path, origin, clockwise):
+    grid = healpix.Grid(level=4, pixel_order=healpix.XY(origin=origin, clockwise=clockwise))
+    z = np.cos(np.deg2rad(grid.lat)) * np.cos(np.deg2rad(grid.lon))
+    z = torch.from_numpy(z)
+    # add singleton dimension for compatibility with hpx pad
+    z = z[None]
+    z = grid.to_faces(z)
+    padded = healpix_pad(z, 1)
 
     def grad_abs(z):
         fx, fy = np.gradient(z, axis=(-1, -2))
@@ -70,7 +85,7 @@ def test_grid_healpix_pad(tmp_path):
         axs = axs.ravel()
         for i in range(12):
             ax = axs[i]
-            ax.pcolormesh(padded[0, i])
+            ax.pcolormesh(z[0, i])
         output_path = tmp_path / "output.png"
         fig.savefig(output_path.as_posix())
 
