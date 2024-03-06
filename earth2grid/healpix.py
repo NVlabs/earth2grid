@@ -58,7 +58,7 @@ class XY:
     Assumes
         - i = n * n * f + n * y + x
         - the origin (x,y)=(0,0) is South
-        - if clockwise follows the hand rule:
+        - if clockwise=False follows the hand rule:
 
         Space
           |
