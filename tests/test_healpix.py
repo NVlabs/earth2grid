@@ -54,7 +54,6 @@ def test_reorder(tmp_path, origin, clockwise):
 
     z = np.cos(np.deg2rad(src_grid.lat)) * np.cos(np.deg2rad(src_grid.lon))
     z = torch.from_numpy(z)
-    # padded = healpix_pad(z.clone(), 1)
     z_reorder = src_grid.reorder(dest_grid.pixel_order, z)
     z_roundtrip = dest_grid.reorder(src_grid.pixel_order, z_reorder)
     np.testing.assert_array_equal(z, z_roundtrip)
