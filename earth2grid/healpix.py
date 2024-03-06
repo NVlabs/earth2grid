@@ -18,9 +18,9 @@ when looking down on the face.
 
 """
 
-from typing import Union
 from dataclasses import dataclass
 from enum import Enum
+from typing import Union
 
 import einops
 import healpy
@@ -53,7 +53,7 @@ class Compass(Enum):
 class XY:
     """
     Assumes
-        - i = 12 * n * f + n * y + x
+        - i = n * n * f + n * y + x
         - the origin (x,y)=(0,0) is South
         - if clockwise follows the hand rule:
 
@@ -211,8 +211,9 @@ def _extract_every_other_bit(binary_number):
 def _rotate_index(nside: int, rotations: int, flip: bool, i):
     # Extract f, x, and y from i
     # convention is arr[f, y, x] ... x is the fastest changing index
-    f = i // (12 * nside)
-    y = (i % (12 * nside)) // nside
+    n2 = nside * nside
+    f = i // n2
+    y = (i % n2) // nside
     x = i % nside
 
     # Reduce k to its equivalent in the range [0, 3]
@@ -222,11 +223,11 @@ def _rotate_index(nside: int, rotations: int, flip: bool, i):
 
     # Apply the rotation based on k
     if k == 1:  # 90 degrees counterclockwise
-        new_x, new_y = -y, x
+        new_x, new_y = -y - 1, x
     elif k == 2:  # 180 degrees
-        new_x, new_y = -x, -y
+        new_x, new_y = -x - 1, -y - 1
     elif k == 3:  # 270 degrees counterclockwise
-        new_x, new_y = y, -x
+        new_x, new_y = y, -x - 1
     else:  # k == 0, no change
         new_x, new_y = x, y
 
@@ -236,9 +237,9 @@ def _rotate_index(nside: int, rotations: int, flip: bool, i):
 
     # Recalculate the linear index with the rotated x and y
     if flip:
-        new_i = 12 * nside * f + nside * new_x + new_y
+        new_i = n2 * f + nside * new_x + new_y
     else:
-        new_i = 12 * nside * f + nside * new_y + new_x
+        new_i = n2 * f + nside * new_y + new_x
 
     return new_i
 
