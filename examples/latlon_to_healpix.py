@@ -20,7 +20,7 @@ import earth2grid
 
 # level is the resolution
 level = 6
-hpx = earth2grid.healpix.Grid(level=level, pixel_order=earth2grid.healpix.PixelOrder.XY)
+hpx = earth2grid.healpix.Grid(level=level, pixel_order=earth2grid.healpix.XY())
 src = earth2grid.latlon.equiangular_lat_lon_grid(32, 64)
 regrid = earth2grid.get_regridder(src, hpx)
 

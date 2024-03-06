@@ -25,7 +25,6 @@ Details on the HEALPix can be found at https://iopscience.iop.org/article/10.108
 
 import sys
 
-import numpy as np
 import torch
 import torch as th
 
@@ -368,7 +367,7 @@ class HEALPixPadding(th.nn.Module):
 
         return th.cat((left, c, right), dim=-1)
 
-    def tl(self, t: th.Tensor, l: th.Tensor) -> th.Tensor: # noqa
+    def tl(self, t: th.Tensor, l: th.Tensor) -> th.Tensor:  # noqa
         """
         Assembles the top left corner of a center face in the cases where no according top left face is defined on the
         HPX.
@@ -421,77 +420,3 @@ class HEALPixPadding(th.nn.Module):
             ret[..., i, i] = 0.5 * b[..., i, -1] + 0.5 * r[..., -1, i]  # Diagonal
 
         return ret
-
-
-def visualize_healpix(data: np.array, s: int = 1e12, **kwargs):
-    """
-    Visualizes HEALPix data that are stored in a rectangular data structure.
-
-    :param data: The data for visualization in shape [f, h, w] (faces=12, height, width)
-    :param s: (Optional) A scalar used for masking the data
-    :param **kwargs: (Optional) Additional plotting parameters for imshow (e.g., vmin, vmax)
-    """
-    import matplotlib.pyplot as plt
-    import numpy as np
-    from scipy.ndimage import rotate
-
-    if "vmin" not in kwargs or "vmax" not in kwargs:
-        kwargs["vmin"], kwargs["vmax"] = data.min(), data.max()
-
-    # Concatenate the faces in a HEALPix-like diamond structure
-    f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11 = data
-
-    nans = np.ones_like(f0) * s
-    row0 = np.concatenate((nans, nans, nans, f3, nans), axis=1)
-    row1 = np.concatenate((nans, nans, f2, f7, f11), axis=1)
-    row2 = np.concatenate((nans, f1, f6, f10, nans), axis=1)
-    row3 = np.concatenate((f0, f5, f9, nans, nans), axis=1)
-    row4 = np.concatenate((f4, f8, nans, nans, nans), axis=1)
-    data = np.concatenate((row0, row1, row2, row3, row4), axis=0)
-
-    # Create mask and set all masked data points to zero (necessary for successfull rotation)
-    mask = np.ones_like(data, dtype=np.int32) * (-s)
-    mask[data == s] = s
-    data[mask == s] = 0.0
-
-    # Rotate data and mask and apply mask to rotated data
-    data = rotate(data, angle=-45, reshape=True)
-    mask = rotate(mask, angle=-45, reshape=True)
-    mask[mask == 0.0] = s
-    data[mask > s / 2] = np.nan
-
-    # Crop and plot
-    h, w = data.shape
-    fig, ax = plt.subplots(1, 1, figsize=(8, 4))
-    ax.imshow(data[int(h / 3.3) : h - int(h / 3.3), : int(w * 0.91)], **kwargs)
-    ax.set_title("(Border artifacts caused by rotation)")
-    plt.tight_layout()
-    # plt.show()
-
-
-if __name__ == "__main__":
-    # For debugging purposes
-
-    data = th.randn(1, 12, 1, 32, 32)
-    print(data.shape)
-
-    # import xarray as xr
-    # data[0, 0] = th.tensor(xr.open_dataset("era5_1deg_3h_HPX32_1979-2022_land_sea_mask.nc")["lsm"].values)
-
-    # 2D HEALPix convolution layer (hard coded example)
-    layer = HEALPixLayer(layer=th.nn.Conv2d, in_channels=1, out_channels=1, kernel_size=3, bias=False)
-    print(layer)
-
-    # Set all convolution weights to 1/9 to realize a smoothing of the input
-    layer.layers[2].weight = th.nn.Parameter(
-        th.tensor([[[[1 / 9, 1 / 9, 1 / 9], [1 / 9, 1 / 9, 1 / 9], [1 / 9, 1 / 9, 1 / 9]]]]).type_as(
-            layer.layers[2].weight
-        )
-    )
-    x = layer(x=data)
-    visualize_healpix(data=x[0, 0].detach().cpu().numpy())
-
-    # Padding alone
-    padding = HEALPixPadding(padding=1)
-    data = padding(data=data)
-    visualize_healpix(data=data[0, 0].numpy())

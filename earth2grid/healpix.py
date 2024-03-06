@@ -32,10 +32,10 @@ try:
 except ImportError:
     pv = None
 
-from earth2grid.third_party.zephyr.healpix import healpix_pad
 from earth2grid import base
+from earth2grid.third_party.zephyr.healpix import healpix_pad as pad
 
-
+__all__ = ["pad", "PixelOrder", "XY", "Compass", "Grid"]
 
 
 class PixelOrder(Enum):
@@ -73,16 +73,18 @@ class XY:
     origin: Compass = Compass.S
     clockwise: bool = False
 
+
+PixelOrderT = Union[PixelOrder, XY]
+
 HEALPIX_PAD_XY = XY(origin=Compass.N, clockwise=True)
+
 
 def _convert_xyindex(nside: int, src: XY, dest: XY, i):
     if src.clockwise != dest.clockwise:
         i = _flip_xy(nside, i)
 
     rotations = dest.origin.value - src.origin.value
-    i =_rotate_index(
-        nside=nside, rotations=- rotations if dest.clockwise else rotations, i=i
-    )
+    i = _rotate_index(nside=nside, rotations=-rotations if dest.clockwise else rotations, i=i)
     return i
 
 
@@ -110,7 +112,7 @@ class Grid(base.Grid):
     """
 
     level: int
-    pixel_order: Union[PixelOrder, XY] = PixelOrder.RING
+    pixel_order: PixelOrderT = PixelOrder.RING
 
     def __post_init__(self):
         if self.level > ZOOM_LEVELS:
@@ -165,48 +167,6 @@ class Grid(base.Grid):
         j = self._nest2me(i)
         healpy.mollview(map[j], nest=True)
 
-    def to_faces(self, map: torch.Tensor, orientation: XY=HEALPIX_PAD_XY) -> torch.Tensor:
-        """Convert the map to faces
-
-        Args:
-            map: shape (n, 12 * nside * nside)
-            padding: the amount of padding to use
-            orientation: the orientation of the face (defaults to the healpix
-                pad convention)
-
-        Returns:
-            array: shape (n, 12, nside + 2*padding, nside + 2 * padding)
-        """
-        npix = self._npix()
-        n = self._nside()
-
-        i_north_origin = np.arange(npix)
-        i_xy = _convert_xyindex(n, src=orientation, dest=XY(), i=i_north_origin)
-        i_nest = xy2nest(n, i_xy)
-        i_me = self._nest2me(i_nest)
-        shape = map.shape[:-1] + (12, n, n)
-        return map[..., i_me].reshape(shape)
-
-    def from_faces(self, x: torch.Tensor, orientation: XY = HEALPIX_PAD_XY) -> torch.Tensor:
-        """Convert faced tensor in hpx pad convention into map
-
-        Args:
-            x: shape (..., f, nside, nside)
-            orientation: the orientation of the face (defaults to the healpix
-                pad convention)
-        
-        Returns:
-            shape (..., f * nside * nside) in self.pixel_order convention
-
-        
-        """
-        n = self._nside()
-        i_xy = nest2xy(n, self._nest_ipix())
-        i_hpx_pad = _convert_xyindex(n, src=XY(), dest=orientation, i=i_xy)
-        shape = x.shape[:-3] + (-1,)
-        x = x.reshape(shape)
-        return x[..., i_hpx_pad]
-
     def to_pyvista(self):
         if pv is None:
             raise ImportError("Need to install pyvista")
@@ -237,6 +197,22 @@ class Grid(base.Grid):
     def approximate_grid_length_meters(self):
         return approx_grid_length_meters(self._nside())
 
+    def reorder(self, order: PixelOrderT, x: torch.Tensor) -> torch.Tensor:
+        """Rorder the pixels of ``x`` to have ``order``"""
+        output_grid = Grid(level=self.level, pixel_order=order)
+        i_nest = output_grid._nest_ipix()
+        i_me = self._nest2me(i_nest)
+        return x[..., i_me]
+
+    def get_healpix_regridder(self, dest: "Grid"):
+        if self.level != dest.level:
+            raise NotImplementedError(f"{self} and {dest} must have the same level.")
+
+        def regridder(x: torch.Tensor) -> torch.Tensor:
+            return self.reorder(dest.pixel_order, x)
+
+        return regridder
+
 
 # nside = 2^ZOOM_LEVELS
 ZOOM_LEVELS = 20
@@ -264,6 +240,7 @@ def _flip_xy(nside: int, i):
     y = (i % n2) // nside
     x = i % nside
     return n2 * f + nside * x + y
+
 
 def _rotate_index(nside: int, rotations: int, i):
     # Extract f, x, and y from i
