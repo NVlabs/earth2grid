@@ -31,139 +31,12 @@ import torch as th
 sys.path.append('/home/disk/quicksilver/nacc/dlesm/HealPixPad')
 have_healpixpad = False
 try:
-    from healpixpad import HEALPixPad
+    from healpixpad import HEALPixPad  # noqa
 
     have_healpixpad = True
 except ImportError:
     print("Warning, cannot find healpixpad module")
     have_healpixpad = False
-
-
-# converts an NFCHW tensor to an NFHWC tensor
-@torch.jit.script
-def healpix_channels_first_to_channels_last(tensor):
-    N, F, C, H, W = tensor.shape
-    tensor = torch.permute(tensor, dims=(0, 1, 3, 4, 2))
-    tensor = torch.as_strided(tensor, size=(N, F, C, H, W), stride=(F * H * W * C, H * W * C, 1, W * C, C))
-
-    return tensor
-
-
-# perform face folding:
-# [B, F, C, H, W] -> [B*F, C, H, W]
-class HEALPixFoldFaces(th.nn.Module):
-    def __init__(self, enable_nhwc=False):
-        super().__init__()
-        self.enable_nhwc = enable_nhwc
-
-    def forward(self, tensor: torch.Tensor) -> torch.Tensor:
-
-        N, F, C, H, W = tensor.shape
-        tensor = torch.reshape(tensor, shape=(N * F, C, H, W))
-
-        if self.enable_nhwc:
-            tensor = tensor.to(memory_format=torch.channels_last)
-
-        return tensor
-
-
-class HEALPixUnfoldFaces(th.nn.Module):
-    def __init__(self, num_faces=12, enable_nhwc=False):
-        super().__init__()
-        self.num_faces = num_faces
-        self.enable_nhwc = enable_nhwc
-
-    def forward(self, tensor: torch.Tensor) -> torch.Tensor:
-
-        NF, C, H, W = tensor.shape
-        tensor = torch.reshape(tensor, shape=(-1, self.num_faces, C, H, W))
-
-        return tensor
-
-
-class HEALPixLayer(th.nn.Module):
-    """
-    Pytorch module for applying any base torch Module on a HEALPix tensor. Expects all input/output tensors to have a
-    shape [..., 12, H, W], where 12 is the dimension of the faces.
-    """
-
-    def __init__(self, layer, **kwargs):
-        """
-        Constructor for the HEALPix base layer.
-
-        :param layer: Any torch layer function, e.g., th.nn.Conv2d
-        :param kwargs: The arguments that are passed to the torch layer function, e.g., kernel_size
-        """
-        super().__init__()
-        layers = []
-
-        # If 'layer' is a string, convert into the according function
-        if isinstance(layer, str):
-            layer = eval(layer)
-
-        enable_nhwc = kwargs["enable_nhwc"]
-        del kwargs["enable_nhwc"]
-
-        enable_healpixpad = kwargs["enable_healpixpad"]
-        del kwargs["enable_healpixpad"]
-
-        # Define a HEALPixPadding layer if the given layer is a convolution layer
-        try:
-            if layer.__bases__[0] is th.nn.modules.conv._ConvNd and kwargs["kernel_size"] > 1:
-                kwargs["padding"] = 0  # Disable native padding
-                kernel_size = 3 if "kernel_size" not in kwargs else kwargs["kernel_size"]
-                dilation = 1 if "dilation" not in kwargs else kwargs["dilation"]
-                padding = ((kernel_size - 1) // 2) * dilation
-                if enable_healpixpad and have_healpixpad and th.cuda.is_available() and not enable_nhwc:
-                    layers.append(HEALPixPaddingv2(padding=padding))
-                else:
-                    layers.append(HEALPixPadding(padding=padding, enable_nhwc=enable_nhwc))
-        except AttributeError:
-            print(
-                f"Could not determine the base class of the given layer '{layer}'. No padding layer was added, "
-                "which may not be an issue if the specified layer does not require a previous padding."
-            )
-
-        # Initialize the desired pytorch layer surrounded by tensor reshaping functions that enable the layer to
-        # process all faces in parallel on the batch dimension
-        # layers.append(Rearrange("b f ... h w -> (b f) ... h w"))
-        # layers.append(FoldFaces())
-        layers.append(layer(**kwargs))
-        # layers.append(Rearrange("(b f) ... h w -> b f ... h w", f=12))  # Inverts face-to-batch reshape from above
-        # layers.append(UnfoldFaces(num_faces=12))
-        self.layers = th.nn.Sequential(*layers)
-
-        if enable_nhwc:
-            self.layers = self.layers.to(memory_format=torch.channels_last)
-
-    def forward(self, x: th.Tensor) -> th.Tensor:
-        """
-        Performs the forward pass using the defined layer function and the given data.
-
-        :param x: The input tensor of shape [..., F=12, H, W]
-        :return: The output tensor of this HEALPix layer
-        """
-        res = self.layers(x)
-        return res
-
-
-class HEALPixPaddingv2(th.nn.Module):
-    def __init__(self, padding: int):
-        super().__init__()
-        self.unfold = HEALPixUnfoldFaces(num_faces=12)
-        self.fold = HEALPixFoldFaces()
-        self.padding = HEALPixPad(padding=padding)
-
-    def forward(self, x):
-        torch.cuda.nvtx.range_push("HEALPixPaddingv2:forward")
-
-        x = self.unfold(x)
-        xp = self.padding(x)
-        xp = self.fold(xp)
-
-        torch.cuda.nvtx.range_pop()
-
-        return xp
 
 
 def healpix_pad(x: torch.Tensor, padding: int, enable_nhwc: bool = False) -> torch.Tensor:
@@ -205,20 +78,6 @@ class HEALPixPadding(th.nn.Module):
         self.enable_nhwc = enable_nhwc
         if not isinstance(padding, int) or padding < 1:
             raise ValueError(f"invalid value for 'padding', expected int > 0 but got {padding}")
-
-        self.fold = HEALPixFoldFaces(enable_nhwc=self.enable_nhwc)
-        self.unfold = HEALPixUnfoldFaces(num_faces=12, enable_nhwc=self.enable_nhwc)
-
-    def forward(self, data: torch.Tensor) -> torch.Tensor:
-        torch.cuda.nvtx.range_push("HEALPixPadding:forward")
-        try:
-            # unfold faces from batch dim
-            data = self.unfold(data)
-            res = self.pad(data)
-            # fold faces into batch dim
-            res = self.fold(res)
-        finally:
-            torch.cuda.nvtx.range_pop()
 
     def pad(self, data: th.Tensor) -> th.Tensor:
         """
