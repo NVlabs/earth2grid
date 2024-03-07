@@ -8,9 +8,19 @@ Healpy has two indexing conventions NEST and RING. But for convolutions we want
 routines `nest2xy` and `x2nest` for going in between these conventions. The
 previous code shared by Dale used string computations to handle these
 operations, which was probably quite slow. Here we use vectorized bit-shifting.
+
+## XY orientation
+
+For array-like indexing can have a different origin and orientation.  For
+example, the default is the origin is S and the data arr[f, y, x] follows the
+right hand rule.  In other words, (x + 1, y) being counterclockwise from (x, y)
+when looking down on the face.
+
 """
+
 from dataclasses import dataclass
 from enum import Enum
+from typing import Union
 
 import einops
 import healpy
@@ -23,12 +33,59 @@ except ImportError:
     pv = None
 
 from earth2grid import base
+from earth2grid.third_party.zephyr.healpix import healpix_pad as pad
+
+__all__ = ["pad", "PixelOrder", "XY", "Compass", "Grid"]
 
 
 class PixelOrder(Enum):
     RING = 0
     NEST = 1
-    XY = 2
+
+
+class Compass(Enum):
+    """Cardinal directions in counter clockwise order"""
+
+    S = 0
+    E = 1
+    N = 2
+    W = 3
+
+
+@dataclass(frozen=True)
+class XY:
+    """
+    Assumes
+        - i = n * n * f + n * y + x
+        - the origin (x,y)=(0,0) is South
+        - if clockwise=False follows the hand rule:
+
+        Space
+          |
+          |
+          |  / y
+          | /
+          |/______ x
+
+        (Thumb points towards Space, index finger towards x, middle finger towards y)
+    """
+
+    origin: Compass = Compass.S
+    clockwise: bool = False
+
+
+PixelOrderT = Union[PixelOrder, XY]
+
+HEALPIX_PAD_XY = XY(origin=Compass.N, clockwise=True)
+
+
+def _convert_xyindex(nside: int, src: XY, dest: XY, i):
+    if src.clockwise != dest.clockwise:
+        i = _flip_xy(nside, i)
+
+    rotations = dest.origin.value - src.origin.value
+    i = _rotate_index(nside=nside, rotations=-rotations if dest.clockwise else rotations, i=i)
+    return i
 
 
 class ApplyWeights(torch.nn.Module):
@@ -47,10 +104,15 @@ class ApplyWeights(torch.nn.Module):
 
 @dataclass
 class Grid(base.Grid):
-    """A Healpix Grid"""
+    """A Healpix Grid
+
+    Attrs:
+        level: 2^level = nside
+        pixel_order: the ordering convection of the data
+    """
 
     level: int
-    pixel_order: PixelOrder = PixelOrder.RING
+    pixel_order: PixelOrderT = PixelOrder.RING
 
     def __post_init__(self):
         if self.level > ZOOM_LEVELS:
@@ -65,22 +127,25 @@ class Grid(base.Grid):
     def _nest_ipix(self):
         """convert to nested index number"""
         i = np.arange(self._npix())
-        if self.pixel_order == PixelOrder.RING:
+        if isinstance(self.pixel_order, XY):
+            i_xy = _convert_xyindex(nside=self._nside(), src=self.pixel_order, dest=XY(), i=i)
+            return xy2nest(self._nside(), i_xy)
+        elif self.pixel_order == PixelOrder.RING:
             return healpy.ring2nest(self._nside(), i)
         elif self.pixel_order == PixelOrder.NEST:
             return i
         else:
-            return xy2nest(self._nside(), i)
+            raise ValueError(self.pixel_order)
 
     def _nest2me(self, ipix: np.ndarray) -> np.ndarray:
         """return the index in my PIXELORDER corresponding to ipix in NEST ordering"""
-        if self.pixel_order == PixelOrder.RING:
+        if isinstance(self.pixel_order, XY):
+            i_xy = nest2xy(self._nside(), ipix)
+            i_me = _convert_xyindex(nside=self._nside(), src=XY(), dest=self.pixel_order, i=i_xy)
+        elif self.pixel_order == PixelOrder.RING:
             i_me = healpy.nest2ring(self._nside(), ipix)
         elif self.pixel_order == PixelOrder.NEST:
             i_me = ipix
-        elif self.pixel_order == PixelOrder.XY:
-            i_me = nest2xy(self._nside(), ipix)
-
         return i_me
 
     @property
@@ -132,6 +197,22 @@ class Grid(base.Grid):
     def approximate_grid_length_meters(self):
         return approx_grid_length_meters(self._nside())
 
+    def reorder(self, order: PixelOrderT, x: torch.Tensor) -> torch.Tensor:
+        """Rorder the pixels of ``x`` to have ``order``"""
+        output_grid = Grid(level=self.level, pixel_order=order)
+        i_nest = output_grid._nest_ipix()
+        i_me = self._nest2me(i_nest)
+        return x[..., i_me]
+
+    def get_healpix_regridder(self, dest: "Grid"):
+        if self.level != dest.level:
+            raise NotImplementedError(f"{self} and {dest} must have the same level.")
+
+        def regridder(x: torch.Tensor) -> torch.Tensor:
+            return self.reorder(dest.pixel_order, x)
+
+        return regridder
+
 
 # nside = 2^ZOOM_LEVELS
 ZOOM_LEVELS = 20
@@ -151,6 +232,45 @@ def _extract_every_other_bit(binary_number):
         shift_count += 1
 
     return result
+
+
+def _flip_xy(nside: int, i):
+    n2 = nside * nside
+    f = i // n2
+    y = (i % n2) // nside
+    x = i % nside
+    return n2 * f + nside * x + y
+
+
+def _rotate_index(nside: int, rotations: int, i):
+    # Extract f, x, and y from i
+    # convention is arr[f, y, x] ... x is the fastest changing index
+    n2 = nside * nside
+    f = i // n2
+    y = (i % n2) // nside
+    x = i % nside
+
+    # Reduce k to its equivalent in the range [0, 3]
+    k = rotations % 4
+
+    assert 0 <= k < 4
+
+    # Apply the rotation based on k
+    if k == 1:  # 90 degrees counterclockwise
+        new_x, new_y = -y - 1, x
+    elif k == 2:  # 180 degrees
+        new_x, new_y = -x - 1, -y - 1
+    elif k == 3:  # 270 degrees counterclockwise
+        new_x, new_y = y, -x - 1
+    else:  # k == 0, no change
+        new_x, new_y = x, y
+
+    # Adjust for negative indices
+    new_x = new_x % nside
+    new_y = new_y % nside
+
+    # Recalculate the linear index with the rotated x and y
+    return n2 * f + nside * new_y + new_x
 
 
 def nest2xy(nside, i):

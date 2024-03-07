@@ -14,7 +14,7 @@ def test_latlon_regridder(with_channels, tmp_path):
     nlat = 30
     nlon = 60
 
-    src = earth2grid.healpix.Grid(level=6, pixel_order=earth2grid.healpix.PixelOrder.XY)
+    src = earth2grid.healpix.Grid(level=6, pixel_order=earth2grid.healpix.XY())
 
     lat = np.linspace(-90, 90, nlat + 2)[1:-1]
     lon = np.linspace(0, 360, nlon)
@@ -46,7 +46,7 @@ def test_latlon_regridder(with_channels, tmp_path):
 
 @pytest.mark.parametrize("with_channels", [True, False])
 def test_regridder_healpix(with_channels):
-    dest = earth2grid.healpix.Grid(level=6, pixel_order=earth2grid.healpix.PixelOrder.XY)
+    dest = earth2grid.healpix.Grid(level=6, pixel_order=earth2grid.healpix.XY())
     src = earth2grid.latlon.equiangular_lat_lon_grid(33, 64)
     regrid = earth2grid.get_regridder(src, dest)
 
