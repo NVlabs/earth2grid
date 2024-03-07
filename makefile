@@ -12,10 +12,11 @@ lint:
 	mypy $(sources) tests
 
 unittest:
-	pytest
+	coverage run --source earth2grid/ -m pytest
+	coverage run --source earth2grid/ -a -m pytest --doctest-modules earth2grid/ -vv
 
 coverage:
-	pytest --cov=$(sources) --cov-branch --cov-report=term-missing tests
+	coverage report
 
 pre-commit:
 	pre-commit run --all-files

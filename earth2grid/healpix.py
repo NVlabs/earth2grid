@@ -33,9 +33,38 @@ except ImportError:
     pv = None
 
 from earth2grid import base
-from earth2grid.third_party.zephyr.healpix import healpix_pad as pad
+from earth2grid.third_party.zephyr.healpix import healpix_pad
 
-__all__ = ["pad", "PixelOrder", "XY", "Compass", "Grid"]
+__all__ = ["pad", "PixelOrder", "XY", "Compass", "Grid", "HEALPIX_PAD_XY"]
+
+
+def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
+    """
+    Pad each face consistently with its according neighbors in the HEALPix
+
+    Args:
+        x: The input tensor of shape [N, F, H, W]
+        padding: the amount of padding
+
+    Returns:
+        The padded tensor with shape [N, F, H+2*padding, W+2*padding]
+
+    Examples:
+
+        Ths example show to pad data described by a :py:class:`Grid` object.
+
+        >>> grid = Grid(level=4, pixel_order=PixelOrder.RING)
+        >>> lon = torch.from_numpy(grid.lon)
+        >>> faces = grid.reorder(HEALPIX_PAD_XY, lon)
+        >>> faces = faces.view(1, 12, grid._nside(), grid._nside())
+        >>> faces.shape
+        torch.Size([1, 12, 16, 16])
+        >>> padded = pad(faces, padding=1)
+        >>> padded.shape
+        torch.Size([1, 12, 18, 18])
+
+    """
+    return healpix_pad(x, padding)
 
 
 class PixelOrder(Enum):

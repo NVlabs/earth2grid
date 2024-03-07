@@ -18,3 +18,8 @@ Regridding
 ----------
 
 .. autofunction:: earth2grid.get_regridder
+
+Other utilities
+---------------
+
+.. autofunction:: earth2grid.healpix.pad
