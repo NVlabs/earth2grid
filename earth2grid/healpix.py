@@ -24,6 +24,7 @@ from typing import Union
 
 import einops
 import healpy
+from earth2grid import healpix_bare
 import numpy as np
 import torch
 
@@ -155,16 +156,17 @@ class Grid(base.Grid):
 
     def _nest_ipix(self):
         """convert to nested index number"""
-        i = np.arange(self._npix())
+        i = torch.arange(self._npix())
         if isinstance(self.pixel_order, XY):
             i_xy = _convert_xyindex(nside=self._nside(), src=self.pixel_order, dest=XY(), i=i)
-            return xy2nest(self._nside(), i_xy)
+            i = xy2nest(self._nside(), i_xy)
         elif self.pixel_order == PixelOrder.RING:
-            return healpy.ring2nest(self._nside(), i)
+            i = healpix_bare.ring2nest(self._nside(), i)
         elif self.pixel_order == PixelOrder.NEST:
-            return i
+            pass
         else:
             raise ValueError(self.pixel_order)
+        return i.numpy()
 
     def _nest2me(self, ipix: np.ndarray) -> np.ndarray:
         """return the index in my PIXELORDER corresponding to ipix in NEST ordering"""
@@ -172,20 +174,23 @@ class Grid(base.Grid):
             i_xy = nest2xy(self._nside(), ipix)
             i_me = _convert_xyindex(nside=self._nside(), src=XY(), dest=self.pixel_order, i=i_xy)
         elif self.pixel_order == PixelOrder.RING:
-            i_me = healpy.nest2ring(self._nside(), ipix)
+            ipix_t = torch.from_numpy(ipix)
+            i_me = healpix_bare.nest2ring(self._nside(), ipix_t).numpy()
         elif self.pixel_order == PixelOrder.NEST:
             i_me = ipix
         return i_me
 
     @property
     def lat(self):
-        _, lat = healpy.pix2ang(self._nside(), self._nest_ipix(), lonlat=True, nest=True)
-        return lat
+        ipix = torch.from_numpy(self._nest_ipix())
+        _, lat = healpix_bare.pix2ang(self._nside(), ipix, lonlat=True, nest=True)
+        return lat.numpy()
 
     @property
     def lon(self):
-        lon, _ = healpy.pix2ang(self._nside(), self._nest_ipix(), lonlat=True, nest=True)
-        return lon
+        ipix = torch.from_numpy(self._nest_ipix())
+        lon, _ = healpix_bare.pix2ang(self._nside(), ipix, lonlat=True, nest=True)
+        return lon.numpy()
 
     @property
     def shape(self) -> tuple[int, ...]:
