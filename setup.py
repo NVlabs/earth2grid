@@ -9,7 +9,9 @@ setup(
     name='earth2grid',
     ext_modules=[
         cpp_extension.CppExtension(
-            'earth2grid._healpix_bare', src_files, extra_compile_args=["-Wno-error=c++11-narrowing"]
+            'earth2grid._healpix_bare',
+            src_files,
+            extra_compile_args=["-Wno-error=c++11-narrowing", "-Wno-c++11-narrowing"],
         )
     ],
     cmdclass={'build_ext': cpp_extension.BuildExtension},
