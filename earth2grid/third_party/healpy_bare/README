@@ -1,0 +1,42 @@
+This package implements a small subset of routines for working with the
+HEALPix tesselation of the sphere.
+
+For information about HEALPix, see the publication by
+K.M. Gorski et al., 2005, Ap.J., 622, p.759
+(http://adsabs.harvard.edu/abs/2005ApJ...622..759G)
+More comprehensive software packages supporting HEALPix, as well as extensive
+documentation and references, are available at
+https://healpix.sourceforge.io/.
+
+
+Compilation
+===========
+
+gcc -O2 healpix_bare.c -std=c99 test.c -lm
+clang -O2 healpix_bare.c -std=c99 test.c -lm
+icc -O2 healpix_bare.c -std=c99 test.c -lm
+
+
+Notes
+=====
+
+This package is designed to cover a small set of frequently used HEALPix-related
+routines, which are implemented with a focus on robustness, accuracy and clarity.
+They have good performance, but are not heavily tuned to keep the code simple -
+the full-featured, GPL-licensed Healpix Fortran and C++ libraries (available
+via the link above) will be more efficient in most situations.
+
+The motivation for this package is to give developers of BSD-licensed
+Healpix-related codes a reliable starting point, so that they don't have to
+re-implement the central algorithms (like conversions between pixel index and
+angular coordinates), which are nontrivial to do correctly for all corner cases.
+
+
+Acknowledgements
+================
+
+If you are using this code in your own packages, please consider citing
+the original paper in your publications:
+
+K.M. Gorski et al., 2005, Ap.J., 622, p.759
+(http://adsabs.harvard.edu/abs/2005ApJ...622..759G)

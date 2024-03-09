@@ -117,3 +117,5 @@ test_grid_visualize.png
 *.jpg
 *.jpeg
 public/
+
+a.out
