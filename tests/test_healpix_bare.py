@@ -1,5 +1,6 @@
 import healpy
 import numpy
+import numpy as np
 import pytest
 import torch
 
@@ -43,3 +44,22 @@ def test_pix2ang(nest, lonlat, tmp_path):
         plt.savefig(path, bbox_inches="tight")
         e.add_note(str(path))
         raise e
+
+
+def test_hpc2loc():
+    x = torch.tensor([0.0]).double()
+    y = torch.tensor([0.0]).double()
+    f = torch.tensor([0])
+
+    loc = earth2grid.healpix_bare.hpc2loc(x, y, f)
+    vec = earth2grid.healpix_bare.loc2vec(loc)
+    print(vec)
+    print(healpy.boundaries(1, 1, 1, nest=True))
+
+
+def test_boundaries():
+    boundaries = earth2grid.healpix_bare.boundaries(1, 0, 1)
+    assert not torch.any(torch.isnan(boundaries)), boundaries
+
+    expected = healpy.boundaries(1, 0, 1)
+    np.testing.assert_allclose(boundaries, expected)

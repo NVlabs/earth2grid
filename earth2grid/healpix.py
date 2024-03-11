@@ -24,9 +24,10 @@ from typing import Union
 
 import einops
 import healpy
-from earth2grid import healpix_bare
 import numpy as np
 import torch
+
+from earth2grid import healpix_bare
 
 try:
     import pyvista as pv
@@ -208,7 +209,7 @@ class Grid(base.Grid):
         # Make grid
         nside = 2**self.level
         pix = self._nest_ipix()
-        points = healpy.boundaries(nside, pix, step=1, nest=True)
+        points = healpix_bare.boundaries(nside, torch.from_numpy(pix), step=1, nest=True).numpy()
         out = einops.rearrange(points, "n d s -> (n s) d")
         unique_points, inverse = np.unique(out, return_inverse=True, axis=0)
         assert unique_points.ndim == 2
