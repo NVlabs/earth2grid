@@ -209,7 +209,7 @@ class Grid(base.Grid):
         # Make grid
         nside = 2**self.level
         pix = self._nest_ipix()
-        points = healpix_bare.boundaries(nside, torch.from_numpy(pix), step=1, nest=True).numpy()
+        points = healpix_bare.corners(nside, torch.from_numpy(pix), True).numpy()
         out = einops.rearrange(points, "n d s -> (n s) d")
         unique_points, inverse = np.unique(out, return_inverse=True, axis=0)
         assert unique_points.ndim == 2

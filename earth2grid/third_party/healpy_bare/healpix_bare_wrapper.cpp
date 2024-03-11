@@ -97,11 +97,12 @@ torch::Tensor hpc2loc_wrapper(torch::Tensor x, torch::Tensor y, torch::Tensor f)
 }
 
 
-torch::Tensor boundaries(int nside, torch::Tensor pix, int step, bool nest) {
+
+torch::Tensor corners(int nside, torch::Tensor pix, bool nest) {
     auto accessor = pix.accessor<int64_t, 1>();
 
     auto output_options = torch::TensorOptions().dtype(torch::kDouble);
-    auto output = torch::empty({pix.size(0), 4 * step, 3}, output_options);
+    auto output = torch::empty({pix.size(0), 3, 4}, output_options);
     auto out_accessor = output.accessor<double, 3>();
 
 
@@ -115,60 +116,44 @@ torch::Tensor boundaries(int nside, torch::Tensor pix, int step, bool nest) {
         hpd = ring2hpd(nside, accessor[i]);
       }
 
+      t_hpc hpc;
       int offset = 0;
-      for (int j = 0; j < step; j++){
-        t_hpc hpc;
-        double jd = j;
-        hpc.x = (static_cast<double>(hpd.x) + jd / step) / n;
-        hpc.y = static_cast<double>(hpd.y) / n;
-        hpc.f = hpd.f;
-        t_vec vec = loc2vec(hpc2loc(hpc));
-        out_accessor[i][offset][0] = FILLNA(vec.x);
-        out_accessor[i][offset][1] = FILLNA(vec.y);
-        out_accessor[i][offset][2] = vec.z;
-        offset++;
-      }
+      t_vec vec;
 
-      for (int j = 0; j < step; j++){
-        t_hpc hpc;
-        double jd = j;
-        hpc.x = static_cast<double>(hpd.x + 1) / n;
-        hpc.y = (static_cast<double>(hpd.y) + jd / step) / n;
-        hpc.f = hpd.f;
-        t_vec vec = loc2vec(hpc2loc(hpc));
-        out_accessor[i][offset][0] = FILLNA(vec.x);
-        out_accessor[i][offset][1] = FILLNA(vec.y);
-        out_accessor[i][offset][2] = vec.z;
-        offset++;
-      }
+      hpc.x = static_cast<double>(hpd.x) / n;
+      hpc.y = static_cast<double>(hpd.y) / n;
+      hpc.f = hpd.f;
+      vec = loc2vec(hpc2loc(hpc));
+      out_accessor[i][0][offset] = FILLNA(vec.x);
+      out_accessor[i][1][offset] = FILLNA(vec.y);
+      out_accessor[i][2][offset] = vec.z;
+      offset++;
 
-      for (int j = 0; j < step; j++){
-        t_hpc hpc;
-        double jd = j;
-        hpc.x = (static_cast<double>(hpd.x + 1) - jd / step) / n;
-        hpc.y = static_cast<double>(hpd.y + 1) / n;
-        hpc.f = hpd.f;
-        t_vec vec = loc2vec(hpc2loc(hpc));
-        out_accessor[i][offset][0] = FILLNA(vec.x);
-        out_accessor[i][offset][1] = FILLNA(vec.y);
-        out_accessor[i][offset][2] = vec.z;
-        offset++;
-      }
+      hpc.x = static_cast<double>(hpd.x + 1) / n;
+      hpc.y = static_cast<double>(hpd.y) / n;
+      vec = loc2vec(hpc2loc(hpc));
+      out_accessor[i][0][offset] = FILLNA(vec.x);
+      out_accessor[i][1][offset] = FILLNA(vec.y);
+      out_accessor[i][2][offset] = vec.z;
+      offset++;
 
-      for (int j = 0; j < step; j++){
-        t_hpc hpc;
-        double jd = j;
-        hpc.x = static_cast<double>(hpd.x) / n;
-        hpc.y = (static_cast<double>(hpd.y + 1) - jd / step) / n;
-        hpc.f = hpd.f;
-        t_vec vec = loc2vec(hpc2loc(hpc));
-        out_accessor[i][offset][0] = FILLNA(vec.x);
-        out_accessor[i][offset][1] = FILLNA(vec.y);
-        out_accessor[i][offset][2] = vec.z;
-        offset++;
-      }
+      hpc.x = static_cast<double>(hpd.x + 1) / n;
+      hpc.y = static_cast<double>(hpd.y + 1) / n;
+      vec = loc2vec(hpc2loc(hpc));
+      out_accessor[i][0][offset] = FILLNA(vec.x);
+      out_accessor[i][1][offset] = FILLNA(vec.y);
+      out_accessor[i][2][offset] = vec.z;
+      offset++;
+
+      hpc.x = static_cast<double>(hpd.x) / n;
+      hpc.y = static_cast<double>(hpd.y + 1) / n;
+      vec = loc2vec(hpc2loc(hpc));
+      out_accessor[i][0][offset] = FILLNA(vec.x);
+      out_accessor[i][1][offset] = FILLNA(vec.y);
+      out_accessor[i][2][offset] = vec.z;
+      offset++;
     }
-    return output.transpose(-1, -2);
+    return output;
 }
 
 // these are the minimal routines
@@ -188,5 +173,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("ring2hpd", wrap_2hpd(ring2hpd), "hpd is f, y ,x");
   m.def("hpd2loc", &hpd2loc_wrapper, "loc is in z, s, phi");
   m.def("hpc2loc", &hpc2loc_wrapper, "hpc2loc(x, y, f) -> z, s, phi");
-  m.def("boundaries", &boundaries, "");
+  m.def("corners", &corners, "");
 }

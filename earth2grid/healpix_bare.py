@@ -1,13 +1,13 @@
 import torch
 
-from earth2grid._healpix_bare import boundaries as boundaries_c
-from earth2grid._healpix_bare import hpc2loc, hpd2loc, nest2hpd, nest2ring, ring2hpd, ring2nest
+from earth2grid._healpix_bare import corners, hpc2loc, hpd2loc, nest2hpd, nest2ring, ring2hpd, ring2nest
 
 __all__ = [
     "pix2ang",
     "ring2nest",
     "nest2ring",
     "hpc2loc",
+    "corners",
 ]
 
 
@@ -43,22 +43,3 @@ def loc2vec(loc):
     x = (s * torch.cos(phi),)
     y = (s * torch.sin(phi),)
     return x, y, z
-
-
-def boundaries(nside, pix, step, nest=False):
-    """Give boundaries starting at the S corner and going counter clockwise
-    (facing down).
-
-    This gives rolled outputs with respect to healpy.boundaries
-    """
-    if isinstance(pix, int):
-        pix_t = torch.tensor([pix])
-    else:
-        pix_t = pix
-
-    out = boundaries_c(nside, pix_t.flatten(), step, nest)
-    if isinstance(pix, int):
-        return out[0]
-    else:
-        shape = pix_t.shape + (3, 4 * step)
-        return out.view(shape)

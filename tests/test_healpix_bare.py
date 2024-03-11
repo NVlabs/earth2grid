@@ -58,8 +58,9 @@ def test_hpc2loc():
 
 
 def test_boundaries():
-    boundaries = earth2grid.healpix_bare.boundaries(1, 0, 1)
+    ipix = torch.tensor([0])
+    boundaries = earth2grid.healpix_bare.corners(1, ipix, False)
     assert not torch.any(torch.isnan(boundaries)), boundaries
 
-    expected = healpy.boundaries(1, 0, 1)
-    np.testing.assert_allclose(boundaries, expected)
+    expected = healpy.boundaries(1, ipix, 1)
+    np.testing.assert_allclose(boundaries, np.roll(expected, 2, axis=-1))
