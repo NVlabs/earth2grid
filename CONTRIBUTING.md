@@ -10,7 +10,7 @@ helps, and credit will always be given.
 1. When writing code, group changes logically into commits. Messy commits are
    usually a result of excessive multitasking. If you work on one thing at a
    time, then your commits will be cleaner. 
-    1. Name each commit "<imperative verb> <subject>" (e.g. "add earth2grid.some_modules"). Make sure it fits onto one line.
+    1. Name each commit "[imperative verb] [subject]" (e.g. "add earth2grid.some_modules"). Make sure it fits onto one line.
     1. Please provide context in the commit message. Start by explaining the
         previous state of the code and why this needed changing. Focus on motivating
         rather than explaining the changeset.
