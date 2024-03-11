@@ -198,9 +198,7 @@ class Grid(base.Grid):
         return (self._npix(),)
 
     def visualize(self, map):
-        i = np.arange(self._npix())
-        j = self._nest2me(i)
-        healpy.mollview(map[j], nest=True)
+        raise NotImplementedError()
 
     def to_pyvista(self):
         if pv is None:
