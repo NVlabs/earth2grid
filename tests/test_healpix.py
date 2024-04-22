@@ -107,3 +107,17 @@ def test_grid_healpix_pad(tmp_path, origin, clockwise, padding, device):
             f"The gradient of the padded data {sigma_padded} is too large. "
             f"Examine the padding in the image at {output_path}."
         )
+
+
+def test_conv2d():
+    f = 12
+    nside = 16
+    npix = f * nside * nside
+    cin = 3
+    cout = 4
+    n = 1
+
+    x = torch.ones(n, cin, 1, npix)
+    weight = torch.zeros(cout, cin, 3, 3)
+    out = healpix.conv2d(x, weight, padding=(1, 1))
+    assert out.shape == (n, cout, 1, npix)

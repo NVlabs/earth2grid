@@ -1,7 +1,7 @@
 # %%
 import contextlib
 import pprint
-from typing import Callable, Optional
+from typing import Callable
 
 import diffusers
 import einops
@@ -37,54 +37,22 @@ torch_attention = torch.nn.functional.scaled_dot_product_attention
 in_c = 5
 out_c = 4
 h = w = 256
-n = 12
+f = 12
+n = 1
+npix = h * w * f
 
 device = "cuda"
 
 model = diffusers.AutoencoderKL(in_channels=in_c, out_channels=out_c)
 model.to(device)
-x = torch.zeros(n, in_c, h, w).to(device)
+x = torch.zeros(n, in_c, 1, npix).to(device)
 out = model(x)
 print("output keys", out.keys())
-assert out.sample.shape == (n, out_c, h, w)
 print("functions in torch.nn.functional called by diffusers.AutoencoderKL")
 pprint.pprint(set(calls))
 
 
 # %%
-def conv2d_healpix(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    """conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1) -> Tensor
-
-    Applies a 2D convolution over an input image composed of several input
-    planes.
-
-    This operator supports :ref:`TensorFloat32<tf32_on_ampere>`.
-
-    See :class:`~torch.nn.Conv2d` for details and output shape.
-
-    """
-    px, py = padding
-    assert px == py
-
-    n, c, x, y = input.shape
-    input = einops.rearrange(input, "(n f) c x y -> (n c) f x y", f=12)
-    input = healpix.pad(input, px)
-    input = einops.rearrange(input, "(n c) f x y -> (n f) c x y", c=c)
-    padding = (0, 0)
-    return torch_conv2d(input, weight, bias, stride, padding, dilation, groups)
-
-
-def group_norm_healpix(
-    input: torch.Tensor,
-    num_groups: int,
-    weight: Optional[torch.Tensor] = None,
-    bias: Optional[torch.Tensor] = None,
-    eps: float = 1e-05,
-) -> torch.Tensor:
-    """Applies Group Normalization for last certain number of dimensions"""
-    input = einops.rearrange(input, "(n f) c ... -> n c f ...", f=12)
-    output = torch_group_norm(input, num_groups, weight, bias, eps)
-    return einops.rearrange(output, "n c f ... -> (n f) c ...")
 
 
 def disabled_attention(query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False, scale=None) -> torch.Tensor:
@@ -109,43 +77,6 @@ def disabled_attention(query, key, value, attn_mask=None, dropout_p=0.0, is_caus
     return value
 
 
-def scaled_dot_product_attention_healpix(
-    query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False, scale=None
-) -> torch.Tensor:
-    """Computes scaled dot product attention on query, key and value tensors,
-    using an optional attention mask if passed, and applying dropout if a
-    probability greater than 0.0 is specified.
-
-    Args:
-        query (Tensor): Query tensor; shape :math:`(N, ..., L, E)`.
-        key (Tensor): Key tensor; shape :math:`(N, ..., S, E)`.
-        value (Tensor): Value tensor; shape :math:`(N, ..., S, Ev)`.
-        attn_mask (optional Tensor): Attention mask; shape :math:`(N, ..., L, S)`. Two types of masks are supported.
-            A boolean mask where a value of True indicates that the element *should* take part in attention.
-            A float mask of the same type as query, key, value that is added to the attention score.
-    Shape legend:
-    - :math:`N: \text{Batch size} ... : \text{Any number of other batch dimensions (optional)}`
-    - :math:`S: \text{Source sequence length}`
-    - :math:`L: \text{Target sequence length}`
-    - :math:`E: \text{Embedding dimension of the query and key}`
-    - :math:`Ev: \text{Embedding dimension of the value}`
-    """
-    F = 12
-
-    def rearrange(x):
-        # p is (x y)
-        return einops.rearrange(x, "(n f) ... p e -> n ... (f p) e", f=F)
-
-    query = rearrange(query)
-    key = rearrange(key)
-    value = rearrange(value)
-
-    assert attn_mask is None
-    output = torch_attention(query, key, value, attn_mask, dropout_p=dropout_p, is_causal=is_causal, scale=scale)
-    output = einops.rearrange(output, "n ... (f p) e -> (n f) ... p e", f=12)
-    return output
-
-
 @contextlib.contextmanager
 def healpix_ops(no_attention: bool = False):
     """Override the parts of torch.nn.functional used by the diffusers autoencoder
@@ -154,23 +85,18 @@ def healpix_ops(no_attention: bool = False):
         no_attention: if true, than have attention just return the value with no
             spatial mixing
     """
-    torch.nn.functional.conv2d = conv2d_healpix
-    torch.nn.functional.group_norm = group_norm_healpix
+    torch.nn.functional.conv2d = healpix.conv2d
     if no_attention:
-        torch.nn.functional.scaled_dot_product_attention = scaled_dot_product_attention_healpix
-    else:
-        torch.nn.functional.scaled_dot_product_attention = scaled_dot_product_attention_healpix
+        torch.nn.functional.scaled_dot_product_attention = no_attention
     # TODO scaled-dot-product attention
     yield
     torch.nn.functional.conv2d = torch_conv2d
-    torch.nn.functional.group_norm = torch_group_norm
-    torch.nn.functional.scaled_dot_product_attention = torch_attention
 
 
 with healpix_ops():
     decoder_out = model(x)
 
-assert decoder_out.sample.shape == (n, out_c, h, w)
+assert decoder_out.sample.shape == (n, out_c, 1, npix)
 
 # %%
 
@@ -197,7 +123,7 @@ nside = 2**hpx_grid.level
 n = 12
 
 device = "cuda"
-input = einops.rearrange(z, "(f x y) -> f () x y", f=12, x=nside, y=nside)
+input = einops.rearrange(z, "(f x y) -> () () () (f x y)", f=12, x=nside, y=nside)
 input = input.float()
 
 with torch.no_grad():
