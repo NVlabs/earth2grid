@@ -98,3 +98,11 @@ def test_grid_healpix_pad(tmp_path, origin, clockwise, padding):
             f"The gradient of the padded data {sigma_padded} is too large. "
             f"Examine the padding in the image at {output_path}."
         )
+
+
+def test_to_image():
+    grid = healpix.Grid(level=4)
+    lat = torch.tensor(grid.lat)
+    lat_img = grid.to_image(lat)
+    n = 2**grid.level
+    assert lat_img.shape == (5 * n, 5 * n)
