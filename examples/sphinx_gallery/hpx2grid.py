@@ -28,4 +28,5 @@ array = plt.cm.viridis(array)
 array = (256 * array).astype("uint8")
 # set transparency for nans
 array[..., -1] = np.where(np.isnan(lat_img), 0, 255)
-Image.fromarray(array)
+image = Image.fromarray(array)
+image.save("hpx_grid.png")
