@@ -33,6 +33,7 @@ import pyvista
 pyvista.BUILDING_GALLERY = True
 
 import pyvista
+from image_scraper import PNGScraper
 from pyvista.core.errors import PyVistaDeprecationWarning
 from pyvista.core.utilities.docs import linkcode_resolve, pv_html_page_context  # noqa: F401
 from pyvista.plotting.utilities.sphinx_gallery import DynamicScraper
@@ -61,10 +62,10 @@ os.environ['PYVISTA_BUILDING_GALLERY'] = 'true'
 
 # sphinx gallery
 sphinx_gallery_conf = {
-    'examples_dirs': '../examples',  # path to your example scripts
+    'examples_dirs': '../examples/sphinx_gallery/',  # path to your example scripts
     'gallery_dirs': 'auto_examples',  # path to where to save gallery generated output
     'filename_pattern': '',
-    "image_scrapers": (DynamicScraper(), "matplotlib"),
+    "image_scrapers": (DynamicScraper(), "matplotlib", PNGScraper()),
 }
 
 # -- Options for HTML output -------------------------------------------------
