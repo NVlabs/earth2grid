@@ -246,6 +246,25 @@ class Grid(base.Grid):
 
         return regridder
 
+    def to_image(self, x: torch.Tensor, fill_value=torch.nan) -> torch.Tensor:
+        """Use the 45 degree rotated grid pixelation
+        i points to SE, j point to NE
+        """
+        grid = [[6, 9, -1, -1, -1], [1, 5, 8, -1, -1], [-1, 0, 4, 11, -1], [-1, -1, 3, 7, 10], [-1, -1, -1, 2, 6]]
+        pixel_order = XY(origin=Compass.W, clockwise=True)
+        x = self.reorder(pixel_order, x)
+        nside = self._nside()
+        *shape, _ = x.shape
+        x = x.reshape((*shape, 12, nside, nside))
+        output = torch.full((*shape, 5 * nside, 5 * nside), device=x.device, dtype=x.dtype, fill_value=fill_value)
+
+        for j in range(len(grid)):
+            for i in range(len(grid[0])):
+                face = grid[j][i]
+                if face != -1:
+                    output[j * nside : (j + 1) * nside, i * nside : (i + 1) * nside] = x[face]
+        return output
+
 
 # nside = 2^ZOOM_LEVELS
 ZOOM_LEVELS = 20
