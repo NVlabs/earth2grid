@@ -18,6 +18,7 @@ when looking down on the face.
 
 """
 
+import math
 from dataclasses import dataclass
 from enum import Enum
 from typing import Union
@@ -37,7 +38,12 @@ except ImportError:
 from earth2grid import base
 from earth2grid.third_party.zephyr.healpix import healpix_pad
 
-__all__ = ["pad", "PixelOrder", "XY", "Compass", "Grid", "HEALPIX_PAD_XY"]
+try:
+    import healpixpad
+except ImportError:
+    healpixpad = None
+
+__all__ = ["pad", "PixelOrder", "XY", "Compass", "Grid", "HEALPIX_PAD_XY", "conv2d"]
 
 
 def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
@@ -66,7 +72,10 @@ def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
         torch.Size([1, 12, 18, 18])
 
     """
-    return healpix_pad(x, padding)
+    if healpixpad is None or x.device.type != 'cuda':
+        return healpix_pad(x, padding)
+    else:
+        return healpixpad.HEALPixPadFunction.apply(x.unsqueeze(2), padding).squeeze(2)
 
 
 class PixelOrder(Enum):
@@ -355,3 +364,40 @@ def approx_grid_length_meters(nside):
     r_m = 6378140
     area = 4 * np.pi * r_m**2 / (12 * nside**2)
     return np.sqrt(area)
+
+
+def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
+    """conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1) -> Tensor
+
+    Applies a 2D convolution over an input image composed of several input
+    planes.
+
+    This operator supports :ref:`TensorFloat32<tf32_on_ampere>`.
+
+    See :class:`~torch.nn.Conv2d` for details and output shape.
+
+    """
+    px, py = padding
+    assert px == py
+
+    n, c, x, y = input.shape
+    npix = input.size(-1)
+    nside2 = npix // 12
+    nside = int(math.sqrt(nside2))
+    assert nside**2 * 12 == npix
+
+    input = einops.rearrange(input, "n c () (f x y) -> (n c) f x y", f=12, x=nside)
+    input = pad(input, px)
+    input = einops.rearrange(input, "(n c) f x y -> n c f x y", c=c)
+    padding = (0, 0, 0)
+    padding = 'valid'
+
+    if not isinstance(stride, int):
+        stride = stride + (1,)
+
+    if not isinstance(dilation, int):
+        dilation = (1,) + dilation
+
+    weight = weight.unsqueeze(-3)
+    out = torch.nn.functional.conv3d(input, weight, bias, stride, padding, dilation, groups)
+    return einops.rearrange(out, "n c f x y -> n c () (f x y)")

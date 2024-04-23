@@ -60,10 +60,18 @@ def test_reorder(tmp_path, origin, clockwise):
     np.testing.assert_array_equal(z, z_roundtrip)
 
 
+def get_devices():
+    devices = [torch.device("cpu")]
+    if torch.cuda.is_available():
+        devices += [torch.device("cuda")]
+    return devices
+
+
 @pytest.mark.parametrize("origin", list(healpix.Compass))
 @pytest.mark.parametrize("clockwise", [True, False])
 @pytest.mark.parametrize("padding", [0, 1, 2])
-def test_grid_healpix_pad(tmp_path, origin, clockwise, padding):
+@pytest.mark.parametrize("device", get_devices())
+def test_grid_healpix_pad(tmp_path, origin, clockwise, padding, device):
     grid = healpix.Grid(level=4, pixel_order=healpix.XY(origin=origin, clockwise=clockwise))
     hpx_pad_grid = healpix.Grid(level=4, pixel_order=healpix.HEALPIX_PAD_XY)
     z = np.cos(np.deg2rad(grid.lat)) * np.cos(np.deg2rad(grid.lon))
@@ -74,7 +82,8 @@ def test_grid_healpix_pad(tmp_path, origin, clockwise, padding):
     n = grid._nside()
     z = z.view(-1, 12, n, n)
     z_hpx_pad = z_hpx_pad.view(-1, 12, n, n)
-    padded = healpix.pad(z_hpx_pad, padding)
+
+    padded = healpix.pad(z_hpx_pad.to(device), padding).cpu()
 
     def grad_abs(z):
         fx, fy = np.gradient(z, axis=(-1, -2))
@@ -106,3 +115,17 @@ def test_to_image():
     lat_img = grid.to_image(lat)
     n = 2**grid.level
     assert lat_img.shape == (5 * n, 5 * n)
+
+
+def test_conv2d():
+    f = 12
+    nside = 16
+    npix = f * nside * nside
+    cin = 3
+    cout = 4
+    n = 1
+
+    x = torch.ones(n, cin, 1, npix)
+    weight = torch.zeros(cout, cin, 3, 3)
+    out = healpix.conv2d(x, weight, padding=(1, 1))
+    assert out.shape == (n, cout, 1, npix)
