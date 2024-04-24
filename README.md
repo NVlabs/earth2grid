@@ -37,8 +37,10 @@ Under construction:
 
 
 ```
+# Install the CUDA healpix padding library
+git clone https://gitlab-master.nvidia.com/tkurth/healpixpad-pytorch
 git clone ssh://git@gitlab-master.nvidia.com:12051/earth-2/earth2-grid.git
-pip install earth2-grid
+pip install  --no-build-isolation healpixpad-pytorch earth2-grid
 ```
 
 ## Example
