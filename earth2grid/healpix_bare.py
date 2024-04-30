@@ -43,3 +43,22 @@ def loc2vec(loc):
     x = (s * torch.cos(phi),)
     y = (s * torch.sin(phi),)
     return x, y, z
+
+
+def get_interp_weights(nside: int, lon: torch.Tensor, lat: torch.Tensor):
+    """
+
+    Args:
+        lon: longtiude in deg E. Shape (m, )
+        lat: latitdue in deg E. Shape (m,)
+
+    Returns:
+        pix, weights: both shaped (4, m). pix is given in RING convention.
+
+    """
+    import healpy
+
+    pix, weights = healpy.get_interp_weights(
+        nside, lon.cpu().detach().numpy(), lat.cpu().detach().numpy(), nest=False, lonlat=True
+    )
+    return torch.from_numpy(pix).to(device=lon.device), torch.from_numpy(weights).to(device=lon.device)

@@ -64,3 +64,29 @@ def test_boundaries():
 
     expected = healpy.boundaries(1, ipix, 1)
     np.testing.assert_allclose(boundaries, np.roll(expected, 2, axis=-1))
+
+
+def test_get_interp_weights_vector():
+    lon = torch.tensor([23, 84, -23]).float()
+    lat = torch.tensor([0, 12, 67]).float()
+    pix, weights = earth2grid.healpix_bare.get_interp_weights(8, lon, lat)
+    assert pix.device == lon.device
+    assert pix.shape == (4, 3)
+    assert weights.shape == (4, 3)
+
+
+def test_get_interp_weights_vector_interp_y():
+    nside = 16
+    inpix = torch.tensor([0, 1, 5, 6])
+
+    lon, lat = earth2grid.healpix_bare.pix2ang(nside, inpix, lonlat=True)
+    ay = 0.8
+
+    lonc = (lon[0] + lon[1]) / 2
+    latc = lat[0] * ay + lat[3] * (1 - ay)
+
+    pix, weights = earth2grid.healpix_bare.get_interp_weights(nside, lonc.unsqueeze(0), latc.unsqueeze(0))
+
+    assert torch.all(pix == inpix[:, None])
+    expected_weights = torch.tensor([ay / 2, ay / 2, (1 - ay) / 2, (1 - ay) / 2]).double()[:, None]
+    assert torch.allclose(weights, expected_weights)
