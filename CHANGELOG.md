@@ -1,5 +1,5 @@
 # Changelog
 
-## 0.1.0 (2024-01-25)
+## v2024.5.1
 
-* First release on PyPI.
+* First tag
