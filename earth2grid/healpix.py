@@ -231,9 +231,13 @@ class Grid(base.Grid):
 
     def get_latlon_regridder(self, lat: np.ndarray, lon: np.ndarray):
         latg, long = np.meshgrid(lat, lon, indexing="ij")
-        i_ring, weights = healpix_bare.get_interp_weights(self._nside(), torch.tensor(long), torch.tensor(latg))
-        i_nest = healpix_bare.ring2nest(self._nside(), i_ring.ravel()).view(i_ring.shape)
-        i_me = self._nest2me(i_nest)
+        return self.get_unstructured_regridder(latg, long)
+
+    def get_unstructured_regridder(self, lat: np.ndarray, lon: np.ndarray):
+        """Get regridder to the specified lat and lon points"""
+        i_ring, weights = healpix_bare.get_interp_weights(self._nside(), torch.tensor(lon), torch.tensor(lat))
+        i_nest = healpix_bare.ring2nest(self._nside(), i_ring.ravel())
+        i_me = torch.from_numpy(self._nest2me(i_nest.numpy())).view(i_ring.shape)
         return ApplyWeights(i_me, weights)
 
     def approximate_grid_length_meters(self):
@@ -248,7 +252,7 @@ class Grid(base.Grid):
 
     def get_healpix_regridder(self, dest: "Grid"):
         if self.level != dest.level:
-            raise NotImplementedError(f"{self} and {dest} must have the same level.")
+            return self.get_unstructured_regridder(dest.lat, dest.lon)
 
         def regridder(x: torch.Tensor) -> torch.Tensor:
             return self.reorder(dest.pixel_order, x)

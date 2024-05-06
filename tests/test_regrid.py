@@ -45,7 +45,7 @@ def test_latlon_regridder(with_channels, tmp_path):
 
 
 @pytest.mark.parametrize("with_channels", [True, False])
-def test_regridder_healpix(with_channels):
+def test_healpix_to_lat_lon(with_channels):
     dest = earth2grid.healpix.Grid(level=6, pixel_order=earth2grid.healpix.XY())
     src = earth2grid.latlon.equiangular_lat_lon_grid(33, 64)
     regrid = earth2grid.get_regridder(src, dest)
@@ -61,6 +61,29 @@ def test_regridder_healpix(with_channels):
     z_regridded = regrid(z)
     expected = f(dest.lat, dest.lon)
     assert torch.allclose(z_regridded, expected, rtol=0.01)
+
+
+@pytest.mark.parametrize("with_channels", [True, False])
+@pytest.mark.parametrize("level", [4, 5])
+def test_healpix_to_healpix(with_channels, level):
+    """Test finer healpix interpolation"""
+    src = earth2grid.healpix.Grid(level=4)
+    dest = earth2grid.healpix.Grid(level=level)
+    regrid = earth2grid.get_regridder(src, dest)
+
+    def f(lat, lon):
+        lat = torch.from_numpy(lat)
+        lon = torch.from_numpy(lon)
+        return torch.cos(torch.deg2rad(lat)) * torch.sin(2 * torch.deg2rad(lon))
+
+    z = f(src.lat, src.lon)
+    if with_channels:
+        z = z[None]
+    z_regridded = regrid(z)
+    expected = f(dest.lat, dest.lon)
+    max_diff = torch.max(z_regridded - expected)
+    print(max_diff)
+    assert torch.allclose(z_regridded, expected, atol=0.03)
 
 
 @pytest.mark.parametrize("reverse", [True, False])
