@@ -24,7 +24,6 @@ from enum import Enum
 from typing import Union
 
 import einops
-import healpy
 import numpy as np
 import torch
 
@@ -232,9 +231,10 @@ class Grid(base.Grid):
 
     def get_latlon_regridder(self, lat: np.ndarray, lon: np.ndarray):
         latg, long = np.meshgrid(lat, lon, indexing="ij")
-        i_nest, weights = healpy.get_interp_weights(self._nside(), long, latg, nest=True, lonlat=True)
+        i_ring, weights = healpix_bare.get_interp_weights(self._nside(), torch.tensor(long), torch.tensor(latg))
+        i_nest = healpix_bare.ring2nest(self._nside(), i_ring.ravel()).view(i_ring.shape)
         i_me = self._nest2me(i_nest)
-        return ApplyWeights(i_me, torch.from_numpy(weights))
+        return ApplyWeights(i_me, weights)
 
     def approximate_grid_length_meters(self):
         return approx_grid_length_meters(self._nside())
