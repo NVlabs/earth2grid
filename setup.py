@@ -42,7 +42,6 @@ src_files = [
 
 setup(
     name='earth2grid',
-    version='2024.5.1',
     ext_modules=[
         cpp_extension.CppExtension(
             'earth2grid._healpix_bare',
