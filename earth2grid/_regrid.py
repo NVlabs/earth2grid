@@ -66,16 +66,23 @@ class BilinearInterpolator(torch.nn.Module):
         x_u_weight = (x_query - x_coords[x_l_idx]) / (x_coords[x_u_idx] - x_coords[x_l_idx])
         y_l_weight = (y_coords[y_u_idx] - y_query) / (y_coords[y_u_idx] - y_coords[y_l_idx])
         y_u_weight = (y_query - y_coords[y_l_idx]) / (y_coords[y_u_idx] - y_coords[y_l_idx])
+        weights = torch.stack(
+            [x_l_weight * y_l_weight, x_u_weight * y_l_weight, x_l_weight * y_u_weight, x_u_weight * y_u_weight], dim=-1
+        )
 
-        self.x_l_idx = x_l_idx
-        self.x_u_idx = x_u_idx
-        self.y_l_idx = y_l_idx
-        self.y_u_idx = y_u_idx
+        self.register_buffer("weights", weights)
 
-        self.register_buffer("x_l_weight", x_l_weight)
-        self.register_buffer("x_u_weight", x_u_weight)
-        self.register_buffer("y_l_weight", y_l_weight)
-        self.register_buffer("y_u_weight", y_u_weight)
+        stride = x_coords.size(-1)
+        index = torch.stack(
+            [
+                x_l_idx + stride * y_l_idx,
+                x_u_idx + stride * y_l_idx,
+                x_l_idx + stride * y_u_idx,
+                x_u_idx + stride * y_u_idx,
+            ],
+            dim=-1,
+        )
+        self.register_buffer("index", index)
 
     def forward(self, z: torch.Tensor):
         """
@@ -84,15 +91,12 @@ class BilinearInterpolator(torch.nn.Module):
         Args:
             z: shape [Y, X]
         """
-
-        # Perform bilinear interpolation
-        interpolated_values = (
-            z[..., self.y_l_idx, self.x_l_idx] * self.x_l_weight * self.y_l_weight
-            + z[..., self.y_l_idx, self.x_u_idx] * self.x_u_weight * self.y_l_weight
-            + z[..., self.y_u_idx, self.x_l_idx] * self.x_l_weight * self.y_u_weight
-            + z[..., self.y_u_idx, self.x_u_idx] * self.x_u_weight * self.y_u_weight
-        )
-        return interpolated_values
+        *shape, y, x = z.shape
+        zrs = z.view(-1, y * x).T
+        # using embedding bag is 2x faster on cpu and 4x on gpu.
+        interpolated = torch.nn.functional.embedding_bag(self.index, zrs, per_sample_weights=self.weights, mode='sum')
+        interpolated = interpolated.T.view(*shape, self.weights.size(0))
+        return interpolated
 
 
 class TempestRegridder(torch.nn.Module):

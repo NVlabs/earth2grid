@@ -156,3 +156,7 @@ class TestBilinearInterpolateNonUniform(unittest.TestCase):
 
         # Verify
         self.assertTrue(torch.allclose(result, expected, rtol=0.01))
+
+        if torch.cuda.is_available() and torch.cuda.device_count() > 0:
+            interpolator.cuda()
+            interpolator(input_tensor.cuda())
