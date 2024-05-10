@@ -1,5 +1,6 @@
 import torch
 
+from earth2grid import _healpix_bare
 from earth2grid._healpix_bare import corners, hpc2loc, hpd2loc, nest2hpd, nest2ring, ring2hpd, ring2nest
 
 __all__ = [
@@ -49,16 +50,16 @@ def get_interp_weights(nside: int, lon: torch.Tensor, lat: torch.Tensor):
     """
 
     Args:
-        lon: longtiude in deg E. Shape (m, )
-        lat: latitdue in deg E. Shape (m,)
+        lon: longtiude in deg E. Shape (*)
+        lat: latitdue in deg E. Shape (*)
 
     Returns:
-        pix, weights: both shaped (4, m). pix is given in RING convention.
+        pix, weights: both shaped (4, *). pix is given in RING convention.
 
     """
-    import healpy
+    shape = lon.shape
+    lon = lon.double().cpu().flatten()
+    lat = lat.double().cpu().flatten()
+    pix, weights = _healpix_bare.get_interp_weights(nside, lon, lat)
 
-    pix, weights = healpy.get_interp_weights(
-        nside, lon.cpu().detach().numpy(), lat.cpu().detach().numpy(), nest=False, lonlat=True
-    )
-    return torch.from_numpy(pix).to(device=lon.device), torch.from_numpy(weights).to(device=lon.device)
+    return pix.view(4, *shape), weights.view(4, *shape)

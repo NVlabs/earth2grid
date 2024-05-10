@@ -1,3 +1,4 @@
+// This is NVIDIA code
 #pragma once
 
 #include <array>
@@ -7,7 +8,7 @@
 #include <numbers>
 #include <stdint.h>
 
-#include "third_party/healpy_bare/healpix_bare.h"
+#include "healpix_bare.h"
 
 void hpx_info(int64_t nside, int64_t &npface, int64_t &ncap, int64_t &npix,
               double &fact1, double &fact2) {
@@ -148,34 +149,4 @@ t_ang latlon2ang(double lat, double lon) {
   double phi = degrees2radians(lon);
   t_ang ang = {theta, phi};
   return ang;
-}
-
-template <bool nest = false>
-void get_interp_weights(const int64_t nside, const double *const theta,
-                        const double *const phi, const int64_t num_points,
-                        bool lonlat, int64_t *const pix,
-                        double *const weights) {
-  for (int64_t i = 0; i < num_points; ++i) {
-    std::array<int64_t, 4> this_pix;
-    std::array<double, 4> this_weights;
-
-    // Convert to co-latitude and azimuth in radians
-    t_ang ptg;
-    if (lonlat)
-      ptg = latlon2ang(phi[i], theta[i]);
-    else
-      ptg = {theta[i], phi[i]};
-
-    // Get interpolation weights and indices for this point
-    interpolation_weights<nest>(ptg, this_pix, this_weights, nside);
-
-    // Set pixel indices and weights in the global array
-    // TODO (asubramaniam): Remove these copies by changing
-    // interpolation_weights signature
-    size_t this_offset = i * 4;
-    for (int m = 0; m < 4; ++m)
-      pix[this_offset + m] = this_pix[m];
-    for (int m = 0; m < 4; ++m)
-      weights[this_offset + m] = this_weights[m];
-  }
 }

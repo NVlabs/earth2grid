@@ -23,7 +23,7 @@ def get_compiler():
 
 
 compiler_type = get_compiler()
-extra_compile_args: List[str] = []
+extra_compile_args: List[str] = ["-std=c++20"]
 
 if compiler_type == "clang":
     print("Detected Clang compiler.")
