@@ -130,15 +130,22 @@ def _convert_xyindex(nside: int, src: XY, dest: XY, i):
 class ApplyWeights(torch.nn.Module):
     def __init__(self, pix: torch.Tensor, weight: torch.Tensor):
         super().__init__()
-        self._pix = pix
+
+        # the first dim is the 4 point stencil
+        n, *self.shape = pix.shape
+
+        pix = pix.view(n, -1).T
+        weight = weight.view(n, -1).T
+
+        self.register_buffer("index", pix)
         self.register_buffer("weight", weight)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        pix = self._pix
-        weight = self.weight
-        selected = x[..., pix.ravel()].reshape(*x.shape[:-1], *pix.shape)
-        non_spatial_dims = x.ndim - 1
-        return torch.sum(selected * weight, axis=non_spatial_dims)
+        *shape, npix = x.shape
+
+        x = x.view(-1, npix).T
+        interpolated = torch.nn.functional.embedding_bag(self.index, x, per_sample_weights=self.weight, mode="sum")
+        return interpolated.view(shape + self.shape)
 
 
 @dataclass
