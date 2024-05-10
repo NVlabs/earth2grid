@@ -1,3 +1,4 @@
+import os
 import subprocess
 from typing import List
 
@@ -23,7 +24,7 @@ def get_compiler():
 
 
 compiler_type = get_compiler()
-extra_compile_args: List[str] = []
+extra_compile_args: List[str] = ["-std=c++20"]
 
 if compiler_type == "clang":
     print("Detected Clang compiler.")
@@ -37,7 +38,7 @@ else:
 
 
 src_files = [
-    "earth2grid/third_party/healpy_bare/healpix_bare_wrapper.cpp",
+    "earth2grid/csrc/healpix_bare_wrapper.cpp",
 ]
 
 setup(
@@ -47,6 +48,7 @@ setup(
             'earth2grid._healpix_bare',
             src_files,
             extra_compile_args=extra_compile_args,
+            include_dirs=[os.path.abspath("earth2grid/csrc"), os.path.abspath("earth2grid/third_party/healpix_bare")],
         )
     ],
     cmdclass={'build_ext': cpp_extension.BuildExtension},

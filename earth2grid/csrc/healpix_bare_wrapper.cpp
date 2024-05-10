@@ -1,6 +1,8 @@
+// This NVIDIA code
 #include <vector>
 #include <torch/extension.h>
 #include "healpix_bare.c"
+#include "interpolation.h"
 #include <cmath>
 
 
@@ -162,7 +164,39 @@ torch::Tensor corners(int nside, torch::Tensor pix, bool nest) {
 // hpd2loc
 // loc2ang
 
+std::vector<torch::Tensor> get_interp_weights(int nside, torch::Tensor lon, torch::Tensor lat) {
 
+  // setup outputs
+  auto weight_options = torch::TensorOptions().dtype(torch::kDouble);
+  auto weight = torch::empty({4, lon.size(0)}, weight_options);
+
+  auto pix_options = torch::TensorOptions().dtype(torch::kLong);
+  auto pix = torch::empty({4, lon.size(0)}, pix_options);
+
+
+  auto pix_a = pix.accessor<int64_t, 2>();
+  auto weight_a = weight.accessor<double, 2>();
+
+  auto lon_a = lon.accessor<double, 1>();
+  auto lat_a = lat.accessor<double, 1>();
+  const bool nest = false;
+
+  {
+    // output information
+    std::array<int64_t, 4> pix_i;
+    std::array<double, 4> wgt_i;
+    for (int64_t i = 0; i < lon.size(0); ++i) {
+      t_ang ptg = latlon2ang(lat_a[i], lon_a[i]);
+      interpolation_weights<nest>(ptg, pix_i, wgt_i, nside);
+      // TODO flip i and j to get better cache performance
+      for (int j= 0; j < 4; ++j){
+        pix_a[j][i] = pix_i[j];
+        weight_a[j][i] = wgt_i[j];
+      }
+    };
+  }
+  return std::vector{pix, weight};
+}
 
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
@@ -174,4 +208,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("hpd2loc", &hpd2loc_wrapper, "loc is in z, s, phi");
   m.def("hpc2loc", &hpc2loc_wrapper, "hpc2loc(x, y, f) -> z, s, phi");
   m.def("corners", &corners, "");
-}
+  m.def("get_interp_weights", &get_interp_weights, "");
+};

@@ -119,3 +119,4 @@ test_grid_visualize.png
 public/
 
 a.out
+*.o

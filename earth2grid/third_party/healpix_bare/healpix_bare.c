@@ -22,7 +22,7 @@
 #include <math.h>
 #include "healpix_bare.h"
 
-#define pi 3.141592653589793238462643383279502884197
+const double pi = 3.141592653589793238462643383279502884197;
 
 static const int jrll[] = { 2,2,2,2,3,3,3,3,4,4,4,4 };
 static const int jpll[] = { 1,3,5,7,0,2,4,6,1,3,5,7 };
