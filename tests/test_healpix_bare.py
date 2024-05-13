@@ -1,4 +1,3 @@
-import healpy
 import numpy
 import numpy as np
 import pytest
@@ -7,63 +6,50 @@ import torch
 import earth2grid.healpix_bare
 
 
-@pytest.mark.parametrize("func", ["ring2nest", "nest2ring"])
-def test_ring2nest(func):
+def test_ring2nest():
     n = 8
     i = torch.arange(n * n * 12)
 
-    bare_func = getattr(earth2grid.healpix_bare, func)
-    healpy_func = getattr(healpy, func)
-
-    answer = bare_func(n, i)
-    expected = healpy_func(n, i)
-    numpy.testing.assert_array_equal(answer, expected)
+    j = earth2grid.healpix_bare.ring2nest(n, i)
+    i_round = earth2grid.healpix_bare.nest2ring(n, j)
+    numpy.testing.assert_array_equal(i, i_round)
 
 
 @pytest.mark.parametrize("nest", [True, False])
 @pytest.mark.parametrize("lonlat", [True, False])
-def test_pix2ang(nest, lonlat, tmp_path):
-    n = 32
+def test_pix2ang(nest, lonlat, regtest):
+    n = 2
     i = torch.arange(n * n * 12)
 
     x, y = earth2grid.healpix_bare.pix2ang(n, i, nest=nest, lonlat=lonlat)
-    xe, ye = healpy.pix2ang(n, i, nest=nest, lonlat=lonlat)
-    import matplotlib.pyplot as plt
+    print("x", file=regtest)
+    np.savetxt(regtest, x, fmt="%.5e")
 
-    try:
-        numpy.testing.assert_allclose(x, xe)
-        numpy.testing.assert_allclose(y, ye)
-    except AssertionError as e:
-        healpy.cartview(x, sub=(2, 2, 1), nest=nest)
-        healpy.cartview(xe, sub=(2, 2, 2), nest=nest)
-        healpy.cartview(y, sub=(2, 2, 3), nest=nest)
-        healpy.cartview(ye, sub=(2, 2, 4), nest=nest)
-
-        plt.tight_layout()
-        path = tmp_path / "image.png"
-        plt.savefig(path, bbox_inches="tight")
-        e.add_note(str(path))
-        raise e
+    print("y", file=regtest)
+    np.savetxt(regtest, y, fmt="%.5e")
 
 
-def test_hpc2loc():
+def savetxt(file, array):
+    np.savetxt(file, array, fmt="%.5e")
+
+
+def test_hpc2loc(regtest):
     x = torch.tensor([0.0]).double()
     y = torch.tensor([0.0]).double()
     f = torch.tensor([0])
 
     loc = earth2grid.healpix_bare.hpc2loc(x, y, f)
     vec = earth2grid.healpix_bare.loc2vec(loc)
-    print(vec)
-    print(healpy.boundaries(1, 1, 1, nest=True))
+    for array in vec:
+        savetxt(regtest, array)
 
 
-def test_boundaries():
+def test_boundaries(regtest):
     ipix = torch.tensor([0])
     boundaries = earth2grid.healpix_bare.corners(1, ipix, False)
     assert not torch.any(torch.isnan(boundaries)), boundaries
-
-    expected = healpy.boundaries(1, ipix, 1)
-    np.testing.assert_allclose(boundaries, np.roll(expected, 2, axis=-1))
+    assert boundaries.shape == (1, 3, 4)
+    savetxt(regtest, boundaries.flatten())
 
 
 def test_get_interp_weights_vector():

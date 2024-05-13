@@ -24,7 +24,6 @@ classifiers = [
 
 dependencies = [
     "einops>=0.7.0",
-    "healpy>=0.0.0",
     "netCDF4>=1.6.5",
     "numpy>=1.23.3",
     "pandas>=1.5.0",
