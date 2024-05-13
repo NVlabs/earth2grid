@@ -12,26 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Protocol
-
-
-class Grid(Protocol):
-    """lat and lon should be broadcastable arrays"""
-
-    @property
-    def lat(self):
-        pass
-
-    @property
-    def lon(self):
-        pass
-
-    @property
-    def shape(self) -> tuple[int, ...]:
-        pass
-
-    def visualize(self, data):
-        pass
-
-    def to_pyvista(self):
-        pass

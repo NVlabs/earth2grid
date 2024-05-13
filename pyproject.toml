@@ -7,7 +7,7 @@ name = "earth2-grid"
 version = "2024.5.1"
 description = "Utilities for working with geographic data defined on various grids."
 readme = "README.md"
-license = { file="LICENSE" }
+license = { file="LICENSE.txt" }
 authors = [
     { name = "NVIDIA", email = "nbrenowitz@nvidia.com" }
 ]

@@ -3,13 +3,16 @@ sources = earth2grid
 .PHONY: test format lint unittest coverage pre-commit clean
 test: format lint unittest
 
-format:
+.PHONY: license
+license:
+	python tests/_license/header_check.py
+
+format: license
 	isort $(sources) tests
 	black $(sources) tests
 
-lint:
-	flake8 $(sources) tests
-	mypy $(sources) tests
+lint: license
+	pre-commit run --all-files
 
 unittest:
 	coverage run --source earth2grid/ -m pytest

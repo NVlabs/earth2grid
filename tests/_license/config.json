@@ -1,0 +1,13 @@
+{
+    "copyright_file": "header.txt",
+    "dir": "../../",
+    "exclude-dir": [
+        "../../build/",
+        "../../docs/",
+        "../../earth2grid/third_party",
+        "."
+      ],
+    "include-ext": [
+        ".py"
+    ]
+  }
