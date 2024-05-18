@@ -38,9 +38,13 @@ def test_latlon_regridder(with_channels, tmp_path):
     z = np.cos(10 * np.deg2rad(src.lat))
     z = torch.from_numpy(z)
     if with_channels:
-        z = z[None]
+        z = torch.stack([z, 0*z])
+
 
     out = regridder(z)
+
+    if out.ndim == 3:
+        out = out[0]
 
     assert out.shape[-2:] == (nlat, nlon)
 

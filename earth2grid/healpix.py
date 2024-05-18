@@ -156,9 +156,8 @@ class ApplyWeights(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         *shape, npix = x.shape
-
         x = x.view(-1, npix).T
-        interpolated = torch.nn.functional.embedding_bag(self.index, x, per_sample_weights=self.weight, mode="sum")
+        interpolated = torch.nn.functional.embedding_bag(self.index, x, per_sample_weights=self.weight, mode="sum").T
         return interpolated.view(shape + self.shape)
 
 
