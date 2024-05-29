@@ -39,7 +39,7 @@ src = earth2grid.latlon.equiangular_lat_lon_grid(32, 64)
 regrid = earth2grid.get_regridder(src, hpx)
 
 
-z = np.cos(np.deg2rad(src.lat[:, None])) * np.cos(np.deg2rad(src.lon))
+z = np.cos(np.deg2rad(src.lat)) * np.cos(np.deg2rad(src.lon))
 
 
 z_torch = torch.as_tensor(z)

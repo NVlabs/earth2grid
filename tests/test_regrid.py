@@ -72,7 +72,7 @@ def test_healpix_to_lat_lon(with_channels):
         lon = torch.from_numpy(lon)
         return torch.cos(torch.deg2rad(lat)) * torch.sin(2 * torch.deg2rad(lon))
 
-    z = f(src.lat[:, None], src.lon)
+    z = f(src.lat, src.lon)
     if with_channels:
         z = z[None]
     z_regridded = regrid(z)

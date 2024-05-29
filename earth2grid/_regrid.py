@@ -135,10 +135,10 @@ class RegridLatLon(torch.nn.Module):
         super().__init__()
         self._src_grid = src_grid
         self._dest_grid = dest_grid
-        self._lat_index = pandas.Index(src_grid.lat).get_indexer(dest_grid.lat)
+        self._lat_index = pandas.Index(src_grid.lat.ravel()).get_indexer(dest_grid.lat.ravel())
         assert not np.any(self._lat_index == -1)  # noqa
 
-        self._lon_index = pandas.Index(src_grid.lon).get_indexer(dest_grid.lon)
+        self._lon_index = pandas.Index(src_grid.lon.ravel()).get_indexer(dest_grid.lon.ravel())
         assert not np.any(self._lon_index == -1)  # noqa
 
     def forward(self, x):
@@ -191,8 +191,9 @@ def get_regridder(src: base.Grid, dest: base.Grid) -> torch.nn.Module:
         return RegridLatLon(src, dest)
     elif isinstance(src, LatLonGrid) and isinstance(dest, healpix.Grid):
         return _RegridFromLatLon(src, dest)
-    elif isinstance(src, healpix.Grid) and isinstance(dest, LatLonGrid):
-        return src.get_latlon_regridder(dest.lat, dest.lon)
+    elif isinstance(src, healpix.Grid):
+        lat, lon = np.broadcast_arrays(dest.lat, dest.lon)
+        return src.get_unstructured_regridder(lat, lon)
     elif isinstance(dest, healpix.Grid):
         return src.get_healpix_regridder(dest)  # type: ignore
 

@@ -249,12 +249,9 @@ class Grid(base.Grid):
         grid = pv.UnstructuredGrid(cells, celltypes, unique_points)
         return grid
 
-    def get_latlon_regridder(self, lat: np.ndarray, lon: np.ndarray):
-        latg, long = np.meshgrid(lat, lon, indexing="ij")
-        return self.get_unstructured_regridder(latg, long)
-
     def get_unstructured_regridder(self, lat: np.ndarray, lon: np.ndarray):
         """Get regridder to the specified lat and lon points"""
+        lat, lon = np.broadcast_arrays(lat, lon)
         i_ring, weights = healpix_bare.get_interp_weights(self._nside(), torch.tensor(lon), torch.tensor(lat))
         i_nest = healpix_bare.ring2nest(self._nside(), i_ring.ravel())
         i_me = torch.from_numpy(self._nest2me(i_nest.numpy())).view(i_ring.shape)

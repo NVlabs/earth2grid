@@ -34,7 +34,7 @@ class LatLonGrid(base.Grid):
 
     @property
     def lat(self):
-        return np.array(self._lat)
+        return np.array(self._lat)[:, None]
 
     @property
     def lon(self):
