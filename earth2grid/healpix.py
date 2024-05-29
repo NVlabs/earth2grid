@@ -249,7 +249,7 @@ class Grid(base.Grid):
         grid = pv.UnstructuredGrid(cells, celltypes, unique_points)
         return grid
 
-    def get_unstructured_regridder(self, lat: np.ndarray, lon: np.ndarray):
+    def get_bilinear_regridder_to(self, lat: np.ndarray, lon: np.ndarray):
         """Get regridder to the specified lat and lon points"""
         lat, lon = np.broadcast_arrays(lat, lon)
         i_ring, weights = healpix_bare.get_interp_weights(self._nside(), torch.tensor(lon), torch.tensor(lat))
@@ -269,7 +269,7 @@ class Grid(base.Grid):
 
     def get_healpix_regridder(self, dest: "Grid"):
         if self.level != dest.level:
-            return self.get_unstructured_regridder(dest.lat, dest.lon)
+            return self.get_bilinear_regridder_to(dest.lat, dest.lon)
 
         def regridder(x: torch.Tensor) -> torch.Tensor:
             return self.reorder(dest.pixel_order, x)

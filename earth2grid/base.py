@@ -14,6 +14,8 @@
 # limitations under the License.
 from typing import Protocol
 
+import numpy as np
+
 
 class Grid(Protocol):
     """lat and lon should be broadcastable arrays"""
@@ -29,6 +31,14 @@ class Grid(Protocol):
     @property
     def shape(self) -> tuple[int, ...]:
         pass
+
+    def get_bilinear_regridder_to(self, lat: np.ndarray, lon: np.ndarray):
+        """Return a regridder from `self` to lat/lon.
+
+        Args:
+            lat, lon: broadcastable arrays for the lat/lon
+        """
+        raise NotImplementedError()
 
     def visualize(self, data):
         pass
