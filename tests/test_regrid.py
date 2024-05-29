@@ -112,6 +112,7 @@ def test_latlon_to_latlon(reverse):
     src = earth2grid.latlon.LatLonGrid(lat[::-1] if reverse else lat, lon)
     dest = earth2grid.latlon.LatLonGrid(lat, lon)
     regrid = earth2grid.get_regridder(src, dest)
+    regrid.float()
 
     z = torch.zeros(src.shape)
     regrid(z)

@@ -42,11 +42,11 @@ class BilinearInterpolator(torch.nn.Module):
         # Ensure input coordinates are float for interpolation
         x_coords, y_coords = x_coords.float(), y_coords.float()
 
-        if torch.any(x_coords[1:] <= x_coords[:-1]):
-            raise ValueError("x_coords must be in increasing order.")
+        if torch.any(x_coords[1:] < x_coords[:-1]):
+            raise ValueError("x_coords must be in non-decreasing order.")
 
-        if torch.any(y_coords[1:] <= y_coords[:-1]):
-            raise ValueError("y_coords must be in increasing order.")
+        if torch.any(y_coords[1:] < y_coords[:-1]):
+            raise ValueError("y_coords must be in non-decreasing order.")
 
         # Find indices for the closest lower and upper bounds in x and y directions
         x_l_idx = torch.searchsorted(x_coords, x_query, right=True) - 1
@@ -179,7 +179,8 @@ class _RegridFromLatLon(torch.nn.Module):
         # only works for a global grid
         # TODO generalize this to local grids and add options for padding
         x = torch.cat([x, x[..., 0:1]], axis=-1)
-        return self._bilinear(x)
+        out = self._bilinear(x)
+        return out.view(out.shape[:-1] + self.shape)
 
 
 def equiangular_lat_lon_grid(nlat: int, nlon: int, includes_south_pole: bool = True) -> LatLonGrid:

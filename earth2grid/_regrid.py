@@ -14,8 +14,6 @@
 # limitations under the License.
 import einops
 import netCDF4 as nc
-import numpy as np
-import pandas
 import torch
 
 from earth2grid import base, healpix
@@ -55,30 +53,12 @@ class Identity(torch.nn.Module):
         return x
 
 
-class RegridLatLon(torch.nn.Module):
-    def __init__(self, src_grid: LatLonGrid, dest_grid: LatLonGrid):
-        super().__init__()
-        self._src_grid = src_grid
-        self._dest_grid = dest_grid
-        self._lat_index = pandas.Index(src_grid.lat.ravel()).get_indexer(dest_grid.lat.ravel())
-        assert not np.any(self._lat_index == -1)  # noqa
-
-        self._lon_index = pandas.Index(src_grid.lon.ravel()).get_indexer(dest_grid.lon.ravel())
-        assert not np.any(self._lon_index == -1)  # noqa
-
-    def forward(self, x):
-        if x.shape[-2:] != self._src_grid.shape:
-            raise ValueError(f"Input shape {x.shape} does not match grid shape" f"{self._src_grid.shape}")
-
-        return x[..., self._lat_index, :][..., self._lon_index]
-
-
 def get_regridder(src: base.Grid, dest: base.Grid) -> torch.nn.Module:
     """Get a regridder from `src` to `dest`"""
     if src == dest:
         return Identity()
     elif isinstance(src, LatLonGrid) and isinstance(dest, LatLonGrid):
-        return RegridLatLon(src, dest)
+        return src.get_bilinear_regridder_to(dest.lat, dest.lon)
     elif isinstance(src, LatLonGrid) and isinstance(dest, healpix.Grid):
         return src.get_bilinear_regridder_to(dest.lat, dest.lon)
     elif isinstance(src, healpix.Grid):
