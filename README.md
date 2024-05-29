@@ -1,13 +1,5 @@
 # Earth2 Grid Utilities
 
-
-
-
-[![pypi](https://img.shields.io/pypi/v/earth2-grid.svg)](https://pypi.org/project/earth2-grid/)
-[![python](https://img.shields.io/pypi/pyversions/earth2-grid.svg)](https://pypi.org/project/earth2-grid/)
-[![Build Status](https://github.com/waynerv/earth2-grid/actions/workflows/dev.yml/badge.svg)](https://github.com/waynerv/earth2-grid/actions/workflows/dev.yml)
-[![codecov](https://codecov.io/gh/waynerv/earth2-grid/branch/main/graphs/badge.svg)](https://codecov.io/github/waynerv/earth2-grid)
-
 <img src="docs/img/image.jpg" width="800px"/>
 
 
@@ -15,32 +7,20 @@ Utilities for working geographic data defined on various grids.
 
 Features:
 - regridding
+- Permissively licensed python healpix utilities
 
 Grids currently supported:
 - regular lat lon
 - HealPIX
 
-Under construction:
-- exporting meshes to visualization software (e.g. VTK)
-- neural network primitives for different grids:
-  - convolutional layers
-  - up/downsampling
-- staggered grids
-
-
 * Documentation: <https://earth-2.gitlab-master-pages.nvidia.com/earth2-grid>
-* GitHub: <https://github.com/waynerv/earth2-grid>
-* PyPI: <https://pypi.org/project/earth2-grid/>
-* Free software: BSD-3-Clause
+* GitHub: <https://github.com/NVlabs/earth2grid>
 
 ## Install
 
-
 ```
-# Install the CUDA healpix padding library
-git clone https://gitlab-master.nvidia.com/tkurth/healpixpad-pytorch
-git clone ssh://git@gitlab-master.nvidia.com:12051/earth-2/earth2-grid.git
-pip install  --no-build-isolation healpixpad-pytorch earth2-grid
+git clone https://github.com/NVlabs/earth2grid.git
+pip install --no-build-isolation earth2-grid
 ```
 
 ## Example
@@ -64,12 +44,3 @@ torch.Size([49152])
 >>> reshaped.shape
 torch.Size([12, 64, 64])
 ```
-
-
-## Features
-
-* TODO
-
-## Credits
-
-This package was created with [Cookiecutter](https://github.com/audreyr/cookiecutter) and the [waynerv/cookiecutter-pypackage](https://github.com/waynerv/cookiecutter-pypackage) project template.
