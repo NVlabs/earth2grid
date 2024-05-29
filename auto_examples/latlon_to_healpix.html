@@ -1,0 +1,186 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>HealPIX regridding &#8212; Earth2-Grid  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Plot grids with PyVista" href="pyvista_grids.html" />
+    <link rel="prev" title="HealPIX Image visualization" href="hpx2grid.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-latlon-to-healpix-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code</p>
+</div>
+<section class="sphx-glr-example-title" id="healpix-regridding">
+<span id="sphx-glr-auto-examples-latlon-to-healpix-py"></span><h1>HealPIX regridding<a class="headerlink" href="#healpix-regridding" title="Permalink to this heading">¶</a></h1>
+<p>In this notebook, I demonstrate bilinear regridding onto healpy grids in O(10)
+ms. this is a 3 order of magnitude speed-up compared to what Dale has reported.</p>
+<p>Now, lets define a healpix grid with indexing in the XY convention. we convert
+to NEST indexing in order to use the <cite>healpy.pix2ang</cite> to get the lat lon
+coordinates. This operation is near instant.</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+
+<span class="kn">import</span> <span class="nn">earth2grid</span>
+
+<span class="c1"># level is the resolution</span>
+<span class="n">level</span> <span class="o">=</span> <span class="mi">6</span>
+<span class="n">hpx</span> <span class="o">=</span> <span class="n">earth2grid</span><span class="o">.</span><span class="n">healpix</span><span class="o">.</span><span class="n">Grid</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">level</span><span class="p">,</span> <span class="n">pixel_order</span><span class="o">=</span><span class="n">earth2grid</span><span class="o">.</span><span class="n">healpix</span><span class="o">.</span><span class="n">XY</span><span class="p">())</span>
+<span class="n">src</span> <span class="o">=</span> <span class="n">earth2grid</span><span class="o">.</span><span class="n">latlon</span><span class="o">.</span><span class="n">equiangular_lat_lon_grid</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
+<span class="n">regrid</span> <span class="o">=</span> <span class="n">earth2grid</span><span class="o">.</span><span class="n">get_regridder</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">hpx</span><span class="p">)</span>
+
+
+<span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">lat</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">lon</span><span class="p">))</span>
+
+
+<span class="n">z_torch</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+<span class="n">z_hpx</span> <span class="o">=</span> <span class="n">regrid</span><span class="p">(</span><span class="n">z_torch</span><span class="p">)</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">a</span><span class="o">.</span><span class="n">pcolormesh</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">lon</span><span class="p">,</span> <span class="n">src</span><span class="o">.</span><span class="n">lat</span><span class="p">,</span> <span class="n">z</span><span class="p">)</span>
+<span class="n">a</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Lat Lon Grid&quot;</span><span class="p">)</span>
+
+<span class="n">b</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">hpx</span><span class="o">.</span><span class="n">lon</span><span class="p">,</span> <span class="n">hpx</span><span class="o">.</span><span class="n">lat</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">z_hpx</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+<span class="n">b</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Healpix&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<img src="../_images/sphx_glr_latlon_to_healpix_001.png" srcset="../_images/sphx_glr_latlon_to_healpix_001.png" alt="Lat Lon Grid, Healpix" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>Text(0.5, 1.0, &#39;Healpix&#39;)
+</pre></div>
+</div>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">nside</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="n">level</span>
+<span class="n">reshaped</span> <span class="o">=</span> <span class="n">z_hpx</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="n">nside</span><span class="p">,</span> <span class="n">nside</span><span class="p">)</span>
+<span class="n">lat_r</span> <span class="o">=</span> <span class="n">hpx</span><span class="o">.</span><span class="n">lat</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="n">nside</span><span class="p">,</span> <span class="n">nside</span><span class="p">)</span>
+<span class="n">lon_r</span> <span class="o">=</span> <span class="n">hpx</span><span class="o">.</span><span class="n">lon</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="n">nside</span><span class="p">,</span> <span class="n">nside</span><span class="p">)</span>
+
+<span class="n">tile</span> <span class="o">=</span> <span class="mi">11</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">sharex</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">sharey</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">axs</span> <span class="o">=</span> <span class="n">axs</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+<span class="k">for</span> <span class="n">tile</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
+    <span class="n">axs</span><span class="p">[</span><span class="n">tile</span><span class="p">]</span><span class="o">.</span><span class="n">pcolormesh</span><span class="p">(</span><span class="n">lon_r</span><span class="p">[</span><span class="n">tile</span><span class="p">],</span> <span class="n">lat_r</span><span class="p">[</span><span class="n">tile</span><span class="p">],</span> <span class="n">reshaped</span><span class="p">[</span><span class="n">tile</span><span class="p">])</span>
+</pre></div>
+</div>
+<img src="../_images/sphx_glr_latlon_to_healpix_002.png" srcset="../_images/sphx_glr_latlon_to_healpix_002.png" alt="latlon to healpix" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>/Users/nbrenowitz/workspace/nvidia/earth2grid/examples/sphinx_gallery/latlon_to_healpix.py:66: UserWarning: The input coordinates to pcolormesh are interpreted as cell centers, but are not monotonically increasing or decreasing. This may lead to incorrectly calculated cell edges, in which case, please supply explicit cell edges to pcolormesh.
+  axs[tile].pcolormesh(lon_r[tile], lat_r[tile], reshaped[tile])
+</pre></div>
+</div>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 0.666 seconds)</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-latlon-to-healpix-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/f6888b7c20ca92b13107eb2bef6349b7/latlon_to_healpix.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">latlon_to_healpix.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/326f1e4f381185b5da31cfd0fc7fb40e/latlon_to_healpix.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">latlon_to_healpix.py</span></code></a></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Earth2-Grid</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Examples</a><ul>
+      <li>Previous: <a href="hpx2grid.html" title="previous chapter">HealPIX Image visualization</a></li>
+      <li>Next: <a href="pyvista_grids.html" title="next chapter">Plot grids with PyVista</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2024, NVIDIA Research.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.2.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/auto_examples/latlon_to_healpix.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
