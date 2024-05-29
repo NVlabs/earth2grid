@@ -1,5 +1,5 @@
 # Changelog
 
-## v2024.5.1
+## v2024.5.2
 
-* First tag
+- First publicly available release
