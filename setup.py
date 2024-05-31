@@ -24,7 +24,7 @@ def get_compiler():
     try:
         # Try to get the compiler path from the CC environment variable
         # If not set, it will default to gcc (which could be symlinked to clang or g++)
-        compiler = subprocess.check_output(["gcc", "--version"], universal_newlines=True)
+        compiler = subprocess.check_output(["gcc", "--version"], universal_newlines=True)  # noqa: S603, S607
 
         if "clang" in compiler:
             return "clang"

@@ -118,7 +118,7 @@ class HEALPixPadding(th.nn.Module):
         c: th.Tensor,
         t: th.Tensor,
         tl: th.Tensor,
-        l: th.Tensor,
+        l: th.Tensor,  # noqa: E741
         bl: th.Tensor,
         b: th.Tensor,
         br: th.Tensor,
@@ -156,7 +156,7 @@ class HEALPixPadding(th.nn.Module):
         c: th.Tensor,
         t: th.Tensor,
         tl: th.Tensor,
-        l: th.Tensor,
+        l: th.Tensor,  # noqa: E741
         bl: th.Tensor,
         b: th.Tensor,
         br: th.Tensor,
@@ -193,7 +193,7 @@ class HEALPixPadding(th.nn.Module):
         c: th.Tensor,
         t: th.Tensor,
         tl: th.Tensor,
-        l: th.Tensor,
+        l: th.Tensor,  # noqa: E741
         bl: th.Tensor,
         b: th.Tensor,
         br: th.Tensor,

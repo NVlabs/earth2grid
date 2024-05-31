@@ -238,8 +238,10 @@ class Grid(base.Grid):
         points = healpix_bare.corners(nside, torch.from_numpy(pix), True).numpy()
         out = einops.rearrange(points, "n d s -> (n s) d")
         unique_points, inverse = np.unique(out, return_inverse=True, axis=0)
-        assert unique_points.ndim == 2
-        assert unique_points.shape[1] == 3
+        if unique_points.ndim != 2:
+            raise ValueError(f"unique_points.ndim should be 2, got {unique_points.ndim}.")
+        if unique_points.shape[1] != 3:
+            raise ValueError(f"unique_points.shape[1] should be 3, got {unique_points.shape[1]}.")
         inverse = einops.rearrange(inverse, "(n s) -> n s", n=pix.size)
         n, s = inverse.shape
         cells = np.ones_like(inverse, shape=(n, s + 1))
@@ -335,7 +337,8 @@ def _rotate_index(nside: int, rotations: int, i):
     # Reduce k to its equivalent in the range [0, 3]
     k = rotations % 4
 
-    assert 0 <= k < 4
+    if k < 0 or k >= 4:
+        raise ValueError(f"k not in [0, 3], got {k}")
 
     # Apply the rotation based on k
     if k == 1:  # 90 degrees counterclockwise
@@ -399,13 +402,15 @@ def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
 
     """
     px, py = padding
-    assert px == py
+    if px != py:
+        raise ValueError(f"Padding should be equal in x and y, got px={px}, py={py}")
 
     n, c, x, y = input.shape
     npix = input.size(-1)
     nside2 = npix // 12
     nside = int(math.sqrt(nside2))
-    assert nside**2 * 12 == npix
+    if nside**2 * 12 != npix:
+        raise ValueError(f"Incompatible npix ({npix}) and nside ({nside})")
 
     input = einops.rearrange(input, "n c () (f x y) -> (n c) f x y", f=12, x=nside)
     input = pad(input, px)
