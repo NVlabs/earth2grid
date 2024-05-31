@@ -8,7 +8,7 @@ license:
 	python tests/_license/header_check.py
 
 format: license
-	isort $(sources) tests
+	ruff check --fix $(sources) tests
 	black $(sources) tests
 
 lint: license
