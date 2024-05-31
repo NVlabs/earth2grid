@@ -27,12 +27,13 @@ pip install --no-build-isolation earth2-grid
 
 ```
 >>> import earth2grid
+>>> import torch
 ... # level is the resolution
 ... level = 6
-... hpx = earth2grid.healpix.Grid(level=level, pixel_order=earth2grid.healpix.PixelOrder.XY)
+... hpx = earth2grid.healpix.Grid(level=level, pixel_order=earth2grid.healpix.XY())
 ... src = earth2grid.latlon.equiangular_lat_lon_grid(32, 64)
-... z_torch = torch.as_tensor(z)
-... z_torch = torch.as_tensor(z)
+... z_torch = torch.cos(torch.deg2rad(torch.tensor(src.lat)))
+... z_torch = z_torch.broadcast_to(src.shape)
 >>> regrid = earth2grid.get_regridder(src, hpx)
 >>> z_hpx = regrid(z_torch)
 >>> z_hpx.shape
