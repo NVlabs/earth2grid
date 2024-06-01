@@ -9,6 +9,30 @@ on:
       - main
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        apt-get update && apt-get install -y make
+        python -m pip install --upgrade pip
+        pip install pre-commit
+
+    - name: Install pre-commit hooks
+      run: |
+        pre-commit install
+
+    - name: Run lint
+      run: |
+        make lint
   build:
 
     runs-on: ubuntu-latest
@@ -18,16 +42,11 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
-    - name: Install dependencies
-      run: |
-        apt-get install -y build-essential
-    - name: lint
-      run: make lint
     - name: Build package
       run: |
+        apt-get update && apt-get install -y build-essential
         python -m pip install --upgrade pip
         pip install --no-build-isolation .
-        apt-get install -y build-essential
     - name: Run tests
       run: make unittest
     - name: coverage
