@@ -16,7 +16,8 @@ lint: license
 
 unittest:
 	coverage run --source earth2grid/ -m pytest
-	coverage run --source earth2grid/ -a -m pytest --doctest-modules earth2grid/ -vv
+	# requires vtk so don't run in ci
+	# coverage run --source earth2grid/ -a -m pytest --doctest-modules earth2grid/ -vv
 
 coverage:
 	coverage report
