@@ -1,0 +1,147 @@
+[build-system]
+requires = ["setuptools>=40.8.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "earth2-grid"
+version = "2024.5.2"
+description = "Utilities for working with geographic data defined on various grids."
+readme = "README.md"
+license = { file="LICENSE.txt" }
+authors = [
+    { name = "NVIDIA", email = "nbrenowitz@nvidia.com" }
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+]
+
+dependencies = [
+    "einops>=0.7.0",
+    "netCDF4>=1.6.5",
+    "numpy>=1.23.3",
+    "pyvista>=0.43.2",
+    "torch>=2.0.1",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/waynerv/earth2-grid"
+
+
+[project.optional-dependencies]
+test = [
+    "pytest>=6.2.4",
+    "black>=21.5b2",
+    "coverage>=7.0.0",
+    "isort>=5.8.0",
+    "mypy>=0.900",
+    "flake8>=3.9.2",
+    "flake8-docstrings>=1.6.0",
+    "pytest-cov>=2.12.0",
+    "pytest-regtest>=1.5.1,<2"
+]
+dev = [
+    "tox>=3.20.1",
+    "pre-commit>=2.12.0",
+    "virtualenv>=20.2.2",
+    "pip>=20.3.1",
+    "twine>=3.3.0",
+    "toml>=0.10.2",
+    "bump2version>=1.0.1",
+    "ruff>=0.1.5"
+]
+doc = [
+    "sphinx",
+    "myst-parser",
+    "sphinx_gallery",
+]
+
+[tool.black]
+line-length = 120
+skip-string-normalization = true
+target-version = ['py36', 'py37', 'py38']
+include = '\\.pyi?$'
+exclude = '''
+/(
+    \\.eggs
+  | \\.git
+  | \\.hg
+  | \\.mypy_cache
+  | \\.tox
+  | \\.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.ruff]
+# Enable flake8/pycodestyle (`E`), Pyflakes (`F`), flake8-bandit (`S`),
+# isort (`I`), and performance 'PERF' rules.
+select = ["E", "F", "S", "I", "PERF"]
+fixable = ["ALL"]
+
+# Never enforce `E402`, `E501` (line length violations),
+# and `S311` (random number generators)
+ignore = ["E501", "S311"]
+
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+
+# Same as Black.
+line-length = 120
+indent-width = 4
+
+target-version = 'py38'
+
+[tool.ruff.per-file-ignores]
+# Ignore `F401` (import violations) in all `__init__.py` files, and in `docs/*.py`.
+"__init__.py" = ["F401", "E402"]
+"docs/*.py" = ["F401"]
+"**/{tests,docs,tools}/*" = ["E402"]
+"**/tests/**/*.py" = [
+    # at least this three should be fine in tests:
+    "S101", # asserts allowed in tests...
+    "ARG", # Unused function args -> fixtures nevertheless are functionally relevant...
+    "FBT", # Don't care about booleans as positional arguments in tests, e.g. via @pytest.mark.parametrize()
+]
+"**/test_*.py" = [
+    # at least this three should be fine in tests:
+    "S101", # asserts allowed in tests...
+    "ARG", # Unused function args -> fixtures nevertheless are functionally relevant...
+    "FBT", # Don't care about booleans as positional arguments in tests, e.g. via @pytest.mark.parametrize()
+]
