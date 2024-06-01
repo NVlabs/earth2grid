@@ -14,7 +14,7 @@ Grids currently supported:
 - regular lat lon
 - HealPIX
 
-* Documentation: <https://nvlabs.github.io/earth2grid>
+* Documentation: <https://nvlabs.github.io/earth2grid/>
 * GitHub: <https://github.com/NVlabs/earth2grid>
 
 ## Install
