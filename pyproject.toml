@@ -38,11 +38,12 @@ dependencies = [
 test = [
     "pytest>=6.2.4",
     "black>=21.5b2",
+    "cvoerage>=7.0.0",
     "isort>=5.8.0",
     "mypy>=0.900",
     "flake8>=3.9.2",
     "flake8-docstrings>=1.6.0",
-    "pytest-cov>=2.12.0"
+    "pytest-cov>=2.12.0",
 ]
 dev = [
     "tox>=3.20.1",
