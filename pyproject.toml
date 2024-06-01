@@ -44,6 +44,7 @@ test = [
     "flake8>=3.9.2",
     "flake8-docstrings>=1.6.0",
     "pytest-cov>=2.12.0",
+    "pytest-regtest>=1.5.1"
 ]
 dev = [
     "tox>=3.20.1",
