@@ -28,5 +28,5 @@ jobs:
         apt-get install -y build-essential
     - name: Run tests
       run: make unittest
-    - name: coverage:
+    - name: coverage
       run: make coverage
