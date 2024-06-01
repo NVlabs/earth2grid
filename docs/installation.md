@@ -18,6 +18,7 @@ $ curl -OJL https://github.com/NVlabs/earth2-grid/tarball/master
 Once you have a copy of the source, you can install it with:
 
 ``` console
+$ cd earth2grid
 $ pip install --no-build-isolation .
 ```
 
