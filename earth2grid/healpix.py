@@ -48,13 +48,8 @@ try:
 except ImportError:
     pv = None
 
-from earth2grid import base
+from earth2grid import base, healpixpad
 from earth2grid.third_party.zephyr.healpix import healpix_pad
-
-try:
-    import healpixpad
-except ImportError:
-    healpixpad = None
 
 __all__ = ["pad", "PixelOrder", "XY", "Compass", "Grid", "HEALPIX_PAD_XY", "conv2d"]
 
@@ -85,7 +80,7 @@ def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
         torch.Size([1, 12, 18, 18])
 
     """
-    if healpixpad is None or x.device.type != 'cuda':
+    if x.device.type != 'cuda':
         return healpix_pad(x, padding)
     else:
         return healpixpad.HEALPixPadFunction.apply(x.unsqueeze(2), padding).squeeze(2)

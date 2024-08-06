@@ -54,7 +54,11 @@ else:
 src_files = [
     "earth2grid/csrc/healpix_bare_wrapper.cpp",
 ]
-
+cuda_src_files = [
+    "earth2grid/csrc/healpixpad/healpixpad_cuda.cpp",
+    "earth2grid/csrc/healpixpad/healpixpad_cuda_fwd.cu",
+    "earth2grid/csrc/healpixpad/healpixpad_cuda_bwd.cu",
+]
 setup(
     name='earth2grid',
     ext_modules=[
@@ -63,7 +67,12 @@ setup(
             src_files,
             extra_compile_args=extra_compile_args,
             include_dirs=[os.path.abspath("earth2grid/csrc"), os.path.abspath("earth2grid/third_party/healpix_bare")],
-        )
+        ),
+        cpp_extension.CUDAExtension(
+            name='healpixpad_cuda',
+            sources=cuda_src_files,
+            extra_compile_args={'nvcc': ['-O2']},
+        ),
     ],
     cmdclass={'build_ext': cpp_extension.BuildExtension},
 )
