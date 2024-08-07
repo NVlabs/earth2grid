@@ -16,8 +16,9 @@
 # Written by Mauro Bisson <maurob@nvidia.com> and Thorsten Kurth <tkurth@nvidia.com>.
 
 
-import torch
 import healpixpad_cuda
+import torch
+
 
 class HEALPixPadFunction(torch.autograd.Function):
     """
