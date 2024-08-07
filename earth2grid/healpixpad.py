@@ -24,6 +24,7 @@ class HEALPixPadFunction(torch.autograd.Function):
     """
     A torch autograd class that pads a healpixpad xy tensor
     """
+
     @staticmethod
     def forward(ctx, input, pad):
         """
@@ -43,7 +44,9 @@ class HEALPixPadFunction(torch.autograd.Function):
         """
         ctx.pad = pad
         if len(input.shape) != 5:
-            raise ValueError(f"Input tensor must be have 4 dimensions (B, F, C, H, W), got {len(input.shape)} dimensions instead")
+            raise ValueError(
+                f"Input tensor must be have 4 dimensions (B, F, C, H, W), got {len(input.shape)} dimensions instead"
+            )
         # make contiguous
         input = input.contiguous()
         out = healpixpad_cuda.forward(input, pad)[0]
@@ -56,6 +59,7 @@ class HEALPixPadFunction(torch.autograd.Function):
         out = healpixpad_cuda.backward(grad, pad)[0]
         return out, None
 
+
 class HEALPixPad(torch.nn.Module):
     """
     A torch module that handles padding of healpixpad xy tensors
@@ -65,6 +69,7 @@ class HEALPixPad(torch.nn.Module):
     padding: int
         The amount to pad the tensors
     """
+
     def __init__(self, padding: int):
         super(HEALPixPad, self).__init__()
         self.padding = padding
@@ -84,4 +89,3 @@ class HEALPixPad(torch.nn.Module):
         torch.tensor: The padded tensor
         """
         return HEALPixPadFunction.apply(input, self.padding)
-

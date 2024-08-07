@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <cuda_runtime.h>
 #include "cudamacro.h"
-#include "healpixpad.h" 
+#include "healpixpad.h"
 
 #define THREADS  64
 
@@ -66,7 +66,7 @@ __global__ void HEALPixPadBck_bulk_k(const int padSize,
   if (tid >= ((long long)dimI)*dimJ*dimK*dimL*dimM) {
     return;
   }
-  
+
   const long long sliceId = tid / (dimM*dimL);
 
   const int i = (tid % (dimM*dimL)) / dimM;
@@ -747,9 +747,9 @@ void HEALPixPad_bwd_fp32(int padSize,
 			 float *dataIn_d,
 			 float *dataOut_d,
 			 cudaStream_t stream) {
-  
+
   HEALPixPadBck<float>(padSize, dimI, dimJ, dimK, dimL, dimM, dataIn_d, dataOut_d, stream);
-  
+
   return;
 }
 
@@ -762,9 +762,9 @@ void HEALPixPad_bwd_fp64(int padSize,
 			 double *dataIn_d,
 			 double *dataOut_d,
 			 cudaStream_t stream) {
-  
+
   HEALPixPadBck<double>(padSize, dimI, dimJ, dimK, dimL, dimM, dataIn_d, dataOut_d, stream);
-  
+
   return;
 }
 
@@ -834,4 +834,4 @@ std::vector<torch::Tensor> healpixpad_cuda_backward(
   }
 
   return {goutput};
-}  
+}

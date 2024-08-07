@@ -33,7 +33,7 @@
 #define DIV_UP(a,b) (((a)+((b)-1))/(b))
 
 // All coordinates are w.r.t. a face[dimK][dimL][dimM]:
-//      
+//
 //     ^ k-axis
 //    /
 //   *---------*
@@ -669,7 +669,7 @@ void HEALPixPad_fp32(
 		     cudaStream_t stream) {
 
   HEALPixPadFwd<float>(padSize, dimI, dimJ, dimK, dimL, dimM, dataIn_d, dataOut_d, stream);
-  
+
   return;
 }
 
@@ -706,7 +706,7 @@ std::vector<torch::Tensor> healpixpad_cuda_forward(
 
   // get cuda stream:
   cudaStream_t my_stream = c10::cuda::getCurrentCUDAStream(input.device().index()).stream();
-  
+
   switch (input.scalar_type()) {
   case torch::ScalarType::Double:
     HEALPixPadFwd<double>(
@@ -760,4 +760,3 @@ std::vector<torch::Tensor> healpixpad_cuda_forward(
 
   return {output};
 }
-

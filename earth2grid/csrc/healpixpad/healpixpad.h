@@ -61,7 +61,7 @@ void HEALPixPad_bwd_fp64(int dimI, // batch size
 			 double *dataIn_d,
 			 double *dataOut_d,
 			 cudaStream_t stream=0);
-  
+
 #ifdef __cplusplus
 }
 #endif
