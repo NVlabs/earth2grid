@@ -820,6 +820,17 @@ std::vector<torch::Tensor> healpixpad_cuda_backward(
 			    goutput.data_ptr<at::Half>(),
 			    my_stream);
     break;
+  case torch::ScalarType::BFloat16:
+    HEALPixPadBck<at::BFloat16>(pad,
+			    batch_size,
+			    num_faces,
+			    num_channels,
+			    face_size,
+			    face_size,
+			    ginput.data_ptr<at::BFloat16>(),
+			    goutput.data_ptr<at::BFloat16>(),
+			    my_stream);
+    break;
   }
 
   return {goutput};
