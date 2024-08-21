@@ -143,3 +143,18 @@ def test_conv2d():
     weight = torch.zeros(cout, cin, 3, 3)
     out = healpix.conv2d(x, weight, padding=(1, 1))
     assert out.shape == (n, cout, 1, npix)
+
+
+def test_latlon_cuda_set_device_regression():
+    """See https://github.com/NVlabs/earth2grid/issues/6"""
+
+    if torch.cuda.device_count() == 0:
+        pytest.skip()
+
+    default = torch.get_default_device()
+    try:
+        torch.set_default_device("cuda")
+        grid = healpix.Grid(4)
+        grid.lat
+    finally:
+        torch.set_default_device(default)
