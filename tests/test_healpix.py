@@ -158,3 +158,18 @@ def test_reorder(nside, src_pixel_order, dest_pixel_order, device):
     out = healpix.reorder(data, src_pixel_order, dest_pixel_order)
     out = healpix.reorder(out, dest_pixel_order, src_pixel_order)
     assert torch.all(data == out), data - out
+
+
+def test_latlon_cuda_set_device_regression():
+    """See https://github.com/NVlabs/earth2grid/issues/6"""
+
+    if torch.cuda.device_count() == 0:
+        pytest.skip()
+
+    default = torch.get_default_device()
+    try:
+        torch.set_default_device("cuda")
+        grid = healpix.Grid(4)
+        grid.lat
+    finally:
+        torch.set_default_device(default)
