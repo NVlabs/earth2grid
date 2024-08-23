@@ -14,6 +14,7 @@
 # limitations under the License.
 import os
 import subprocess
+import warnings
 from typing import List
 
 from setuptools import setup
@@ -59,20 +60,32 @@ cuda_src_files = [
     "earth2grid/csrc/healpixpad/healpixpad_cuda_fwd.cu",
     "earth2grid/csrc/healpixpad/healpixpad_cuda_bwd.cu",
 ]
-setup(
-    name='earth2grid',
-    ext_modules=[
-        cpp_extension.CppExtension(
-            'earth2grid._healpix_bare',
-            src_files,
-            extra_compile_args=extra_compile_args,
-            include_dirs=[os.path.abspath("earth2grid/csrc"), os.path.abspath("earth2grid/third_party/healpix_bare")],
-        ),
-        cpp_extension.CUDAExtension(
+
+ext_modules = [
+    cpp_extension.CppExtension(
+        'earth2grid._healpix_bare',
+        src_files,
+        extra_compile_args=extra_compile_args,
+        include_dirs=[os.path.abspath("earth2grid/csrc"), os.path.abspath("earth2grid/third_party/healpix_bare")],
+    ),
+]
+
+try:
+    from torch.utils.cpp_extension import CUDAExtension
+
+    ext_modules.append(
+        CUDAExtension(
             name='healpixpad_cuda',
             sources=cuda_src_files,
             extra_compile_args={'nvcc': ['-O2']},
         ),
-    ],
+    )
+except ImportError:
+    warnings.warn("Cuda extensions for torch not found, skipping cuda healpix padding module")
+
+
+setup(
+    name='earth2grid',
+    ext_modules=ext_modules,
     cmdclass={'build_ext': cpp_extension.BuildExtension},
 )
