@@ -36,6 +36,7 @@ dependencies = [
 [project.optional-dependencies]
 viz = [
     "pyvista>=0.43.2",
+    "matplotlib",
 ]
 test = [
     "pytest>=6.2.4",
