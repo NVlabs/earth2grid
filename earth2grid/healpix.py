@@ -33,6 +33,7 @@ when looking down on the face.
 """
 
 import math
+import warnings
 from dataclasses import dataclass
 from enum import Enum
 from typing import Union
@@ -48,13 +49,17 @@ try:
 except ImportError:
     pv = None
 
-from earth2grid import base
-from earth2grid.third_party.zephyr.healpix import healpix_pad
-
 try:
-    import healpixpad
+    import healpixpad_cuda
+
+    healpixpad_cuda_avail = True
 except ImportError:
-    healpixpad = None
+    healpixpad_cuda_avail = False
+    warnings.warn("healpixpad_cuda module not available, reverting to CPU for all padding routines")
+
+
+from earth2grid import base
+from earth2grid.third_party.zephyr.healpix import healpix_pad as heapixpad_cpu
 
 try:
     import cuhpx
@@ -69,7 +74,7 @@ def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
     Pad each face consistently with its according neighbors in the HEALPix
 
     Args:
-        x: The input tensor of shape [N, F, H, W]
+        x: The input tensor of shape [N, F, H, W] or [N, F, C, H, W]
         padding: the amount of padding
 
     Returns:
@@ -90,10 +95,12 @@ def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
         torch.Size([1, 12, 18, 18])
 
     """
-    if healpixpad is None or x.device.type != 'cuda':
-        return healpix_pad(x, padding)
+    if x.device.type != 'cuda' or not healpixpad_cuda_avail:
+        return heapixpad_cpu(x, padding)
+    elif x.ndim == 5:
+        return HEALPixPadFunction.apply(x, padding)
     else:
-        return healpixpad.HEALPixPadFunction.apply(x.unsqueeze(2), padding).squeeze(2)
+        return HEALPixPadFunction.apply(x.unsqueeze(2), padding).squeeze(2)
 
 
 def _apply_cuhpx_remap(func, x, **kwargs):
@@ -383,6 +390,69 @@ class Grid(base.Grid):
                 if face != -1:
                     output[j * nside : (j + 1) * nside, i * nside : (i + 1) * nside] = x[face]
         return output
+
+
+class HEALPixPadFunction(torch.autograd.Function):
+    """
+    A torch autograd class that pads a healpixpad xy tensor
+    """
+
+    @staticmethod
+    def forward(ctx, input, pad):
+        """
+        The forward pass of the padding class
+
+        Parameters
+        ----------
+        input: torch.tensor
+            The tensor to pad, must have 5 dimensions and be in (B, F, C, H, W) format
+            where F == 12 and H == W
+        pad: int
+            The amount to pad each face of the tensor
+
+        Returns
+        -------
+        torch.tensor: The padded tensor
+        """
+        ctx.pad = pad
+        if input.ndim != 5:
+            raise ValueError(
+                f"Input tensor must be have 5 dimensions (B, F, C, H, W), got {len(input.shape)} dimensions instead"
+            )
+        if input.shape[1] != 12:
+            raise ValueError(
+                f"Input tensor must be have 5 dimensions (B, F, C, H, W), with F == 12, got {input.shape[1]}"
+            )
+        if input.shape[3] != input.shape[4]:
+            raise ValueError(
+                f"Input tensor must be have 5 dimensions (B, F, C, H, W), with H == @, got {input.shape[3]},  {input.shape[4]}"
+            )
+        # make contiguous
+        input = input.contiguous()
+        out = healpixpad_cuda.forward(input, pad)[0]
+        return out
+
+    @staticmethod
+    def backward(ctx, grad):
+        """
+        The forward pass of the padding class
+
+        Parameters
+        ----------
+        input: torch.tensor
+            The tensor to pad, must have 5 dimensions and be in (B, F, C, H, W) format
+            where F == 12 and H == W
+        pad: int
+            The amount to pad each face of the tensor
+
+        Returns
+        -------
+        torch.tensor: The padded tensor
+        """
+        pad = ctx.pad
+        grad = grad.contiguous()
+        out = healpixpad_cuda.backward(grad, pad)[0]
+        return out, None
 
 
 # nside = 2^ZOOM_LEVELS

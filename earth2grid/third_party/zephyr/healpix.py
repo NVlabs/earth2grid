@@ -23,20 +23,9 @@ Details on the HEALPix can be found at https://iopscience.iop.org/article/10.108
 
 """
 
-import sys
 
 import torch
 import torch as th
-
-sys.path.append('/home/disk/quicksilver/nacc/dlesm/HealPixPad')
-have_healpixpad = False
-try:
-    from healpixpad import HEALPixPad  # noqa
-
-    have_healpixpad = True
-except ImportError:
-    print("Warning, cannot find healpixpad module")
-    have_healpixpad = False
 
 
 def healpix_pad(x: torch.Tensor, padding: int, enable_nhwc: bool = False) -> torch.Tensor:
