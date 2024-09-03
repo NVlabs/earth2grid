@@ -133,6 +133,7 @@ class TestBilinearInterpolateNonUniform(unittest.TestCase):
 
         # Execute
         interpolator = BilinearInterpolator(x_coords, y_coords, x_query, y_query)
+        interpolator.to(input_tensor)
         result = interpolator(input_tensor)
 
         # Verify
@@ -142,13 +143,13 @@ class TestBilinearInterpolateNonUniform(unittest.TestCase):
         x_coords = torch.linspace(1, -1, steps=32)  # Example non-uniform x-coordinates
         y_coords = torch.linspace(-1, 1, steps=32)  # Example non-uniform y-coordinates
         with self.assertRaises(ValueError):
-            BilinearInterpolator(x_coords, y_coords, [0], [0])
+            BilinearInterpolator(x_coords, y_coords, torch.tensor([0]), torch.tensor([0]))
 
     def test_raises_error_when_coordinates_not_increasing_y(self):
         x_coords = torch.linspace(-1, 1, steps=32)  # Example non-uniform x-coordinates
         y_coords = torch.linspace(1, -1, steps=32)  # Example non-uniform y-coordinates
         with self.assertRaises(ValueError):
-            BilinearInterpolator(x_coords, y_coords, [0], [0])
+            BilinearInterpolator(x_coords, y_coords, torch.tensor([0]), torch.tensor([0]))
 
     def test_interpolation_func(self):
         # Setup
@@ -170,6 +171,7 @@ class TestBilinearInterpolateNonUniform(unittest.TestCase):
 
         # Execute
         interpolator = BilinearInterpolator(x_coords, y_coords, x_query, y_query)
+        interpolator.to(input_tensor)
         result = interpolator(input_tensor)
 
         # Verify
@@ -178,3 +180,18 @@ class TestBilinearInterpolateNonUniform(unittest.TestCase):
         if torch.cuda.is_available() and torch.cuda.device_count() > 0:
             interpolator.cuda()
             interpolator(input_tensor.cuda())
+
+
+def test_out_of_bounds():
+    x_coords = torch.tensor([0, 1, 2]).float()
+    y_coords = torch.tensor([0, 1, 2]).float()
+
+    x_query = torch.tensor([-1, 3]).float()
+    y_query = torch.tensor([-1, 3]).float()
+    regrid = BilinearInterpolator(x_coords, y_coords, x_query, y_query)
+
+    data = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]]).float()
+    regrid.to(data)
+    output = regrid(data)
+
+    assert torch.all(torch.isnan(output))

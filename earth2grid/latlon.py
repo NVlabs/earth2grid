@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import math
+
 import numpy as np
 import torch
 
@@ -27,7 +29,12 @@ class BilinearInterpolator(torch.nn.Module):
     """Bilinear interpolation for a non-uniform grid"""
 
     def __init__(
-        self, x_coords: torch.Tensor, y_coords: torch.Tensor, x_query: torch.Tensor, y_query: torch.Tensor
+        self,
+        x_coords: torch.Tensor,
+        y_coords: torch.Tensor,
+        x_query: torch.Tensor,
+        y_query: torch.Tensor,
+        fill_value=math.nan,
     ) -> None:
         """
 
@@ -38,9 +45,12 @@ class BilinearInterpolator(torch.nn.Module):
             y_query (Tensor): Y-coordinates for query points, shape [N].
         """
         super().__init__()
+        self.fill_value = fill_value
 
         # Ensure input coordinates are float for interpolation
-        x_coords, y_coords = x_coords.float(), y_coords.float()
+        x_coords, y_coords = x_coords.double(), y_coords.double()
+        x_query = x_query.double()
+        y_query = y_query.double()
 
         if torch.any(x_coords[1:] < x_coords[:-1]):
             raise ValueError("x_coords must be in non-decreasing order.")
@@ -54,11 +64,22 @@ class BilinearInterpolator(torch.nn.Module):
         y_l_idx = torch.searchsorted(y_coords, y_query, right=True) - 1
         y_u_idx = y_l_idx + 1
 
-        # Clip indices to ensure they are within the bounds of the input grid
-        x_l_idx = x_l_idx.clamp(0, x_coords.size(0) - 2)
-        x_u_idx = x_u_idx.clamp(1, x_coords.size(0) - 1)
-        y_l_idx = y_l_idx.clamp(0, y_coords.size(0) - 2)
-        y_u_idx = y_u_idx.clamp(1, y_coords.size(0) - 1)
+        # fill in nan outside mask
+        def isin(x, a, b):
+            return (x <= b) & (x >= a)
+
+        mask = (
+            isin(x_l_idx, 0, x_coords.size(0) - 2)
+            & isin(x_u_idx, 1, x_coords.size(0) - 1)
+            & isin(y_l_idx, 0, y_coords.size(0) - 2)
+            & isin(y_u_idx, 1, y_coords.size(0) - 1)
+        )
+        x_u_idx = x_u_idx[mask]
+        x_l_idx = x_l_idx[mask]
+        y_u_idx = y_u_idx[mask]
+        y_l_idx = y_l_idx[mask]
+        x_query = x_query[mask]
+        y_query = y_query[mask]
 
         # Compute weights
         x_l_weight = (x_coords[x_u_idx] - x_query) / (x_coords[x_u_idx] - x_coords[x_l_idx])
@@ -68,8 +89,6 @@ class BilinearInterpolator(torch.nn.Module):
         weights = torch.stack(
             [x_l_weight * y_l_weight, x_u_weight * y_l_weight, x_l_weight * y_u_weight, x_u_weight * y_u_weight], dim=-1
         )
-
-        self.register_buffer("weights", weights)
 
         stride = x_coords.size(-1)
         index = torch.stack(
@@ -81,6 +100,8 @@ class BilinearInterpolator(torch.nn.Module):
             ],
             dim=-1,
         )
+        self.register_buffer("weights", weights)
+        self.register_buffer("mask", mask)
         self.register_buffer("index", index)
 
     def forward(self, z: torch.Tensor):
@@ -93,8 +114,12 @@ class BilinearInterpolator(torch.nn.Module):
         *shape, y, x = z.shape
         zrs = z.view(-1, y * x).T
         # using embedding bag is 2x faster on cpu and 4x on gpu.
-        interpolated = torch.nn.functional.embedding_bag(self.index, zrs, per_sample_weights=self.weights, mode='sum')
-        interpolated = interpolated.T.view(*shape, self.weights.size(0))
+        output = torch.nn.functional.embedding_bag(self.index, zrs, per_sample_weights=self.weights, mode='sum')
+        interpolated = torch.full(
+            [self.mask.numel(), zrs.shape[1]], fill_value=self.fill_value, dtype=z.dtype, device=z.device
+        )
+        interpolated.masked_scatter_(self.mask.unsqueeze(-1), output)
+        interpolated = interpolated.T.view(*shape, self.mask.numel())
         return interpolated
 
 
