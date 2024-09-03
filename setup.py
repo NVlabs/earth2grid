@@ -71,7 +71,11 @@ ext_modules = [
 ]
 
 try:
+    import torch
     from torch.utils.cpp_extension import CUDAExtension
+
+    if not torch.cuda.is_available():
+        raise ImportError()
 
     ext_modules.append(
         CUDAExtension(
