@@ -63,7 +63,7 @@ def test_rotate_index(rot):
 
 @pytest.mark.parametrize("origin", list(healpix.Compass))
 @pytest.mark.parametrize("clockwise", [True, False])
-def test_reorder(tmp_path, origin, clockwise):
+def test_Grid_reorder(tmp_path, origin, clockwise):
     src_grid = healpix.Grid(level=4, pixel_order=healpix.XY(origin=origin, clockwise=clockwise))
     dest_grid = healpix.Grid(level=4, pixel_order=healpix.PixelOrder.NEST)
 
@@ -143,3 +143,33 @@ def test_conv2d():
     weight = torch.zeros(cout, cin, 3, 3)
     out = healpix.conv2d(x, weight, padding=(1, 1))
     assert out.shape == (n, cout, 1, npix)
+
+
+@pytest.mark.parametrize("nside", [16])
+@pytest.mark.parametrize("device", ["cuda", "cpu"])
+@pytest.mark.parametrize("src_pixel_order", [healpix.HEALPIX_PAD_XY, healpix.PixelOrder.RING, healpix.PixelOrder.NEST])
+@pytest.mark.parametrize("dest_pixel_order", [healpix.HEALPIX_PAD_XY, healpix.PixelOrder.RING, healpix.PixelOrder.NEST])
+def test_reorder(nside, src_pixel_order, dest_pixel_order, device):
+    # Generate some test data
+    if device == "cuda" and torch.cuda.device_count() == 0:
+        pytest.skip("no cuda devices available")
+
+    data = torch.randn(1, 2, 12 * nside * nside, device=device)
+    out = healpix.reorder(data, src_pixel_order, dest_pixel_order)
+    out = healpix.reorder(out, dest_pixel_order, src_pixel_order)
+    assert torch.all(data == out), data - out
+
+
+def test_latlon_cuda_set_device_regression():
+    """See https://github.com/NVlabs/earth2grid/issues/6"""
+
+    if torch.cuda.device_count() == 0:
+        pytest.skip()
+
+    default = torch.get_default_device()
+    try:
+        torch.set_default_device("cuda")
+        grid = healpix.Grid(4)
+        grid.lat
+    finally:
+        torch.set_default_device(default)

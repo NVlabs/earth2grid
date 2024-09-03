@@ -61,7 +61,12 @@ except ImportError:
 from earth2grid import base
 from earth2grid.third_party.zephyr.healpix import healpix_pad as heapixpad_cpu
 
-__all__ = ["pad", "PixelOrder", "XY", "Compass", "Grid", "HEALPIX_PAD_XY", "conv2d"]
+try:
+    import cuhpx
+except ImportError:
+    cuhpx = None
+
+__all__ = ["pad", "PixelOrder", "XY", "Compass", "Grid", "HEALPIX_PAD_XY", "conv2d", "reorder"]
 
 
 def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
@@ -98,9 +103,56 @@ def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
         return HEALPixPadFunction.apply(x.unsqueeze(2), padding).squeeze(2)
 
 
+def _apply_cuhpx_remap(func, x, **kwargs):
+    shape = x.shape
+    x = x.view(-1, 1, shape[-1])
+    nside = npix2nside(x.shape[-1])
+    x = func(x.contiguous(), **kwargs, nside=nside)
+    x = x.contiguous()
+    x = x.view(shape[:-1] + (-1,))
+    return x
+
+
+def npix2nside(npix: int):
+    nside = math.sqrt(npix // 12)
+    return int(nside)
+
+
+def npix2level(npix: int):
+    return nside2level(npix2nside(npix))
+
+
+def nside2level(nside: int):
+    return int(math.log2(nside))
+
+
 class PixelOrder(Enum):
     RING = 0
     NEST = 1
+
+    def reorder_from_cuda(self, x, src: "PixelOrderT"):
+        if self == PixelOrder.RING:
+            return src.to_ring_cuda(x)
+        elif self == PixelOrder.NEST:
+            return src.to_nest_cuda(x)
+
+    def to_ring_cuda(self, x: torch.Tensor):
+        if self == PixelOrder.RING:
+            return x
+        elif self == PixelOrder.NEST:
+            return _apply_cuhpx_remap(cuhpx.nest2ring, x)
+
+    def to_nest_cuda(self, x: torch.Tensor):
+        if self == PixelOrder.RING:
+            return _apply_cuhpx_remap(cuhpx.ring2nest, x)
+        elif self == PixelOrder.NEST:
+            return x
+
+    def to_xy_cuda(self, x: torch.Tensor, dest: "XY"):
+        if self == PixelOrder.RING:
+            return _apply_cuhpx_remap(cuhpx.ring2flat, x, clockwise=dest.clockwise, origin=dest.origin.name)
+        elif self == PixelOrder.NEST:
+            return _apply_cuhpx_remap(cuhpx.nest2flat, x, clockwise=dest.clockwise, origin=dest.origin.name)
 
 
 class Compass(Enum):
@@ -133,10 +185,40 @@ class XY:
     origin: Compass = Compass.S
     clockwise: bool = False
 
+    def reorder_from_cuda(self, x, src: "PixelOrderT"):
+        return src.to_xy_cuda(x, self)
+
+    def to_xy_cuda(self, x: torch.Tensor, dest: "XY"):
+        return _apply_cuhpx_remap(
+            cuhpx.flat2flat,
+            x,
+            src_origin=self.origin.name,
+            src_clockwise=self.clockwise,
+            dest_origin=dest.origin.name,
+            dest_clockwise=dest.clockwise,
+        )
+
+    def to_ring_cuda(self, x: torch.Tensor):
+        return _apply_cuhpx_remap(
+            cuhpx.flat2ring,
+            x,
+            origin=self.origin.name,
+            clockwise=self.clockwise,
+        )
+
+    def to_nest_cuda(self, x: torch.Tensor):
+        return _apply_cuhpx_remap(cuhpx.flat2nest, x, origin=self.origin.name, clockwise=self.clockwise)
+
 
 PixelOrderT = Union[PixelOrder, XY]
 
 HEALPIX_PAD_XY = XY(origin=Compass.N, clockwise=True)
+
+
+def reorder(x: torch.Tensor, src_pixel_order: PixelOrderT, dest_pixel_order: PixelOrderT):
+    """Reorder x from one pixel order to another"""
+    grid = Grid(level=npix2level(x.size(-1)), pixel_order=src_pixel_order)
+    return grid.reorder(dest_pixel_order, x)
 
 
 def _convert_xyindex(nside: int, src: XY, dest: XY, i):
@@ -192,7 +274,7 @@ class Grid(base.Grid):
 
     def _nest_ipix(self):
         """convert to nested index number"""
-        i = torch.arange(self._npix())
+        i = torch.arange(self._npix(), device="cpu")
         if isinstance(self.pixel_order, XY):
             i_xy = _convert_xyindex(nside=self._nside(), src=self.pixel_order, dest=XY(), i=i)
             i = xy2nest(self._nside(), i_xy)
@@ -202,29 +284,28 @@ class Grid(base.Grid):
             pass
         else:
             raise ValueError(self.pixel_order)
-        return i.numpy()
+        return i
 
-    def _nest2me(self, ipix: np.ndarray) -> np.ndarray:
+    def _nest2me(self, ipix: torch.Tensor) -> torch.Tensor:
         """return the index in my PIXELORDER corresponding to ipix in NEST ordering"""
         if isinstance(self.pixel_order, XY):
             i_xy = nest2xy(self._nside(), ipix)
             i_me = _convert_xyindex(nside=self._nside(), src=XY(), dest=self.pixel_order, i=i_xy)
         elif self.pixel_order == PixelOrder.RING:
-            ipix_t = torch.from_numpy(ipix)
-            i_me = healpix_bare.nest2ring(self._nside(), ipix_t).numpy()
+            i_me = healpix_bare.nest2ring(self._nside(), ipix)
         elif self.pixel_order == PixelOrder.NEST:
             i_me = ipix
         return i_me
 
     @property
     def lat(self):
-        ipix = torch.from_numpy(self._nest_ipix())
+        ipix = self._nest_ipix()
         _, lat = healpix_bare.pix2ang(self._nside(), ipix, lonlat=True, nest=True)
         return lat.numpy()
 
     @property
     def lon(self):
-        ipix = torch.from_numpy(self._nest_ipix())
+        ipix = self._nest_ipix()
         lon, _ = healpix_bare.pix2ang(self._nside(), ipix, lonlat=True, nest=True)
         return lon.numpy()
 
@@ -263,18 +344,24 @@ class Grid(base.Grid):
         lat, lon = np.broadcast_arrays(lat, lon)
         i_ring, weights = healpix_bare.get_interp_weights(self._nside(), torch.tensor(lon), torch.tensor(lat))
         i_nest = healpix_bare.ring2nest(self._nside(), i_ring.ravel())
-        i_me = torch.from_numpy(self._nest2me(i_nest.numpy())).view(i_ring.shape)
+        i_me = self._nest2me(i_nest).reshape(i_ring.shape)
         return ApplyWeights(i_me, weights)
 
     def approximate_grid_length_meters(self):
         return approx_grid_length_meters(self._nside())
 
-    def reorder(self, order: PixelOrderT, x: torch.Tensor) -> torch.Tensor:
-        """Rorder the pixels of ``x`` to have ``order``"""
+    def _reorder_cpu(self, x: torch.Tensor, order: PixelOrderT):
         output_grid = Grid(level=self.level, pixel_order=order)
         i_nest = output_grid._nest_ipix()
         i_me = self._nest2me(i_nest)
         return x[..., i_me]
+
+    def reorder(self, order: PixelOrderT, x: torch.Tensor) -> torch.Tensor:
+        """Rorder the pixels of ``x`` to have ``order``"""
+        if x.device.type == "cuda":
+            return order.reorder_from_cuda(x, self.pixel_order)
+        else:
+            return self._reorder_cpu(x, order)
 
     def get_healpix_regridder(self, dest: "Grid"):
         if self.level != dest.level:

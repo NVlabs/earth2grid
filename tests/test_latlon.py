@@ -24,7 +24,7 @@ def test_lat_lon_bilinear_regrid_to():
 
     regrid.float()
     lat = torch.broadcast_to(torch.tensor(src.lat), src.shape)
-    z = torch.tensor(lat).float()
+    z = lat.float()
 
     out = regrid(z)
     assert out.shape == dest.shape

@@ -26,7 +26,6 @@ dependencies = [
     "einops>=0.7.0",
     "netCDF4>=1.6.5",
     "numpy>=1.23.3",
-    "pyvista>=0.43.2",
     "torch>=2.0.1",
 ]
 
@@ -35,6 +34,10 @@ dependencies = [
 
 
 [project.optional-dependencies]
+viz = [
+    "pyvista>=0.43.2",
+    "matplotlib",
+]
 test = [
     "pytest>=6.2.4",
     "black>=21.5b2",
