@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "earth2-grid"
-version = "2024.5.2"
+version = "2024.8.1"
 description = "Utilities for working with geographic data defined on various grids."
 readme = "README.md"
 license = { file="LICENSE.txt" }
