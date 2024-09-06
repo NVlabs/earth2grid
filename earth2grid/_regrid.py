@@ -187,7 +187,10 @@ class S2NearestNeighborInterpolator(torch.nn.Module):
         Interpolate the field
 
         Args:
-            z: shape [*, X]
+            z: shape [*, m]
+
+        Returns:
+            shape [*, n]
         """
         *shape, x = z.shape
         zrs = z.view(-1, x).T
