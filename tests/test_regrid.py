@@ -20,7 +20,7 @@ import pytest
 import torch
 
 import earth2grid
-from earth2grid.latlon import BilinearInterpolator
+from earth2grid import BilinearInterpolator
 
 
 @pytest.mark.parametrize("with_channels", [True, False])

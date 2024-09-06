@@ -1,7 +1,7 @@
 # Changelog
 
 ## latest
-
+- `earth2grid.latlon.BilinearInterpolator` moved to `earth2grid.BilinearInterpolator`
 
 ## 2024.8.1
 
