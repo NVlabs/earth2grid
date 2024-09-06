@@ -211,3 +211,19 @@ def test_NearestNeighborInterpolator():
     expected = torch.cos(torch.deg2rad(lond))
     mae = torch.mean(torch.abs(out - expected))
     assert mae.item() < 0.02
+
+
+def test_BaryCentric():
+    n = 10000
+    torch.manual_seed(0)
+    lon = torch.rand(n) * 360
+    lat = torch.rand(n) * 180 - 90
+
+    lond = torch.rand(n) * 360
+    latd = torch.rand(n) * 180 - 90
+
+    interpolate = earth2grid.S2LinearBarycentricInterpolator(lon, lat, lond, latd)
+    out = interpolate(torch.cos(torch.deg2rad(lon)))
+    expected = torch.cos(torch.deg2rad(lond))
+    mae = torch.mean(torch.abs(out - expected))
+    assert mae.item() < 0.011
