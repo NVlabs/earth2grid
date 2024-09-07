@@ -149,7 +149,7 @@ class BilinearInterpolator(torch.nn.Module):
 
 
 class S2NearestNeighborInterpolator(torch.nn.Module):
-    """Bilinear interpolation for a non-uniform grid"""
+    """K-nearest neighbor interpolator with inverse distance weighting"""
 
     def __init__(
         self,
@@ -157,6 +157,7 @@ class S2NearestNeighborInterpolator(torch.nn.Module):
         src_lat: torch.Tensor,
         dest_lon: torch.Tensor,
         dest_lat: torch.Tensor,
+        k: int = 1,
     ) -> None:
         """
 
@@ -165,6 +166,7 @@ class S2NearestNeighborInterpolator(torch.nn.Module):
             src_lat: (m,) source latitude in degrees N
             dest_lon: (n,) output longitude in degrees E
             dest_lat: (n,) output latitude in degrees N
+            k: number of neighbors
 
         """
         super().__init__()
@@ -179,68 +181,18 @@ class S2NearestNeighborInterpolator(torch.nn.Module):
         # havesign distance and euclidean are monotone for points on S2 so can use 3d lookups.
         self.tree = spatial.KDTree(vec)
         vec = torch.stack(ang2vec(dest_lon.cpu(), dest_lat.cpu()), -1)
-        _, neighbors = self.tree.query(vec, k=1)
-        self.register_buffer("index", torch.as_tensor(neighbors).view(-1, 1))
+        _, neighbors = self.tree.query(vec, k=k)
+        self.register_buffer("index", torch.as_tensor(neighbors).view(-1, k))
 
-    def forward(self, z: torch.Tensor):
-        """
-        Interpolate the field
+        self.k = k
 
-        Args:
-            z: shape [*, m]
-
-        Returns:
-            shape [*, n]
-        """
-        *shape, x = z.shape
-        zrs = z.view(-1, x).T
-        # using embedding bag is 2x faster on cpu and 4x on gpu.
-        output = torch.nn.functional.embedding_bag(self.index, zrs, mode='sum')
-        output = output.T.view(*shape, -1)
-        return output
-
-
-class S2LinearBarycentricInterpolator(torch.nn.Module):
-    """Linear Barycentric Interpolator for unstructured data
-
-    This is equivalent to inverse square weighting
-
-    """
-
-    def __init__(
-        self,
-        src_lon: torch.Tensor,
-        src_lat: torch.Tensor,
-        dest_lon: torch.Tensor,
-        dest_lat: torch.Tensor,
-    ) -> None:
-        """
-
-        Args:
-            src_lon: (m,) source longitude in degrees E
-            src_lat: (m,) source latitude in degrees N
-            dest_lon: (n,) output longitude in degrees E
-            dest_lat: (n,) output latitude in degrees N
-
-        """
-        super().__init__()
-        src_lon = torch.deg2rad(src_lon.cpu())
-        src_lat = torch.deg2rad(src_lat.cpu())
-
-        dest_lon = torch.deg2rad(dest_lon.cpu())
-        dest_lat = torch.deg2rad(dest_lat.cpu())
-
-        vec = torch.stack(ang2vec(src_lon, src_lat), -1)
-
-        # havesign distance and euclidean are monotone for points on S2 so can use 3d lookups.
-        self.tree = spatial.KDTree(vec)
-        vec = torch.stack(ang2vec(dest_lon.cpu(), dest_lat.cpu()), -1)
-        _, neighbors = self.tree.query(vec, k=3)
-        d = haversine_distance(dest_lon[:, None], dest_lat[:, None], src_lon[neighbors], src_lat[neighbors])
-        lam = 1 / d
-        lam = lam / lam.sum(-1, keepdim=True)
-        self.register_buffer("index", torch.as_tensor(neighbors).view(-1, 3))
-        self.register_buffer("weight", lam)
+        if k > 1:
+            d = haversine_distance(dest_lon[:, None], dest_lat[:, None], src_lon[neighbors], src_lat[neighbors])
+            lam = 1 / d
+            lam = lam / lam.sum(-1, keepdim=True)
+            self.register_buffer("weight", lam)
+        else:
+            self.weight = None
 
     def forward(self, z: torch.Tensor):
         """

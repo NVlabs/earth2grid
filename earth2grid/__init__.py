@@ -18,7 +18,6 @@ from earth2grid import base, healpix, latlon
 from earth2grid._regrid import (
     BilinearInterpolator,
     Identity,
-    S2LinearBarycentricInterpolator,
     S2NearestNeighborInterpolator,
 )
 

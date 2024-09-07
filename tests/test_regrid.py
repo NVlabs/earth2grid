@@ -197,7 +197,8 @@ def test_out_of_bounds():
     assert torch.all(torch.isnan(output))
 
 
-def test_NearestNeighborInterpolator():
+@pytest.mark.parametrize("k", [1, 2, 3])
+def test_NearestNeighborInterpolator(k):
     n = 10000
     torch.manual_seed(0)
     lon = torch.rand(n) * 360
@@ -206,24 +207,8 @@ def test_NearestNeighborInterpolator():
     lond = torch.rand(n) * 360
     latd = torch.rand(n) * 180 - 90
 
-    interpolate = earth2grid.S2NearestNeighborInterpolator(lon, lat, lond, latd)
+    interpolate = earth2grid.S2NearestNeighborInterpolator(lon, lat, lond, latd, k=k)
     out = interpolate(torch.cos(torch.deg2rad(lon)))
     expected = torch.cos(torch.deg2rad(lond))
     mae = torch.mean(torch.abs(out - expected))
     assert mae.item() < 0.02
-
-
-def test_BaryCentric():
-    n = 10000
-    torch.manual_seed(0)
-    lon = torch.rand(n) * 360
-    lat = torch.rand(n) * 180 - 90
-
-    lond = torch.rand(n) * 360
-    latd = torch.rand(n) * 180 - 90
-
-    interpolate = earth2grid.S2LinearBarycentricInterpolator(lon, lat, lond, latd)
-    out = interpolate(torch.cos(torch.deg2rad(lon)))
-    expected = torch.cos(torch.deg2rad(lond))
-    mae = torch.mean(torch.abs(out - expected))
-    assert mae.item() < 0.011
