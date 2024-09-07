@@ -22,6 +22,27 @@ from scipy import spatial
 from earth2grid.spatial import ang2vec, haversine_distance
 
 
+class Regridder(torch.nn.Module):
+    """Regridder to n points, with p nonzero maps weights
+
+    Forward:
+        (*, m) -> (*, n)
+    """
+
+    def __init__(self, n: int, p: int):
+        super().__init__()
+        self.register_buffer("index", torch.empty(n, p, dtype=torch.long))
+        self.register_buffer("weight", torch.ones(n, p))
+
+    def forward(self, z):
+        *shape, x = z.shape
+        zrs = z.view(-1, x).T
+        # using embedding bag is 2x faster on cpu and 4x on gpu.
+        output = torch.nn.functional.embedding_bag(self.index, zrs, per_sample_weights=self.weight, mode='sum')
+        output = output.T.view(*shape, -1)
+        return output
+
+
 class TempestRegridder(torch.nn.Module):
     def __init__(self, file_path):
         super().__init__()
@@ -148,68 +169,44 @@ class BilinearInterpolator(torch.nn.Module):
         return interpolated
 
 
-class S2NearestNeighborInterpolator(torch.nn.Module):
-    """K-nearest neighbor interpolator with inverse distance weighting"""
+def S2NearestNeighborInterpolator(
+    src_lon: torch.Tensor,
+    src_lat: torch.Tensor,
+    dest_lon: torch.Tensor,
+    dest_lat: torch.Tensor,
+    k: int = 1,
+) -> Regridder:
+    """K-nearest neighbor interpolator with inverse distance weighting
 
-    def __init__(
-        self,
-        src_lon: torch.Tensor,
-        src_lat: torch.Tensor,
-        dest_lon: torch.Tensor,
-        dest_lat: torch.Tensor,
-        k: int = 1,
-    ) -> None:
-        """
+    Args:
+        src_lon: (m,) source longitude in degrees E
+        src_lat: (m,) source latitude in degrees N
+        dest_lon: (n,) output longitude in degrees E
+        dest_lat: (n,) output latitude in degrees N
+        k: number of neighbors
 
-        Args:
-            src_lon: (m,) source longitude in degrees E
-            src_lat: (m,) source latitude in degrees N
-            dest_lon: (n,) output longitude in degrees E
-            dest_lat: (n,) output latitude in degrees N
-            k: number of neighbors
+    """
+    src_lon = torch.deg2rad(src_lon.cpu())
+    src_lat = torch.deg2rad(src_lat.cpu())
 
-        """
-        super().__init__()
-        src_lon = torch.deg2rad(src_lon.cpu())
-        src_lat = torch.deg2rad(src_lat.cpu())
+    dest_lon = torch.deg2rad(dest_lon.cpu())
+    dest_lat = torch.deg2rad(dest_lat.cpu())
 
-        dest_lon = torch.deg2rad(dest_lon.cpu())
-        dest_lat = torch.deg2rad(dest_lat.cpu())
+    vec = torch.stack(ang2vec(src_lon, src_lat), -1)
 
-        vec = torch.stack(ang2vec(src_lon, src_lat), -1)
+    # havesign distance and euclidean are monotone for points on S2 so can use 3d lookups.
+    tree = spatial.KDTree(vec)
+    vec = torch.stack(ang2vec(dest_lon.cpu(), dest_lat.cpu()), -1)
+    _, neighbors = tree.query(vec, k=k)
+    regridder = Regridder(dest_lon.shape[0], k)
+    regridder.index.copy_(torch.as_tensor(neighbors).view(-1, k))
+    if k > 1:
+        d = haversine_distance(dest_lon[:, None], dest_lat[:, None], src_lon[neighbors], src_lat[neighbors])
+        lam = 1 / d
+        lam = lam / lam.sum(-1, keepdim=True)
+        regridder.weight.copy_(lam)
 
-        # havesign distance and euclidean are monotone for points on S2 so can use 3d lookups.
-        self.tree = spatial.KDTree(vec)
-        vec = torch.stack(ang2vec(dest_lon.cpu(), dest_lat.cpu()), -1)
-        _, neighbors = self.tree.query(vec, k=k)
-        self.register_buffer("index", torch.as_tensor(neighbors).view(-1, k))
-
-        self.k = k
-
-        if k > 1:
-            d = haversine_distance(dest_lon[:, None], dest_lat[:, None], src_lon[neighbors], src_lat[neighbors])
-            lam = 1 / d
-            lam = lam / lam.sum(-1, keepdim=True)
-            self.register_buffer("weight", lam)
-        else:
-            self.weight = None
-
-    def forward(self, z: torch.Tensor):
-        """
-        Interpolate the field
-
-        Args:
-            z: shape [*, m]
-
-        Returns:
-            shape [*, n]
-        """
-        *shape, x = z.shape
-        zrs = z.view(-1, x).T
-        # using embedding bag is 2x faster on cpu and 4x on gpu.
-        output = torch.nn.functional.embedding_bag(self.index, zrs, per_sample_weights=self.weight, mode='sum')
-        output = output.T.view(*shape, -1)
-        return output
+    return regridder
 
 
 class Identity(torch.nn.Module):
