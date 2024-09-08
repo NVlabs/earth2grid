@@ -42,6 +42,13 @@ class Regridder(torch.nn.Module):
         output = output.T.view(*shape, -1)
         return output
 
+    @staticmethod
+    def from_state_dict(d):
+        n, p = d["index"].shape
+        regridder = Regridder(n, p)
+        regridder.load_state_dict(d)
+        return regridder
+
 
 class TempestRegridder(torch.nn.Module):
     def __init__(self, file_path):

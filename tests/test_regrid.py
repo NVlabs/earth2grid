@@ -212,3 +212,6 @@ def test_NearestNeighborInterpolator(k):
     expected = torch.cos(torch.deg2rad(lond))
     mae = torch.mean(torch.abs(out - expected))
     assert mae.item() < 0.02
+
+    # load-reload
+    earth2grid.Regridder.from_state_dict(interpolate.state_dict())
