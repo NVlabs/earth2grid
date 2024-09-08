@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
+from typing import Dict
 
 import einops
 import netCDF4 as nc
@@ -43,7 +44,7 @@ class Regridder(torch.nn.Module):
         return output
 
     @staticmethod
-    def from_state_dict(d):
+    def from_state_dict(d: Dict[str, torch.Tensor]) -> "Regridder":
         n, p = d["index"].shape
         regridder = Regridder(n, p)
         regridder.load_state_dict(d)
