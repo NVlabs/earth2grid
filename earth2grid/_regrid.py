@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
-from typing import Dict
+from typing import Dict, Sequence
 
 import einops
 import netCDF4 as nc
@@ -27,26 +27,31 @@ class Regridder(torch.nn.Module):
     """Regridder to n points, with p nonzero maps weights
 
     Forward:
-        (*, m) -> (*, n)
+        (*, m) -> (*,) + shape
     """
 
-    def __init__(self, n: int, p: int):
+    def __init__(self, shape: Sequence[int], p: int):
         super().__init__()
-        self.register_buffer("index", torch.empty(n, p, dtype=torch.long))
-        self.register_buffer("weight", torch.ones(n, p))
+        self.register_buffer("index", torch.empty(*shape, p, dtype=torch.long))
+        self.register_buffer("weight", torch.ones(*shape, p))
 
     def forward(self, z):
         *shape, x = z.shape
         zrs = z.view(-1, x).T
+
+        *output_shape, p = self.index.shape
+        index = self.index.view(-1, p)
+        weight = self.weight.view(-1, p)
+
         # using embedding bag is 2x faster on cpu and 4x on gpu.
-        output = torch.nn.functional.embedding_bag(self.index, zrs, per_sample_weights=self.weight, mode='sum')
+        output = torch.nn.functional.embedding_bag(index, zrs, per_sample_weights=weight, mode='sum')
         output = output.T.view(*shape, -1)
-        return output
+        return output.reshape(list(shape) + output_shape)
 
     @staticmethod
     def from_state_dict(d: Dict[str, torch.Tensor]) -> "Regridder":
         n, p = d["index"].shape
-        regridder = Regridder(n, p)
+        regridder = Regridder((n,), p)
         regridder.load_state_dict(d)
         return regridder
 
@@ -206,7 +211,7 @@ def S2NearestNeighborInterpolator(
     tree = spatial.KDTree(vec)
     vec = torch.stack(ang2vec(dest_lon.cpu(), dest_lat.cpu()), -1)
     _, neighbors = tree.query(vec, k=k)
-    regridder = Regridder(dest_lon.shape[0], k)
+    regridder = Regridder(dest_lon.shape, k)
     regridder.index.copy_(torch.as_tensor(neighbors).view(-1, k))
     if k > 1:
         d = haversine_distance(dest_lon[:, None], dest_lat[:, None], src_lon[neighbors], src_lat[neighbors])

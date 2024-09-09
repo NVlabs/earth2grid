@@ -43,6 +43,7 @@ import numpy as np
 import torch
 
 from earth2grid import healpix_bare
+from earth2grid._regrid import Regridder
 
 try:
     import pyvista as pv
@@ -230,24 +231,19 @@ def _convert_xyindex(nside: int, src: XY, dest: XY, i):
     return i
 
 
-class ApplyWeights(torch.nn.Module):
-    def __init__(self, pix: torch.Tensor, weight: torch.Tensor):
-        super().__init__()
+def ApplyWeights(pix: torch.Tensor, weight: torch.Tensor):
+    # the first dim is the 4 point stencil
+    # TODO delete
+    p, *shape = pix.shape
 
-        # the first dim is the 4 point stencil
-        n, *self.shape = pix.shape
+    pix = pix.view(p, -1).T
+    weight = weight.view(p, -1).T
 
-        pix = pix.view(n, -1).T
-        weight = weight.view(n, -1).T
-
-        self.register_buffer("index", pix)
-        self.register_buffer("weight", weight)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        *shape, npix = x.shape
-        x = x.view(-1, npix).T
-        interpolated = torch.nn.functional.embedding_bag(self.index, x, per_sample_weights=self.weight, mode="sum").T
-        return interpolated.view(shape + self.shape)
+    regridder = Regridder(pix.shape[:-1], p=pix.shape[1])
+    regridder.to(weight)
+    regridder.index.copy_(pix)
+    regridder.weight.copy_(weight)
+    return regridder
 
 
 @dataclass
@@ -345,7 +341,16 @@ class Grid(base.Grid):
         i_ring, weights = healpix_bare.get_interp_weights(self._nside(), torch.tensor(lon), torch.tensor(lat))
         i_nest = healpix_bare.ring2nest(self._nside(), i_ring.ravel())
         i_me = self._nest2me(i_nest).reshape(i_ring.shape)
-        return ApplyWeights(i_me, weights)
+
+        # reshape to (*, p)
+        weights = weights.movedim(0, -1)
+        index = i_me.movedim(0, -1)
+
+        regridder = Regridder(weights.shape[:-1], p=weights.shape[-1])
+        regridder.to(weights)
+        regridder.index.copy_(index)
+        regridder.weight.copy_(weights)
+        return regridder
 
     def approximate_grid_length_meters(self):
         return approx_grid_length_meters(self._nside())
