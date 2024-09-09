@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import math
+import warnings
 from typing import Dict, Sequence
 
 import einops
@@ -20,7 +21,7 @@ import netCDF4 as nc
 import torch
 from scipy import spatial
 
-from earth2grid.spatial import ang2vec, haversine_distance
+from earth2grid.spatial import ang2vec, barycentric_coords_with_origin, haversine_distance, select_simplex
 
 
 class Regridder(torch.nn.Module):
@@ -219,6 +220,49 @@ def S2NearestNeighborInterpolator(
         lam = lam / lam.sum(-1, keepdim=True)
         regridder.weight.copy_(lam)
 
+    return regridder
+
+
+def S2DelaunayRegridder(
+    src_lon: torch.Tensor,
+    src_lat: torch.Tensor,
+    dest_lon: torch.Tensor,
+    dest_lat: torch.Tensor,
+) -> Regridder:
+    """Linear interpolation by projecting on the planes defined by the convex
+    hull of the src lons.
+
+    This is equivalent to interpolating on the gnomonic projection with a pole
+    perpendicular to each face of the convex hull.
+
+    Args:
+        src_lon: (m,) source longitude in degrees E
+        src_lat: (m,) source latitude in degrees N
+        dest_lon: (n,) output longitude in degrees E
+        dest_lat: (n,) output latitude in degrees N
+
+    """
+    src_lon = torch.deg2rad(src_lon)
+    src_lat = torch.deg2rad(src_lat)
+
+    dest_lon = torch.deg2rad(dest_lon)
+    dest_lat = torch.deg2rad(dest_lat)
+
+    vec = torch.stack(ang2vec(src_lon, src_lat), -1)
+    dest_vec = torch.stack(ang2vec(dest_lon, dest_lat), -1)
+
+    hull = spatial.ConvexHull(vec.cpu())
+    coords = barycentric_coords_with_origin(dest_vec, vec[hull.simplices])
+    index = select_simplex(coords, tol=1e-3)
+    if torch.any(index == -1):
+        asdf
+        warnings.warn(
+            RuntimeWarning("No simplex detected that contains ``index``. See ``select_simplex`` docstring for tips")
+        )
+
+    regridder = Regridder(dest_lat.numel(), 3)
+
+    assert False
     return regridder
 
 
