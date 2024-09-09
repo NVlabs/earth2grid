@@ -231,21 +231,6 @@ def _convert_xyindex(nside: int, src: XY, dest: XY, i):
     return i
 
 
-def ApplyWeights(pix: torch.Tensor, weight: torch.Tensor):
-    # the first dim is the 4 point stencil
-    # TODO delete
-    p, *shape = pix.shape
-
-    pix = pix.view(p, -1).T
-    weight = weight.view(p, -1).T
-
-    regridder = Regridder(pix.shape[:-1], p=pix.shape[1])
-    regridder.to(weight)
-    regridder.index.copy_(pix)
-    regridder.weight.copy_(weight)
-    return regridder
-
-
 @dataclass
 class Grid(base.Grid):
     """A Healpix Grid
