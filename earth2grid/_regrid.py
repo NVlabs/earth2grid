@@ -188,6 +188,7 @@ def S2NearestNeighborInterpolator(
     dest_lon: torch.Tensor,
     dest_lat: torch.Tensor,
     k: int = 1,
+    eps=1e-7,
 ) -> Regridder:
     """K-nearest neighbor interpolator with inverse distance weighting
 
@@ -196,7 +197,9 @@ def S2NearestNeighborInterpolator(
         src_lat: (m,) source latitude in degrees N
         dest_lon: (n,) output longitude in degrees E
         dest_lat: (n,) output latitude in degrees N
-        k: number of neighbors
+        k: number of neighbors, default: 1
+        eps: regularization factor for inverse distance weighting. Only used if
+            k > 1.
 
     """
     src_lon = torch.deg2rad(src_lon.cpu())
@@ -215,7 +218,7 @@ def S2NearestNeighborInterpolator(
     regridder.index.copy_(torch.as_tensor(neighbors).view(-1, k))
     if k > 1:
         d = haversine_distance(dest_lon[:, None], dest_lat[:, None], src_lon[neighbors], src_lat[neighbors])
-        lam = 1 / d
+        lam = 1 / (d + eps)
         lam = lam / lam.sum(-1, keepdim=True)
         regridder.weight.copy_(lam)
 
