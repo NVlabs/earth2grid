@@ -71,7 +71,6 @@ ext_modules = [
 ]
 
 try:
-    import torch
     from torch.utils.cpp_extension import CUDAExtension
 
     ext_modules.append(
