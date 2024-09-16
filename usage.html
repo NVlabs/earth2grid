@@ -39,18 +39,24 @@
   <section id="usage">
 <h1>Usage<a class="headerlink" href="#usage" title="Permalink to this heading">¶</a></h1>
 <p>To use Earth2 Grid Utilities in a project</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">earth2grid</span>
-<span class="c1"># level is the resolution</span>
-<span class="n">level</span> <span class="o">=</span> <span class="mi">6</span>
-<span class="n">hpx</span> <span class="o">=</span> <span class="n">earth2grid</span><span class="o">.</span><span class="n">healpix</span><span class="o">.</span><span class="n">Grid</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">level</span><span class="p">,</span> <span class="n">pixel_order</span><span class="o">=</span><span class="n">earth2grid</span><span class="o">.</span><span class="n">healpix</span><span class="o">.</span><span class="n">PixelOrder</span><span class="o">.</span><span class="n">XY</span><span class="p">)</span>
-<span class="n">src</span> <span class="o">=</span> <span class="n">earth2grid</span><span class="o">.</span><span class="n">latlon</span><span class="o">.</span><span class="n">equiangular_lat_lon_grid</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
-<span class="n">z_torch</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
-<span class="n">z_torch</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
-<span class="n">regrid</span> <span class="o">=</span> <span class="n">earth2grid</span><span class="o">.</span><span class="n">get_regridder</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">hpx</span><span class="p">)</span>
-<span class="n">z_hpx</span> <span class="o">=</span> <span class="n">regrid</span><span class="p">(</span><span class="n">z_torch</span><span class="p">)</span>
-<span class="n">z_hpx</span><span class="o">.</span><span class="n">shape</span>
-<span class="n">nside</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="n">level</span>
-<span class="n">reshaped</span> <span class="o">=</span> <span class="n">z_hpx</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="n">nside</span><span class="p">,</span> <span class="n">nside</span><span class="p">)</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">earth2grid</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="gp">... </span><span class="c1"># level is the resolution</span>
+<span class="gp">... </span><span class="n">level</span> <span class="o">=</span> <span class="mi">6</span>
+<span class="gp">... </span><span class="n">hpx</span> <span class="o">=</span> <span class="n">earth2grid</span><span class="o">.</span><span class="n">healpix</span><span class="o">.</span><span class="n">Grid</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">level</span><span class="p">,</span> <span class="n">pixel_order</span><span class="o">=</span><span class="n">earth2grid</span><span class="o">.</span><span class="n">healpix</span><span class="o">.</span><span class="n">XY</span><span class="p">())</span>
+<span class="gp">... </span><span class="n">src</span> <span class="o">=</span> <span class="n">earth2grid</span><span class="o">.</span><span class="n">latlon</span><span class="o">.</span><span class="n">equiangular_lat_lon_grid</span><span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
+<span class="gp">... </span><span class="n">z_torch</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">lat</span><span class="p">)))</span>
+<span class="gp">... </span><span class="n">z_torch</span> <span class="o">=</span> <span class="n">z_torch</span><span class="o">.</span><span class="n">broadcast_to</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">regrid</span> <span class="o">=</span> <span class="n">earth2grid</span><span class="o">.</span><span class="n">get_regridder</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">hpx</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">z_hpx</span> <span class="o">=</span> <span class="n">regrid</span><span class="p">(</span><span class="n">z_torch</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">z_hpx</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([49152])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">nside</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="n">level</span>
+<span class="gp">... </span><span class="n">reshaped</span> <span class="o">=</span> <span class="n">z_hpx</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="n">nside</span><span class="p">,</span> <span class="n">nside</span><span class="p">)</span>
+<span class="gp">... </span><span class="n">lat_r</span> <span class="o">=</span> <span class="n">hpx</span><span class="o">.</span><span class="n">lat</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="n">nside</span><span class="p">,</span> <span class="n">nside</span><span class="p">)</span>
+<span class="gp">... </span><span class="n">lon_r</span> <span class="o">=</span> <span class="n">hpx</span><span class="o">.</span><span class="n">lon</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="n">nside</span><span class="p">,</span> <span class="n">nside</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">reshaped</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([12, 64, 64])</span>
 </pre></div>
 </div>
 </section>

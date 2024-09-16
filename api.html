@@ -109,9 +109,40 @@ Lon is ordered from 0 to 360. includes 0, but not 360.</p>
 <dd><p>Get a regridder from <cite>src</cite> to <cite>dest</cite></p>
 </dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.KNNS2Interpolator">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.</span></span><span class="sig-name descname"><span class="pre">KNNS2Interpolator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src_lon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_lat</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_lon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_lat</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-07</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Regridder</span></span></span><a class="headerlink" href="#earth2grid.KNNS2Interpolator" title="Permalink to this definition">¶</a></dt>
+<dd><p>K-nearest neighbor interpolator with inverse distance weighting</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>src_lon</strong> – (m,) source longitude in degrees E</p></li>
+<li><p><strong>src_lat</strong> – (m,) source latitude in degrees N</p></li>
+<li><p><strong>dest_lon</strong> – (n,) output longitude in degrees E</p></li>
+<li><p><strong>dest_lat</strong> – (n,) output latitude in degrees N</p></li>
+<li><p><strong>k</strong> – number of neighbors, default: 1</p></li>
+<li><p><strong>eps</strong> – regularization factor for inverse distance weighting. Only used if
+k &gt; 1.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.BilinearInterpolator">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.</span></span><span class="sig-name descname"><span class="pre">BilinearInterpolator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_coords</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_coords</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fill_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">nan</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#earth2grid.BilinearInterpolator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bilinear interpolation for a non-uniform grid</p>
+</dd></dl>
+
 </section>
 <section id="other-utilities">
 <h2>Other utilities<a class="headerlink" href="#other-utilities" title="Permalink to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.healpix.reorder">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">reorder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_pixel_order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PixelOrder</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">XY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_pixel_order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PixelOrder</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">XY</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.healpix.reorder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reorder x from one pixel order to another</p>
+</dd></dl>
+
 <dl class="py function">
 <dt class="sig sig-object py" id="earth2grid.healpix.pad">
 <span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">pad</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#earth2grid.healpix.pad" title="Permalink to this definition">¶</a></dt>
@@ -119,7 +150,7 @@ Lon is ordered from 0 to 360. includes 0, but not 360.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>x</strong> – The input tensor of shape [N, F, H, W]</p></li>
+<li><p><strong>x</strong> – The input tensor of shape [N, F, H, W] or [N, F, C, H, W]</p></li>
 <li><p><strong>padding</strong> – the amount of padding</p></li>
 </ul>
 </dd>
