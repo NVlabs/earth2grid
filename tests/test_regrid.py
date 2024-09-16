@@ -20,7 +20,7 @@ import pytest
 import torch
 
 import earth2grid
-from earth2grid.latlon import BilinearInterpolator
+from earth2grid import BilinearInterpolator
 
 
 @pytest.mark.parametrize("with_channels", [True, False])
@@ -195,3 +195,30 @@ def test_out_of_bounds():
     output = regrid(data)
 
     assert torch.all(torch.isnan(output))
+
+
+@pytest.mark.parametrize("k", [1, 2, 3])
+def test_NearestNeighborInterpolator(k):
+    n = 10000
+    m = 887
+    torch.manual_seed(0)
+    lon = torch.rand(n) * 360
+    lat = torch.rand(n) * 180 - 90
+
+    lond = torch.rand(m) * 360
+    latd = torch.rand(m) * 180 - 90
+
+    interpolate = earth2grid.KNNS2Interpolator(lon, lat, lond, latd, k=k)
+    out = interpolate(torch.cos(torch.deg2rad(lon)))
+    expected = torch.cos(torch.deg2rad(lond))
+    mae = torch.mean(torch.abs(out - expected))
+    assert mae.item() < 0.02
+
+    # load-reload
+    earth2grid.Regridder.from_state_dict(interpolate.state_dict())
+
+    # try batched interpolation
+    x = torch.cos(torch.deg2rad(lon))
+    x = x.unsqueeze(0)
+    out = interpolate(x)
+    assert out.shape == (1, m)

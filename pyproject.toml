@@ -27,6 +27,7 @@ dependencies = [
     "netCDF4>=1.6.5",
     "numpy>=1.23.3",
     "torch>=2.0.1",
+    "scipy"
 ]
 
 [project.urls]

@@ -12,7 +12,33 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from earth2grid import base, healpix, latlon
-from earth2grid._regrid import get_regridder
+import torch
 
-__all__ = ["base", "healpix", "latlon", "get_regridder"]
+from earth2grid import base, healpix, latlon
+from earth2grid._regrid import BilinearInterpolator, Identity, KNNS2Interpolator, Regridder
+
+__all__ = [
+    "base",
+    "healpix",
+    "latlon",
+    "get_regridder",
+    "BilinearInterpolator",
+    "KNNS2Interpolator",
+    "Regridder",
+]
+
+
+def get_regridder(src: base.Grid, dest: base.Grid) -> torch.nn.Module:
+    """Get a regridder from `src` to `dest`"""
+    if src == dest:
+        return Identity()
+    elif isinstance(src, latlon.LatLonGrid) and isinstance(dest, latlon.LatLonGrid):
+        return src.get_bilinear_regridder_to(dest.lat, dest.lon)
+    elif isinstance(src, latlon.LatLonGrid) and isinstance(dest, healpix.Grid):
+        return src.get_bilinear_regridder_to(dest.lat, dest.lon)
+    elif isinstance(src, healpix.Grid):
+        return src.get_bilinear_regridder_to(dest.lat, dest.lon)
+    elif isinstance(dest, healpix.Grid):
+        return src.get_healpix_regridder(dest)  # type: ignore
+
+    raise ValueError(src, dest, "not supported.")
