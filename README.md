@@ -21,7 +21,7 @@ Grids currently supported:
 
 ```
 git clone https://github.com/NVlabs/earth2grid.git
-pip install --no-build-isolation earth2grid
+pip install --no-build-isolation ./earth2grid
 ```
 
 ## Example
