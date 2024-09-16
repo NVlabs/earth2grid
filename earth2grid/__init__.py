@@ -15,7 +15,7 @@
 import torch
 
 from earth2grid import base, healpix, latlon
-from earth2grid._regrid import BilinearInterpolator, Identity, Regridder, S2NearestNeighborInterpolator
+from earth2grid._regrid import BilinearInterpolator, Identity, KNNS2Interpolator, Regridder
 
 __all__ = [
     "base",
@@ -23,7 +23,7 @@ __all__ = [
     "latlon",
     "get_regridder",
     "BilinearInterpolator",
-    "S2NearestNeighborInterpolator",
+    "KNNS2Interpolator",
     "Regridder",
 ]
 

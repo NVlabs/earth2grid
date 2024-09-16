@@ -182,7 +182,7 @@ class BilinearInterpolator(torch.nn.Module):
         return interpolated
 
 
-def S2NearestNeighborInterpolator(
+def KNNS2Interpolator(
     src_lon: torch.Tensor,
     src_lat: torch.Tensor,
     dest_lon: torch.Tensor,
@@ -202,6 +202,9 @@ def S2NearestNeighborInterpolator(
             k > 1.
 
     """
+    if (src_lat.ndim != 1) or (src_lon.ndim != 1) or (dest_lat.ndim != 1) or (dest_lon.ndim != 1):
+        raise ValueError("All input coordinates must be 1 dimensional.")
+
     src_lon = torch.deg2rad(src_lon.cpu())
     src_lat = torch.deg2rad(src_lat.cpu())
 
