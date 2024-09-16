@@ -304,14 +304,14 @@ class Grid(base.Grid):
         # Make grid
         nside = 2**self.level
         pix = self._nest_ipix()
-        points = healpix_bare.corners(nside, torch.from_numpy(pix), True).numpy()
+        points = healpix_bare.corners(nside, pix, True).numpy()
         out = einops.rearrange(points, "n d s -> (n s) d")
         unique_points, inverse = np.unique(out, return_inverse=True, axis=0)
         if unique_points.ndim != 2:
             raise ValueError(f"unique_points.ndim should be 2, got {unique_points.ndim}.")
         if unique_points.shape[1] != 3:
             raise ValueError(f"unique_points.shape[1] should be 3, got {unique_points.shape[1]}.")
-        inverse = einops.rearrange(inverse, "(n s) -> n s", n=pix.size)
+        inverse = einops.rearrange(inverse, "(n s) -> n s", n=pix.numel())
         n, s = inverse.shape
         cells = np.ones_like(inverse, shape=(n, s + 1))
         cells[:, 0] = s
