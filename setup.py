@@ -80,7 +80,7 @@ try:
             extra_compile_args={'nvcc': ['-O2']},
         ),
     )
-except ImportError:
+except (ImportError, OSError):
     warnings.warn("Cuda extensions for torch not found, skipping cuda healpix padding module")
 
 
