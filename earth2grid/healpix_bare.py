@@ -15,10 +15,11 @@
 import torch
 
 from earth2grid import _healpix_bare
-from earth2grid._healpix_bare import corners, hpc2loc, hpd2loc, nest2hpd, nest2ring, ring2hpd, ring2nest
+from earth2grid._healpix_bare import ang2ring, corners, hpc2loc, hpd2loc, nest2hpd, nest2ring, ring2hpd, ring2nest
 
 __all__ = [
     "pix2ang",
+    "ang2pix",
     "ring2nest",
     "nest2ring",
     "hpc2loc",
@@ -27,6 +28,12 @@ __all__ = [
 
 
 def pix2ang(nside, i, nest=False, lonlat=False):
+    """
+    Returns:
+        theta, phi: (lon, lat) in degrees if lonlat=True else (colat, lon) in
+            radians
+
+    """
     if nest:
         hpd = nest2hpd(nside, i)
     else:
@@ -40,6 +47,29 @@ def pix2ang(nside, i, nest=False, lonlat=False):
         return lat, lon
 
 
+def ang2pix(nside, theta, phi, nest=False, lonlat=False):
+    """Find the pixel containing a given angular coordinate
+
+    Args:
+        theta, phi: (lon, lat) in degrees if lonlat=True else (colat, lon) in
+            radians
+
+    """
+    if lonlat:
+        lon = theta
+        lat = phi
+
+        theta = torch.deg2rad(90 - lat)
+        phi = torch.deg2rad(lon)
+
+    ang = torch.stack([theta, phi], -1)
+    pix = ang2ring(nside, ang.double())
+    if nest:
+        pix = ring2nest(nside, pix)
+
+    return pix
+
+
 def _loc2ang(loc):
     """
     static t_ang loc2ang(tloc loc)
@@ -49,6 +79,10 @@ def _loc2ang(loc):
     s = loc[..., 1]
     phi = loc[..., 2]
     return phi % (2 * torch.pi), torch.atan2(s, z)
+
+
+def _ang2loc(lat, lon):
+    pass
 
 
 def loc2vec(loc):

@@ -90,3 +90,21 @@ def test_get_interp_weights_vector_interp_y():
     assert torch.all(pix == inpix[:, None])
     expected_weights = torch.tensor([ay / 2, ay / 2, (1 - ay) / 2, (1 - ay) / 2]).double()[:, None]
     assert torch.allclose(weights, expected_weights)
+
+
+@pytest.mark.parametrize("lonlat", [True, False])
+def test_ang2pix(lonlat):
+    if lonlat:
+        lon = torch.tensor([32.0])
+        lat = torch.tensor([45.0])
+    else:
+        lon = torch.tensor([1.0])
+        lat = torch.tensor([2.0])
+
+    n = 2**16
+
+    pix = earth2grid.healpix_bare.ang2pix(n, lon, lat, lonlat=lonlat)
+    lon_out, lat_out = earth2grid.healpix_bare.pix2ang(n, pix, lonlat=lonlat)
+
+    assert lon.item() == pytest.approx(lon_out.item(), rel=1e-4)
+    assert lat.item() == pytest.approx(lat_out.item(), rel=1e-4)

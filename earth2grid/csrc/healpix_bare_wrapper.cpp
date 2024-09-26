@@ -93,6 +93,20 @@ torch::Tensor hpd2loc_wrapper(int nside, torch::Tensor input) {
     return output;
 }
 
+torch::Tensor ang2ring_wrapper(int nside, torch::Tensor ang) {
+    auto ang_accessor = ang.accessor<double, 2>();
+    auto output_options = torch::TensorOptions().dtype(torch::kInt64);
+    auto output = torch::empty({ang.size(0)}, output_options);
+
+    auto output_accessor = output.accessor<int64_t, 1>();
+
+    for (int64_t i = 0; i < ang.size(0); ++i) {
+      t_ang angi {ang_accessor[i][0], ang_accessor[i][1]};
+      output_accessor[i] = ang2ring(nside, angi);
+    }
+    return output;
+}
+
 torch::Tensor hpc2loc_wrapper(torch::Tensor x, torch::Tensor y, torch::Tensor f) {
     auto accessor_f = f.accessor<int64_t, 1>();
     auto accessor_x = x.accessor<double, 1>();
@@ -223,6 +237,7 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("ring2hpd", wrap_2hpd(ring2hpd), "hpd is f, y ,x");
   m.def("hpd2loc", &hpd2loc_wrapper, "loc is in z, s, phi");
   m.def("hpc2loc", &hpc2loc_wrapper, "hpc2loc(x, y, f) -> z, s, phi");
+  m.def("ang2ring", &ang2ring_wrapper, "ang2ring(nside, ang) -> pix");
   m.def("corners", &corners, "");
   m.def("get_interp_weights", &get_interp_weights, "");
 };

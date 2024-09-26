@@ -44,6 +44,7 @@ import torch
 
 from earth2grid import healpix_bare
 from earth2grid._regrid import Regridder
+from earth2grid.healpix_bare import ang2pix
 
 try:
     import pyvista as pv
@@ -67,7 +68,7 @@ try:
 except ImportError:
     cuhpx = None
 
-__all__ = ["pad", "PixelOrder", "XY", "Compass", "Grid", "HEALPIX_PAD_XY", "conv2d", "reorder"]
+__all__ = ["pad", "PixelOrder", "XY", "Compass", "Grid", "HEALPIX_PAD_XY", "conv2d", "reorder", "ang2pix"]
 
 
 def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
