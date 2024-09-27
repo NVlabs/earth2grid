@@ -33,11 +33,11 @@ def get_regridder(src: base.Grid, dest: base.Grid) -> torch.nn.Module:
     """Get a regridder from `src` to `dest`"""
     if src == dest:
         return Identity()
-    elif isinstance(src, latlon.LatLonGrid)
+    elif isinstance(src, latlon.LatLonGrid) and isinstance(dest, latlon.LatLonGrid):
         return src.get_bilinear_regridder_to(dest.lat, dest.lon)
     elif isinstance(src, latlon.LatLonGrid) and isinstance(dest, healpix.Grid):
         return src.get_bilinear_regridder_to(dest.lat, dest.lon)
-    elif isinstance(src, lcc.LambertConformalConicGrid)
+    elif isinstance(src, lcc.LambertConformalConicGrid):
         return src.get_bilinear_regridder_to(dest.lat, dest.lon)
     elif isinstance(src, healpix.Grid):
         return src.get_bilinear_regridder_to(dest.lat, dest.lon)
