@@ -98,6 +98,7 @@ HRRR_CONUS_PROJECTION = LambertConformalConicProjection(
 
 
 class LambertConformalConicGrid(base.Grid):
+    # nothing here is specific to the projection, so could be shared by any projected rectilinear grid
     def __init__(self, projection: LambertConformalConicProjection, x, y):
         """        
         Args:
