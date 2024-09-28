@@ -61,16 +61,27 @@ class LambertConformalConicProjection:
     def _rho(self, lat):
         return self.RF / np.power(np.tan(np.pi / 4 + np.deg2rad(lat) / 2), self.n)
 
+    def _theta(self, lon):
+        """
+        Angle of deviation (in radians) of the projected grid from the regular grid,
+        for a given longitude (in degrees).
+
+        To convert to U and V on the projected grid to easterly / northerly components:
+            UN =   cos(theta) * U + sin(theta) * V
+            VN = - sin(theta) * U + cos(theta) * V
+        """
+        # center about reference longitude
+        delta_lon = lon - self.lon0
+        delta_lon = delta_lon - np.round(delta_lon/360) * 360 # convert to [-180, 180]
+        return self.n * np.deg2rad(delta_lon)
+
 
     def proj(self, lat, lon):
         """
         Compute the projected x,y from lat,lon.
         """
         rho = self._rho(lat)
-
-        delta_lon = lon - self.lon0
-        delta_lon = delta_lon - np.round(delta_lon/360) * 360 # convert to [-180, 180]
-        theta = self.n * np.deg2rad(delta_lon)
+        theta = self._theta(lon)
     
         x = rho * np.sin(theta)
         y = self.rho0 - rho * np.cos(theta)
@@ -170,7 +181,7 @@ HRRR_CONUS_GRID = hrrr_conus_grid()
 
 
 class _RegridFromLCC(torch.nn.Module):
-    """Regrid from lat-lon to unstructured grid with bilinear interpolation"""
+    """Regrid from LambertConformalConicGrid to unstructured grid with bilinear interpolation"""
 
     def __init__(self, src: LambertConformalConicGrid, lat: np.ndarray, lon: np.ndarray):
         super().__init__()
@@ -178,7 +189,11 @@ class _RegridFromLCC(torch.nn.Module):
         x, y = src.projection.proj(lat, lon)
         
         self.shape = lat.shape
-        self._bilinear = BilinearInterpolator(torch.from_numpy(src.x), torch.from_numpy(src.y), y_query= torch.from_numpy(y.ravel()), x_query=torch.from_numpy(x.ravel()))
+        self._bilinear = BilinearInterpolator(
+            x_coords = torch.from_numpy(src.x), 
+            y_coords = torch.from_numpy(src.y), 
+            x_query = torch.from_numpy(x.ravel()),
+            y_query = torch.from_numpy(y.ravel()))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         out = self._bilinear(x)
