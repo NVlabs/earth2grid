@@ -34,7 +34,7 @@ __all__ = [
 class LambertConformalConicProjection:
     def __init__(self, lat0: float, lon0: float, lat1: float, lat2: float, radius: float):
         """
-        
+
         Args:
             lat0: latitude of origin (degrees)
             lon0: longitude of origin (degrees)
@@ -50,7 +50,6 @@ class LambertConformalConicProjection:
         self.lat2 = lat2
         self.radius = radius
 
-
         c1 = np.cos(np.deg2rad(lat1))
         c2 = np.cos(np.deg2rad(lat2))
         t1 = np.tan(np.pi / 4 + np.deg2rad(lat1) / 2)
@@ -58,8 +57,8 @@ class LambertConformalConicProjection:
 
         if np.abs(lat1 - lat2) < 1e-8:
             self.n = np.sin(np.deg2rad(lat1))
-        else:            
-            self.n = np.log(c1/c2) / np.log(t2/t1)
+        else:
+            self.n = np.log(c1 / c2) / np.log(t2 / t1)
 
         self.RF = radius * c1 * np.power(t1, self.n) / self.n
         self.rho0 = self._rho(lat0)
@@ -78,9 +77,8 @@ class LambertConformalConicProjection:
         """
         # center about reference longitude
         delta_lon = lon - self.lon0
-        delta_lon = delta_lon - np.round(delta_lon/360) * 360 # convert to [-180, 180]
+        delta_lon = delta_lon - np.round(delta_lon / 360) * 360  # convert to [-180, 180]
         return self.n * np.deg2rad(delta_lon)
-
 
     def project(self, lat, lon):
         """
@@ -88,7 +86,7 @@ class LambertConformalConicProjection:
         """
         rho = self._rho(lat)
         theta = self._theta(lon)
-    
+
         x = rho * np.sin(theta)
         y = self.rho0 - rho * np.cos(theta)
         return x, y
@@ -99,26 +97,21 @@ class LambertConformalConicProjection:
         """
         rho = np.hypot(x, self.rho0 - y)
         theta = np.arctan2(x, self.rho0 - y)
-        
-        lat = np.rad2deg(2 * np.arctan(np.power(self.RF/rho, 1/self.n))) - 90
+
+        lat = np.rad2deg(2 * np.arctan(np.power(self.RF / rho, 1 / self.n))) - 90
         lon = self.lon0 + np.rad2deg(theta / self.n)
         return lat, lon
 
+
 # Projection used by HRRR CONUS (Continental US) data
 # https://rapidrefresh.noaa.gov/hrrr/HRRR_conus.domain.txt
-HRRR_CONUS_PROJECTION = LambertConformalConicProjection(
-    lon0 = -97.5,
-    lat0 = 38.5,
-    lat1 = 38.5,
-    lat2 = 38.5,
-    radius = 6371229.0
-)
+HRRR_CONUS_PROJECTION = LambertConformalConicProjection(lon0=-97.5, lat0=38.5, lat1=38.5, lat2=38.5, radius=6371229.0)
 
 
 class LambertConformalConicGrid(base.Grid):
     # nothing here is specific to the projection, so could be shared by any projected rectilinear grid
     def __init__(self, projection: LambertConformalConicProjection, x, y):
-        """        
+        """
         Args:
             projection: LambertConformalConicProjection object
             x: range of x values
@@ -155,12 +148,13 @@ class LambertConformalConicGrid(base.Grid):
         """Get regridder to the specified lat and lon points"""
 
         x, y = self.projection.project(lat, lon)
-        
+
         return BilinearInterpolator(
-            x_coords = torch.from_numpy(self.x), 
-            y_coords = torch.from_numpy(self.y), 
-            x_query = torch.from_numpy(x),
-            y_query = torch.from_numpy(y))
+            x_coords=torch.from_numpy(self.x),
+            y_coords=torch.from_numpy(self.y),
+            x_query=torch.from_numpy(x),
+            y_query=torch.from_numpy(y),
+        )
 
     def visualize(self, data):
         raise NotImplementedError()
@@ -176,7 +170,8 @@ class LambertConformalConicGrid(base.Grid):
         grid = pv.StructuredGrid(x, y, z)
         return grid
 
-def hrrr_conus_grid(ix0 = 0, iy0 = 0, nx = 1799, ny = 1059):
+
+def hrrr_conus_grid(ix0=0, iy0=0, nx=1799, ny=1059):
     # coordinates of point in top-left corner
     lat0 = 21.138123
     lon0 = 237.280472
@@ -185,10 +180,11 @@ def hrrr_conus_grid(ix0 = 0, iy0 = 0, nx = 1799, ny = 1059):
     # coordinates on projected space
     x0, y0 = HRRR_CONUS_PROJECTION.project(lat0, lon0)
 
-    x = [x0 + i * scale for i in range(ix0, ix0+nx)]
-    y = [y0 + i * scale for i in range(iy0, iy0+ny)]
+    x = [x0 + i * scale for i in range(ix0, ix0 + nx)]
+    y = [y0 + i * scale for i in range(iy0, iy0 + ny)]
 
     return LambertConformalConicGrid(HRRR_CONUS_PROJECTION, x, y)
+
 
 # Grid used by HRRR CONUS (Continental US) data
 HRRR_CONUS_GRID = hrrr_conus_grid()

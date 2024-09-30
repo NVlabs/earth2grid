@@ -44,7 +44,7 @@ class Regridder(torch.nn.Module):
         weight = self.weight.view(-1, p)
 
         # using embedding bag is 2x faster on cpu and 4x on gpu.
-        output = torch.nn.functional.embedding_bag(index, zrs, per_sample_weights=weight, mode='sum')
+        output = torch.nn.functional.embedding_bag(index, zrs, per_sample_weights=weight, mode="sum")
         output = output.T.view(*shape, -1)
         return output.reshape(list(shape) + output_shape)
 
@@ -173,11 +173,11 @@ class BilinearInterpolator(torch.nn.Module):
         *shape, y, x = z.shape
         zrs = z.view(-1, y * x).T
         # using embedding bag is 2x faster on cpu and 4x on gpu.
-        output = torch.nn.functional.embedding_bag(self.index, zrs, per_sample_weights=self.weights, mode='sum')
+        output = torch.nn.functional.embedding_bag(self.index, zrs, per_sample_weights=self.weights, mode="sum")
         interpolated = torch.full(
             [self.mask.numel(), zrs.shape[1]], fill_value=self.fill_value, dtype=z.dtype, device=z.device
         )
-        interpolated.masked_scatter_(self.mask.view(-1,1), output)
+        interpolated.masked_scatter_(self.mask.view(-1, 1), output)
         interpolated = interpolated.T.view(*shape, *self.mask.shape)
         return interpolated
 
