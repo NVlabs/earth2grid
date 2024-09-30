@@ -14,13 +14,14 @@
 # limitations under the License.
 import torch
 
-from earth2grid import base, healpix, latlon
+from earth2grid import base, healpix, latlon, lcc
 from earth2grid._regrid import BilinearInterpolator, Identity, KNNS2Interpolator, Regridder
 
 __all__ = [
     "base",
     "healpix",
     "latlon",
+    "lcc",
     "get_regridder",
     "BilinearInterpolator",
     "KNNS2Interpolator",
@@ -35,6 +36,8 @@ def get_regridder(src: base.Grid, dest: base.Grid) -> torch.nn.Module:
     elif isinstance(src, latlon.LatLonGrid) and isinstance(dest, latlon.LatLonGrid):
         return src.get_bilinear_regridder_to(dest.lat, dest.lon)
     elif isinstance(src, latlon.LatLonGrid) and isinstance(dest, healpix.Grid):
+        return src.get_bilinear_regridder_to(dest.lat, dest.lon)
+    elif isinstance(src, lcc.LambertConformalConicGrid):
         return src.get_bilinear_regridder_to(dest.lat, dest.lon)
     elif isinstance(src, healpix.Grid):
         return src.get_bilinear_regridder_to(dest.lat, dest.lon)
