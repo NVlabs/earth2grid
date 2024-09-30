@@ -177,8 +177,8 @@ class BilinearInterpolator(torch.nn.Module):
         interpolated = torch.full(
             [self.mask.numel(), zrs.shape[1]], fill_value=self.fill_value, dtype=z.dtype, device=z.device
         )
-        interpolated.masked_scatter_(self.mask.unsqueeze(-1), output)
-        interpolated = interpolated.T.view(*shape, self.mask.numel())
+        interpolated.masked_scatter_(self.mask.view(-1,1), output)
+        interpolated = interpolated.T.view(*shape, *self.mask.shape)
         return interpolated
 
 

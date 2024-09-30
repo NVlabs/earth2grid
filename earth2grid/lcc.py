@@ -153,7 +153,14 @@ class LambertConformalConicGrid(base.Grid):
 
     def get_bilinear_regridder_to(self, lat: np.ndarray, lon: np.ndarray):
         """Get regridder to the specified lat and lon points"""
-        return _RegridFromLCC(self, lat, lon)
+
+        x, y = self.projection.project(lat, lon)
+        
+        return BilinearInterpolator(
+            x_coords = torch.from_numpy(self.x), 
+            y_coords = torch.from_numpy(self.y), 
+            x_query = torch.from_numpy(x),
+            y_query = torch.from_numpy(y))
 
     def visualize(self, data):
         raise NotImplementedError()
@@ -185,24 +192,3 @@ def hrrr_conus_grid(ix0 = 0, iy0 = 0, nx = 1799, ny = 1059):
 
 # Grid used by HRRR CONUS (Continental US) data
 HRRR_CONUS_GRID = hrrr_conus_grid()
-
-
-class _RegridFromLCC(torch.nn.Module):
-    """Regrid from LambertConformalConicGrid to unstructured grid with bilinear interpolation"""
-
-    def __init__(self, src: LambertConformalConicGrid, lat: np.ndarray, lon: np.ndarray):
-        super().__init__()
-
-        x, y = src.projection.project(lat, lon)
-        
-        self.shape = lat.shape
-        self._bilinear = BilinearInterpolator(
-            x_coords = torch.from_numpy(src.x), 
-            y_coords = torch.from_numpy(src.y), 
-            x_query = torch.from_numpy(x.ravel()),
-            y_query = torch.from_numpy(y.ravel()))
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        out = self._bilinear(x)
-        return out.view(out.shape[:-1] + self.shape)
-

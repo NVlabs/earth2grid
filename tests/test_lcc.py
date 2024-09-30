@@ -57,10 +57,9 @@ def test_regrid_1d():
 
 def test_regrid_2d():
     src = HRRR_CONUS_GRID
-    dest_lat, dest_lon = np.meshgrid(np.linspace(25.0, 33.0, 10), np.linspace(-123, -98, 10))
+    dest_lat, dest_lon = np.meshgrid(np.linspace(25.0, 33.0, 10), np.linspace(-123, -98, 12))
     regrid = src.get_bilinear_regridder_to(dest_lat, dest_lon)
     src_lat = torch.broadcast_to(torch.tensor(src.lat), src.shape)
     out_lat = regrid(src_lat)
 
     assert torch.allclose(out_lat, torch.tensor(dest_lat))
-
