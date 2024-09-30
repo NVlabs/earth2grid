@@ -17,7 +17,7 @@
 from earth2grid.lcc import HRRR_CONUS_GRID
 import numpy as np
 import torch
-from pytest import approx
+import pytest
 
 def test_grid_shape():
     assert HRRR_CONUS_GRID.lat.shape == HRRR_CONUS_GRID.shape 
@@ -37,13 +37,13 @@ lons = np.array([
 
 
 def test_grid_vals():
-    assert HRRR_CONUS_GRID.lat[0:400:100,0:400:100] == approx(lats)
-    assert HRRR_CONUS_GRID.lon[0:400:100,0:400:100] == approx(lons)
+    assert HRRR_CONUS_GRID.lat[0:400:100,0:400:100] == pytest.approx(lats)
+    assert HRRR_CONUS_GRID.lon[0:400:100,0:400:100] == pytest.approx(lons)
 
 def test_grid_slice():
     slice_grid = HRRR_CONUS_GRID[0:400:100,0:400:100]
-    assert slice_grid.lat == approx(lats)
-    assert slice_grid.lon == approx(lons)
+    assert slice_grid.lat == pytest.approx(lats)
+    assert slice_grid.lon == pytest.approx(lons)
 
 def test_regrid_1d():
     src = HRRR_CONUS_GRID

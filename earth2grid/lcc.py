@@ -23,6 +23,12 @@ try:
 except ImportError:
     pv = None
 
+__all__ = [
+    "LambertConformalConicProjection",
+    "LambertConformalConicGrid",
+    "HRRR_CONUS_PROJECTION",
+    "HRRR_CONUS_GRID",
+]
 
 
 class LambertConformalConicProjection:
@@ -76,7 +82,7 @@ class LambertConformalConicProjection:
         return self.n * np.deg2rad(delta_lon)
 
 
-    def proj(self, lat, lon):
+    def project(self, lat, lon):
         """
         Compute the projected x,y from lat,lon.
         """
@@ -87,7 +93,7 @@ class LambertConformalConicProjection:
         y = self.rho0 - rho * np.cos(theta)
         return x, y
 
-    def inv(self, x, y):
+    def inverse_project(self, x, y):
         """
         Compute the lat,lon from the projected x,y.
         """
@@ -99,6 +105,7 @@ class LambertConformalConicProjection:
         return lat, lon
 
 # Projection used by HRRR CONUS (Continental US) data
+# https://rapidrefresh.noaa.gov/hrrr/HRRR_conus.domain.txt
 HRRR_CONUS_PROJECTION = LambertConformalConicProjection(
     lon0 = -97.5,
     lat0 = 38.5,
@@ -126,7 +133,7 @@ class LambertConformalConicGrid(base.Grid):
     @property
     def lat_lon(self):
         mesh_x, mesh_y = np.meshgrid(self.x, self.y)
-        return self.projection.inv(mesh_x, mesh_y)
+        return self.projection.inverse_project(mesh_x, mesh_y)
 
     @property
     def lat(self):
@@ -169,7 +176,7 @@ def hrrr_conus_grid(ix0 = 0, iy0 = 0, nx = 1799, ny = 1059):
     # grid length (m)
     scale = 3000.0
     # coordinates on projected space
-    x0, y0 = HRRR_CONUS_PROJECTION.proj(lat0, lon0)
+    x0, y0 = HRRR_CONUS_PROJECTION.project(lat0, lon0)
 
     x = [x0 + i * scale for i in range(ix0, ix0+nx)]
     y = [y0 + i * scale for i in range(iy0, iy0+ny)]
@@ -186,7 +193,7 @@ class _RegridFromLCC(torch.nn.Module):
     def __init__(self, src: LambertConformalConicGrid, lat: np.ndarray, lon: np.ndarray):
         super().__init__()
 
-        x, y = src.projection.proj(lat, lon)
+        x, y = src.projection.project(lat, lon)
         
         self.shape = lat.shape
         self._bilinear = BilinearInterpolator(
