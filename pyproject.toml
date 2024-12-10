@@ -24,7 +24,6 @@ classifiers = [
 
 dependencies = [
     "einops>=0.7.0",
-    "netCDF4>=1.6.5",
     "numpy>=1.23.3",
     "torch>=2.0.1",
     "scipy"
@@ -35,6 +34,9 @@ dependencies = [
 
 
 [project.optional-dependencies]
+all = [
+    "netCDF4>=1.6.5",
+]
 viz = [
     "pyvista>=0.43.2",
     "matplotlib",
