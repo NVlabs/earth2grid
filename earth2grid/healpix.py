@@ -76,7 +76,8 @@ def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
     Pad each face consistently with its according neighbors in the HEALPix
 
     Args:
-        x: The input tensor of shape [N, F, H, W] or [N, F, C, H, W]
+        x: The input tensor of shape [N, F, H, W] or [N, F, C, H, W]. Must be
+            ordered in HEALPIX_PAD_XY pixel ordering.
         padding: the amount of padding
 
     Returns:
