@@ -42,7 +42,7 @@ import einops
 import numpy as np
 import torch
 
-from earth2grid import healpix_bare
+from earth2grid import _bit_ops, healpix_bare
 from earth2grid._regrid import Regridder
 from earth2grid.healpix_bare import ang2pix
 
@@ -451,22 +451,6 @@ class HEALPixPadFunction(torch.autograd.Function):
 ZOOM_LEVELS = 20
 
 
-def _extract_every_other_bit(binary_number):
-    result = 0
-    shift_count = 0
-
-    for i in range(ZOOM_LEVELS):
-        # Check if the least significant bit is 1
-        # Set the corresponding bit in the result
-        result |= (binary_number & 1) << shift_count
-
-        # Shift to the next bit to check
-        binary_number = binary_number >> 2
-        shift_count += 1
-
-    return result
-
-
 def _flip_xy(nside: int, i):
     n2 = nside * nside
     f = i // n2
@@ -511,8 +495,8 @@ def nest2xy(nside, i):
     """convert NEST to XY index"""
     tile = i // nside**2
     j = i % (nside**2)
-    x = _extract_every_other_bit(j)
-    y = _extract_every_other_bit(j >> 1)
+    x = _bit_ops.compact_bits(j)
+    y = _bit_ops.compact_bits(j >> 1)
     return tile * nside**2 + y * nside + x
 
 
@@ -523,13 +507,8 @@ def xy2nest(nside, i):
     x = i % nside
 
     result = 0
-    for i in range(ZOOM_LEVELS):
-        # Extract the ith bit from the number
-        extracted_bit = (x >> i) & 1
-        result |= extracted_bit << (2 * i)
-
-        extracted_bit = (y >> i) & 1
-        result |= extracted_bit << (2 * i + 1)
+    result |= _bit_ops.spread_bits(x)
+    result |= _bit_ops.spread_bits(y) << 1
     return result | (tile * nside**2)
 
 
