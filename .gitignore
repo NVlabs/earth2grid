@@ -116,7 +116,14 @@ test_grid_visualize.png
 *.png
 *.jpg
 *.jpeg
+*.gif
 public/
 
 a.out
 *.o
+
+# editor backup files
+# helix
+\#*\#
+# emacs
+*~

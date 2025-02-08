@@ -25,14 +25,18 @@ except ImportError:
 
 
 class LatLonGrid(base.Grid):
-    def __init__(self, lat: list[float], lon: list[float]):
+    def __init__(self, lat: list[float], lon: list[float], cylinder: bool = True):
         """
         Args:
             lat: center of lat cells
             lon: center of lon cells
+            cylinder: if true, then lon is considered a periodic coordinate
+                on cylinder so that interpolation wraps around the edge.
+                Otherwise, it is assumed to be a finite plane.
         """
         self._lat = lat
         self._lon = lon
+        self.cylinder = cylinder
 
     @property
     def lat(self):
@@ -48,7 +52,7 @@ class LatLonGrid(base.Grid):
 
     def get_bilinear_regridder_to(self, lat: np.ndarray, lon: np.ndarray):
         """Get regridder to the specified lat and lon points"""
-        return _RegridFromLatLon(self, lat, lon)
+        return _RegridFromLatLon(self, lat, lon, cylinder=self.cylinder)
 
     def _lonb(self):
         edges = (self.lon[1:] + self.lon[:-1]) / 2
@@ -78,15 +82,22 @@ class LatLonGrid(base.Grid):
 class _RegridFromLatLon(torch.nn.Module):
     """Regrid from lat-lon to unstructured grid with bilinear interpolation"""
 
-    def __init__(self, src: LatLonGrid, lat: np.ndarray, lon: np.ndarray):
+    def __init__(self, src: LatLonGrid, lat: np.ndarray, lon: np.ndarray, cylinder: bool = True):
+        """
+        Args:
+            cylinder: if True than lon is assumed to be periodic
+        """
         super().__init__()
+        self.cylinder = cylinder
 
         lat, lon = np.broadcast_arrays(lat, lon)
         self.shape = lat.shape
 
         # TODO add device switching logic (maybe use torch registers for this
         # info)
-        long = np.concatenate([src.lon.ravel(), [360]], axis=-1)
+        long = src.lon.ravel()
+        if self.cylinder:
+            long = np.concatenate([long, [360]], axis=-1)
         long_t = torch.from_numpy(long)
 
         # flip the order latg since bilinear only works with increasing coordinate values
@@ -104,7 +115,8 @@ class _RegridFromLatLon(torch.nn.Module):
         # pad z in lon direction
         # only works for a global grid
         # TODO generalize this to local grids and add options for padding
-        x = torch.cat([x, x[..., 0:1]], axis=-1)
+        if self.cylinder:
+            x = torch.cat([x, x[..., 0:1]], axis=-1)
         out = self._bilinear(x)
         return out.view(out.shape[:-1] + self.shape)
 

@@ -16,8 +16,13 @@ import math
 from typing import Dict, Sequence
 
 import einops
-import netCDF4 as nc
 import torch
+
+try:
+    import netCDF4 as nc
+except ImportError:
+    nc = None
+
 from scipy import spatial
 
 from earth2grid.spatial import ang2vec, haversine_distance
@@ -59,6 +64,9 @@ class Regridder(torch.nn.Module):
 class TempestRegridder(torch.nn.Module):
     def __init__(self, file_path):
         super().__init__()
+        if nc is None:
+            raise ImportError("netCDF4 not imported. Please install for this feature.")
+
         dataset = nc.Dataset(file_path)
         self.lat = dataset["latc_b"][:]
         self.lon = dataset["lonc_b"][:]
