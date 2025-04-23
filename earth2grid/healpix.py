@@ -36,6 +36,7 @@ import math
 import warnings
 from dataclasses import dataclass
 from enum import Enum
+from functools import lru_cache
 from typing import Union
 
 import einops
@@ -143,17 +144,26 @@ class PixelOrder(Enum):
         if self == PixelOrder.RING:
             return x
         elif self == PixelOrder.NEST:
-            return _apply_cuhpx_remap(cuhpx.nest2ring, x)
+            if cuhpx is None:
+                return _reorder_via_permutation(x, self, PixelOrder.RING)
+            else:
+                return _apply_cuhpx_remap(cuhpx.nest2ring, x)
 
     def to_nest_cuda(self, x: torch.Tensor):
         if self == PixelOrder.RING:
-            return _apply_cuhpx_remap(cuhpx.ring2nest, x)
+            if cuhpx is None:
+                return _reorder_via_permutation(x, self, PixelOrder.NEST)
+            else:
+                return _apply_cuhpx_remap(cuhpx.ring2nest, x)
         elif self == PixelOrder.NEST:
             return x
 
     def to_xy_cuda(self, x: torch.Tensor, dest: "XY"):
         if self == PixelOrder.RING:
-            return _apply_cuhpx_remap(cuhpx.ring2flat, x, clockwise=dest.clockwise, origin=dest.origin.name)
+            if cuhpx is None:
+                return _reorder_via_permutation(x, self, dest)
+            else:
+                return _apply_cuhpx_remap(cuhpx.ring2flat, x, clockwise=dest.clockwise, origin=dest.origin.name)
         elif self == PixelOrder.NEST:
             nside = npix2nside(x.size(-1))
             i_dest = torch.arange(x.shape[-1], dtype=torch.int64, device=x.device)
@@ -201,12 +211,15 @@ class XY:
         return x[..., i]
 
     def to_ring_cuda(self, x: torch.Tensor):
-        return _apply_cuhpx_remap(
-            cuhpx.flat2ring,
-            x,
-            origin=self.origin.name,
-            clockwise=self.clockwise,
-        )
+        if cuhpx is None:
+            return _reorder_via_permutation(x, self, PixelOrder.RING)
+        else:
+            return _apply_cuhpx_remap(
+                cuhpx.flat2ring,
+                x,
+                origin=self.origin.name,
+                clockwise=self.clockwise,
+            )
 
     def to_nest_cuda(self, x: torch.Tensor):
         nside = npix2nside(x.size(-1))
@@ -224,6 +237,32 @@ def reorder(x: torch.Tensor, src_pixel_order: PixelOrderT, dest_pixel_order: Pix
     """Reorder x from one pixel order to another"""
     grid = Grid(level=npix2level(x.size(-1)), pixel_order=src_pixel_order)
     return grid.reorder(dest_pixel_order, x)
+
+
+@lru_cache()
+def _get_permutation_from_src_to_dest(level: int, src: PixelOrder, dest: PixelOrder, device):
+    """Return a index that can be used to reorder src to dest
+
+    >>> i_me = _get_permutation_from_src_to_dest(6, ...)
+    >>> x_in_dest_order = x_in_src_order[..., i_me]
+
+    """
+    src_grid = Grid(level, pixel_order=src)
+    dest_grid = Grid(level, pixel_order=dest)
+    i_nest = dest_grid._nest_ipix()
+    i_me = src_grid._nest2me(i_nest)
+    return i_me.to(device)
+
+
+def _reorder_via_permutation(x: torch.Tensor, src: PixelOrderT, dest: PixelOrderT):
+    """Reorder by indexing using the permutation map from src to dest
+
+    This is a fallback that works when cuhpx is not installed. The
+    permutation is constructed on the cpu, but can be applied on the GPU.
+    An LRU cache is used to avoid recomputing the permutation map."""
+    level = npix2level(x.size(-1))
+    i_me = _get_permutation_from_src_to_dest(level, src=src, dest=dest, device=x.device)
+    return x[..., i_me]
 
 
 def xy2xy(nside: int, src: XY, dest: XY, i: torch.Tensor):
@@ -353,18 +392,12 @@ class Grid(base.Grid):
     def approximate_grid_length_meters(self):
         return approx_grid_length_meters(self._nside())
 
-    def _reorder_cpu(self, x: torch.Tensor, order: PixelOrderT):
-        output_grid = Grid(level=self.level, pixel_order=order)
-        i_nest = output_grid._nest_ipix()
-        i_me = self._nest2me(i_nest)
-        return x[..., i_me]
-
     def reorder(self, order: PixelOrderT, x: torch.Tensor) -> torch.Tensor:
         """Rorder the pixels of ``x`` to have ``order``"""
         if x.device.type == "cuda":
             return order.reorder_from_cuda(x, self.pixel_order)
         else:
-            return self._reorder_cpu(x, order)
+            return _reorder_via_permutation(x, self.pixel_order, order)
 
     def get_healpix_regridder(self, dest: "Grid"):
         if self.level != dest.level:
