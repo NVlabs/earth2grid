@@ -1,7 +1,15 @@
 # Changelog
 
-## latest
+## 2025.4.1
+
+Breaking changes:
+
+- renamed package name from "earth2-grid" to "earth2grid"
 - `earth2grid.latlon.BilinearInterpolator` moved to `earth2grid.BilinearInterpolator`
+
+New features:
+- added `earth2grid.healpix.reorder`
+- added Lambert Conformal conic grid (for use with HRRR)
 
 ## 2024.8.1
 
