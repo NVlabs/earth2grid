@@ -602,3 +602,42 @@ def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     weight = weight.unsqueeze(-3)
     out = torch.nn.functional.conv3d(input, weight, bias, stride, padding, dilation, groups)
     return einops.rearrange(out, "n c f x y -> n c () (f x y)")
+
+
+def pixels_to_rings(nside: int, i: np.ndarray) -> np.ndarray:
+    """Get the ring number of a pixel ``i`` in RING order"""
+    npix = 12 * nside * nside
+    ncap = 2 * nside * (nside - 1)
+
+    i_south = npix - i - 1
+    i_eq = i - ncap
+
+    r_north = np.floor(0.5 * (1 + np.sqrt(1 + 2 * i))) - 1
+    r_eq = np.floor(i_eq / (4 * nside) + nside) - 1
+    r_south = 4 * nside - np.floor(0.5 * (1 + np.sqrt(1 + 2 * i_south))) - 1
+
+    ring = r_north
+    ring = np.where(i >= ncap, r_eq, ring)
+    ring = np.where(i >= (npix - ncap), r_south, ring)
+
+    return ring.astype(int)
+
+
+def zonal_average(x: np.ndarray) -> np.ndarray:
+    """Compute the zonal average of a map in ring format"""
+    if x.ndim != 2:
+        raise ValueError()
+
+    npix = x.shape[-1]
+    nside = npix2nside(npix)
+
+    iring = pixels_to_rings(nside, np.arange(npix))
+    nring = iring.max() + 1
+    batch = np.arange(x.shape[0])
+
+    i_flat = batch[:, None] * nring + iring
+    i_flat = i_flat.ravel()
+    num = np.bincount(i_flat, weights=x.ravel(), minlength=nring * x.shape[0])
+    denom = np.bincount(i_flat, minlength=nring * x.shape[0])
+    average = num / denom
+    return average.reshape(x.shape[0], nring)

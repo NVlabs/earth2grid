@@ -1,5 +1,10 @@
 # Changelog
 
+## Latest
+
+New APIs
+- earth2grid.healpix.{zonal_average,pixels_to_ring}
+
 ## 2025.4.1
 
 Breaking changes:
