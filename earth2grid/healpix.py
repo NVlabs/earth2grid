@@ -713,7 +713,7 @@ def to_double_pixelization(x: ArrayT, fill_value=0) -> ArrayT:
     n = npix2nside(x.shape[-1])
     i, jp = ring2double(n, np.arange(12 * n * n))
     out = xp.zeros_like(x, shape=x.shape[:-1] + (4 * n, 8 * n + 1), dtype=xp.float32)
-    num = xp.zeros_like(out)
+    num = xp.zeros_like(out, dtype=xp.int32)
     out[i, jp] = x
     num[i, jp] += 1
 
@@ -722,8 +722,8 @@ def to_double_pixelization(x: ArrayT, fill_value=0) -> ArrayT:
 
     out[i, jp - 1] += x
     num[i, jp - 1] += 1
-    num[num == 0] = 1
     out[num == 0] = fill_value
+    num[num == 0] = 1
     out /= num
     return out
 
