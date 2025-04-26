@@ -233,3 +233,11 @@ def test_zonal_average():
     zonal = healpix.zonal_average(x)
     assert zonal.shape == (1, 7)
     assert np.all(zonal == np.arange(7))
+
+
+def test_to_double_pixelization(regtest):
+    n = 2
+    x = np.arange(12 * n * n)
+    x = healpix.to_double_pixelization(x)
+    assert x.dtype == x.dtype
+    np.savetxt(regtest, x, fmt="%d")
