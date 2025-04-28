@@ -707,7 +707,11 @@ def to_rotated_pixelization(x, fill_value=math.nan):
 
 
 def to_double_pixelization(x: ArrayT, fill_value=0) -> ArrayT:
-    """Convert the array x to 2D-image w/ the double pixelization"""
+    """Convert the array x to 2D-image w/ the double pixelization
+
+    ``x`` must be in RING pixel order
+
+    """
     xp = _get_array_library(x)
 
     n = npix2nside(x.shape[-1])
