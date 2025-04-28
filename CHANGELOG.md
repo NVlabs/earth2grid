@@ -3,7 +3,11 @@
 ## Latest
 
 New APIs
-- earth2grid.healpix.{zonal_average,pixels_to_ring}
+- earth2grid.healpix
+  - zonal_average
+  - ring2double
+  - to_rotated_pixelization
+  - to_double_pixelization
 
 ## 2025.4.1
 
