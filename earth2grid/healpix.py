@@ -37,7 +37,7 @@ import warnings
 from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
-from typing import Union
+from typing import TypeVar, Union
 
 import einops
 import numpy as np
@@ -70,6 +70,16 @@ except ImportError:
     cuhpx = None
 
 __all__ = ["pad", "PixelOrder", "XY", "Compass", "Grid", "HEALPIX_PAD_XY", "conv2d", "reorder", "ang2pix"]
+
+
+def _get_array_library(x):
+    if isinstance(x, np.ndarray):
+        return np
+    else:
+        return torch
+
+
+ArrayT = TypeVar("ArrayT", np.ndarray, torch.Tensor)
 
 
 def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
@@ -412,20 +422,7 @@ class Grid(base.Grid):
         """Use the 45 degree rotated grid pixelation
         i points to SE, j point to NE
         """
-        grid = [[6, 9, -1, -1, -1], [1, 5, 8, -1, -1], [-1, 0, 4, 11, -1], [-1, -1, 3, 7, 10], [-1, -1, -1, 2, 6]]
-        pixel_order = XY(origin=Compass.W, clockwise=True)
-        x = self.reorder(pixel_order, x)
-        nside = self._nside()
-        *shape, _ = x.shape
-        x = x.reshape((*shape, 12, nside, nside))
-        output = torch.full((*shape, 5 * nside, 5 * nside), device=x.device, dtype=x.dtype, fill_value=fill_value)
-
-        for j in range(len(grid)):
-            for i in range(len(grid[0])):
-                face = grid[j][i]
-                if face != -1:
-                    output[j * nside : (j + 1) * nside, i * nside : (i + 1) * nside] = x[face]
-        return output
+        return to_rotated_pixelization(x, fill_value)
 
 
 class HEALPixPadFunction(torch.autograd.Function):
@@ -602,3 +599,158 @@ def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     weight = weight.unsqueeze(-3)
     out = torch.nn.functional.conv3d(input, weight, bias, stride, padding, dilation, groups)
     return einops.rearrange(out, "n c f x y -> n c () (f x y)")
+
+
+def _pixels_to_rings(nside: int, p: ArrayT) -> ArrayT:
+    """Get the ring number of a pixel ``i`` in RING order"""
+    # See eq (2-5) of Gorski
+    xp = _get_array_library(p)
+    npix = 12 * nside * nside
+    ncap = 2 * nside * (nside - 1)
+
+    i_north = xp.floor(0.5 * (1 + np.sqrt(1 + 2 * p)))
+    j_north = p - 2 * (i_north - 1) * i_north
+
+    p_eq = p - ncap
+    i_eq = xp.floor(p_eq / (4 * nside)) + nside - 1
+    j_eq = p_eq % (4 * nside)
+
+    p_south = npix - p - 1
+    i_south = xp.floor(0.5 * (1 + np.sqrt(1 + 2 * p_south)))
+    j_south = p_south - 2 * (i_south - 1) * i_south
+    length_south = i_south * 4
+
+    i = i_north - 1
+    i = xp.where(p >= ncap, i_eq, i)
+    i = xp.where(p >= (npix - ncap), 4 * nside - i_south - 1, i)
+
+    j = j_north
+    j = xp.where(p >= ncap, j_eq, j)
+    j = xp.where(p >= (npix - ncap), length_south - 1 - j_south, j)
+
+    return i.astype(int), j.astype(int)
+
+
+def ring_length(nside: int, i: ArrayT) -> ArrayT:
+    """The number of pixels in ring 0 <= i < 4 * nside - 2"""
+    xp = _get_array_library(i)
+
+    length_north = 4 * (i + 1)
+    length_eq = 4 * nside
+    length_south = (4 * nside - i - 1) * 4
+
+    length = length_north
+    # test i =1, nside = 1
+    length = xp.where(i >= nside, length_eq, length)
+    # test: i = 2, nside=1, should have len 4
+    length = xp.where(i >= nside * 3 - 1, length_south, length)
+    return length
+
+
+def ring2double(nside: int, p: ArrayT):
+    """Compute the (i,j) index in the double pixelization scheme of Calabretta (2007)
+
+    This is a visually appealing way to visualize healpix data without any
+    interpolation.
+
+    See Fig 5
+
+    Calabretta, M. R., & Roukema, B. F. (2007). Mapping on the HEALPix grid. Monthly Notices of the Royal Astronomical Society, 381(2), 865–872. https://doi.org/10.1111/j.1365-2966.2007.12297.x
+
+    """
+    xp = _get_array_library(p)
+    n = nside
+    i, j = _pixels_to_rings(n, p)
+    n_per_pyramid = ring_length(n, i) // 4
+
+    pyramid = j // n_per_pyramid
+    left = n - i
+    jp_north = 2 * pyramid * n + left + 2 * (j % n_per_pyramid)
+    jp_eq = (n - i) % 2 + 2 * j
+
+    left = i - 3 * n + 2
+    jp_south = 2 * pyramid * n + left + 2 * (j % n_per_pyramid)
+
+    jp = xp.where(i >= n, jp_eq, jp_north)
+    jp = xp.where(i >= 3 * n, jp_south, jp)
+
+    return i, jp
+
+
+def to_rotated_pixelization(x, fill_value=math.nan):
+    """Convert an array to a 2D-iamge w/ the rotated pixelization"""
+
+    numpy_out = False
+    if isinstance(x, np.ndarray):
+        numpy_out = True
+        x = torch.from_numpy(x)
+
+    grid = [[6, 9, -1, -1, -1], [1, 5, 8, -1, -1], [-1, 0, 4, 11, -1], [-1, -1, 3, 7, 10], [-1, -1, -1, 2, 6]]
+    pixel_order = XY(origin=Compass.W, clockwise=True)
+    self = Grid(npix2level(x.shape[-1]))
+    x = self.reorder(pixel_order, x)
+    nside = self._nside()
+    *shape, _ = x.shape
+    x = x.reshape((*shape, 12, nside, nside))
+    output = torch.full((*shape, 5 * nside, 5 * nside), device=x.device, dtype=x.dtype, fill_value=fill_value)
+
+    for j in range(len(grid)):
+        for i in range(len(grid[0])):
+            face = grid[j][i]
+            if face != -1:
+                output[j * nside : (j + 1) * nside, i * nside : (i + 1) * nside] = x[face]
+
+    if numpy_out:
+        return output.numpy()
+    else:
+        return output
+
+
+def to_double_pixelization(x: ArrayT, fill_value=0) -> ArrayT:
+    """Convert the array x to 2D-image w/ the double pixelization
+
+    ``x`` must be in RING pixel order
+
+    """
+    xp = _get_array_library(x)
+
+    n = npix2nside(x.shape[-1])
+    i, jp = ring2double(n, np.arange(12 * n * n))
+    out = xp.zeros_like(x, shape=x.shape[:-1] + (4 * n, 8 * n + 1), dtype=xp.float32)
+    num = xp.zeros_like(out, dtype=xp.int32)
+    out[i, jp] = x
+    num[i, jp] += 1
+
+    out[i, jp + 1] = x
+    num[i, jp + 1] += 1
+
+    out[i, jp - 1] += x
+    num[i, jp - 1] += 1
+    out[num == 0] = fill_value
+    num[num == 0] = 1
+    out /= num
+    return out
+
+
+def zonal_average(x: ArrayT) -> ArrayT:
+    """Compute the zonal average of a map in ring format"""
+    xp = _get_array_library(x)
+    if x.ndim != 2:
+        raise ValueError()
+
+    npix = x.shape[-1]
+    nside = npix2nside(npix)
+
+    iring, _ = _pixels_to_rings(nside, np.arange(npix))
+    nring = iring.max() + 1
+    if isinstance(x, np.ndarray):
+        batch = np.arange(x.shape[0])
+    else:
+        batch = torch.arange(x.shape[0], device=x.device)
+
+    i_flat = batch[:, None] * nring + iring
+    i_flat = i_flat.ravel()
+    num = xp.bincount(i_flat, weights=x.ravel(), minlength=nring * x.shape[0])
+    denom = xp.bincount(i_flat, minlength=nring * x.shape[0])
+    average = num / denom
+    return average.reshape(x.shape[0], nring)

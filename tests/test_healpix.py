@@ -173,3 +173,71 @@ def test_latlon_cuda_set_device_regression():
         grid.lat
     finally:
         torch.set_default_device(default)
+
+
+def test_zonal_average():
+    # hpx 2 in ring order
+    x = np.array(
+        [
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            5,
+            5,
+            5,
+            5,
+            5,
+            5,
+            5,
+            5,
+            6,
+            6,
+            6,
+            6,
+        ]
+    )
+    x = x[None]
+    zonal = healpix.zonal_average(x)
+    assert zonal.shape == (1, 7)
+    assert np.all(zonal == np.arange(7))
+
+
+def test_to_double_pixelization(regtest):
+    n = 2
+    x = np.arange(12 * n * n)
+    x = healpix.to_double_pixelization(x)
+    assert x.dtype == x.dtype
+    np.savetxt(regtest, x, fmt="%d")
