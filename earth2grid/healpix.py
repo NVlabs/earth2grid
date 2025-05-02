@@ -608,7 +608,7 @@ def _pixels_to_rings(nside: int, p: ArrayT) -> ArrayT:
     npix = 12 * nside * nside
     ncap = 2 * nside * (nside - 1)
 
-    i_north = xp.floor(0.5 * (1 + np.sqrt(1 + 2 * p)))
+    i_north = xp.floor(0.5 * (1 + xp.sqrt(1 + 2 * p)))
     j_north = p - 2 * (i_north - 1) * i_north
 
     p_eq = p - ncap
@@ -616,7 +616,7 @@ def _pixels_to_rings(nside: int, p: ArrayT) -> ArrayT:
     j_eq = p_eq % (4 * nside)
 
     p_south = npix - p - 1
-    i_south = xp.floor(0.5 * (1 + np.sqrt(1 + 2 * p_south)))
+    i_south = xp.floor(0.5 * (1 + xp.sqrt(1 + 2 * p_south)))
     j_south = p_south - 2 * (i_south - 1) * i_south
     length_south = i_south * 4
 
@@ -628,7 +628,7 @@ def _pixels_to_rings(nside: int, p: ArrayT) -> ArrayT:
     j = xp.where(p >= ncap, j_eq, j)
     j = xp.where(p >= (npix - ncap), length_south - 1 - j_south, j)
 
-    return i.astype(int), j.astype(int)
+    return _to_int(i), _to_int(j)
 
 
 def ring_length(nside: int, i: ArrayT) -> ArrayT:
@@ -706,6 +706,28 @@ def to_rotated_pixelization(x, fill_value=math.nan):
         return output
 
 
+def _arange_like(n, like):
+    if isinstance(like, np.ndarray):
+        batch = np.arange(n)
+    else:
+        batch = torch.arange(n, device=like.device)
+    return batch
+
+
+def _to_int(x):
+    if isinstance(x, np.ndarray):
+        return x.astype(int)
+    else:
+        return x.int()
+
+
+def _zeros_like(x, shape=None, dtype=None):
+    if isinstance(x, np.ndarray):
+        return np.zeros_like(x, shape=shape, dtype=dtype)
+    else:
+        return torch.zeros(shape or x.shape, dtype=dtype, device=x.device)
+
+
 def to_double_pixelization(x: ArrayT, fill_value=0) -> ArrayT:
     """Convert the array x to 2D-image w/ the double pixelization
 
@@ -713,11 +735,16 @@ def to_double_pixelization(x: ArrayT, fill_value=0) -> ArrayT:
 
     """
     xp = _get_array_library(x)
+    dtype = xp.float32
 
     n = npix2nside(x.shape[-1])
-    i, jp = ring2double(n, np.arange(12 * n * n))
-    out = xp.zeros_like(x, shape=x.shape[:-1] + (4 * n, 8 * n + 1), dtype=xp.float32)
-    num = xp.zeros_like(out, dtype=xp.int32)
+    i, jp = ring2double(n, _arange_like(12 * n * n, x))
+    out = _zeros_like(x, shape=x.shape[:-1] + (4 * n, 8 * n + 1), dtype=dtype)
+    num = _zeros_like(out, dtype=xp.int32)
+
+    if torch.is_tensor(x):
+        x = x.to(out)
+
     out[i, jp] = x
     num[i, jp] += 1
 
@@ -732,25 +759,26 @@ def to_double_pixelization(x: ArrayT, fill_value=0) -> ArrayT:
     return out
 
 
-def zonal_average(x: ArrayT) -> ArrayT:
+def zonal_average(x: ArrayT, dim=-1) -> ArrayT:
     """Compute the zonal average of a map in ring format"""
     xp = _get_array_library(x)
-    if x.ndim != 2:
-        raise ValueError()
+
+    dim = dim % x.ndim
+    shape = [x.shape[i] for i in range(x.ndim) if i != dim]
+    x = xp.moveaxis(x, dim, -1)
+    x = x.reshape([-1, x.shape[-1]])
 
     npix = x.shape[-1]
     nside = npix2nside(npix)
 
-    iring, _ = _pixels_to_rings(nside, np.arange(npix))
+    iring, _ = _pixels_to_rings(nside, _arange_like(npix, like=x))
     nring = iring.max() + 1
-    if isinstance(x, np.ndarray):
-        batch = np.arange(x.shape[0])
-    else:
-        batch = torch.arange(x.shape[0], device=x.device)
+    batch = _arange_like(x.shape[0], x)
 
     i_flat = batch[:, None] * nring + iring
     i_flat = i_flat.ravel()
     num = xp.bincount(i_flat, weights=x.ravel(), minlength=nring * x.shape[0])
     denom = xp.bincount(i_flat, minlength=nring * x.shape[0])
     average = num / denom
-    return average.reshape(x.shape[0], nring)
+    average = average.reshape((*shape, nring))  # type: ignore
+    return xp.moveaxis(average, -1, dim)
