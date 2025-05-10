@@ -30,7 +30,6 @@ def test_grid_visualize():
 
 @pytest.mark.parametrize("origin", list(healpix.Compass))
 def test_grid_healpix_orientations(tmp_path, origin):
-
     nest_grid = healpix.Grid(level=4, pixel_order=healpix.PixelOrder.NEST)
     grid = healpix.Grid(level=4, pixel_order=healpix.XY(origin=origin))
 
@@ -108,7 +107,6 @@ def test_grid_healpix_pad(tmp_path, origin, clockwise, padding, device):
     sigma = grad_abs(z)
 
     if sigma_padded > sigma * 1.1:
-
         fig, axs = plt.subplots(3, 4)
         axs = axs.ravel()
         for i in range(12):
@@ -173,3 +171,94 @@ def test_latlon_cuda_set_device_regression():
         grid.lat
     finally:
         torch.set_default_device(default)
+
+
+@pytest.mark.parametrize("device,do_torch", [("cpu", True), ("cuda", True), ("cpu", False)])
+def test_zonal_average(device, do_torch):
+
+    if device == "cuda" and torch.cuda.device_count() == 0:
+        pytest.skip("no cuda devices available")
+
+    # hpx 2 in ring order
+    x = np.array(
+        [
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            2,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            3,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            5,
+            5,
+            5,
+            5,
+            5,
+            5,
+            5,
+            5,
+            6,
+            6,
+            6,
+            6,
+        ]
+    )
+    x = x[None]
+    if do_torch:
+        x = torch.from_numpy(x).to(device)
+    zonal = healpix.zonal_average(x)
+    if do_torch:
+        zonal = zonal.cpu().numpy()
+    assert zonal.shape == (1, 7)
+    assert np.all(zonal == np.arange(7))
+
+
+def test_to_double_pixelization(regtest):
+    n = 2
+    x = np.arange(12 * n * n)
+    x = healpix.to_double_pixelization(x)
+    assert x.dtype == x.dtype
+    np.savetxt(regtest, x, fmt="%d")
+
+
+def test_to_double_pixelization_cuda(device="cuda"):
+    if not torch.cuda.is_available():
+        pytest.skip()
+
+    n = 2
+    x = np.arange(12 * n * n)
+    xnp = healpix.to_double_pixelization(x)
+
+    x = torch.arange(12 * n * n, device=device)
+    x = healpix.to_double_pixelization(x)
+
+    np.testing.assert_array_equal(xnp, x.cpu().numpy())

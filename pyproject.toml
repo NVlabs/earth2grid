@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=40.8.0", "wheel"]
+requires = ["setuptools>=40.8.0", "wheel", "torch", "numpy"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "earth2-grid"
-version = "2024.8.1"
+name = "earth2grid"
+version = "2025.4.1"
 description = "Utilities for working with geographic data defined on various grids."
 readme = "README.md"
 license = { file="LICENSE.txt" }
@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/waynerv/earth2-grid"
+"Homepage" = "https://github.com/NVlabs/earth2grid"
 
 
 [project.optional-dependencies]

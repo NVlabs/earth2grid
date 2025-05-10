@@ -5,6 +5,7 @@
         "../../build/",
         "../../docs/",
         "../../earth2grid/third_party",
+        "../../.venv",
         "."
       ],
     "include-ext": [
