@@ -8,6 +8,12 @@ New APIs
   - ring2double
   - to_rotated_pixelization
   - to_double_pixelization
+- earth2grid.projections. Grids in arbitrary projections
+- earth2grid.yingyang
+
+Breaking changes:
+
+- change coordinate transform and shape of lcc grid
 
 ## 2025.4.1
 

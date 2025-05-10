@@ -44,3 +44,10 @@ def ang2vec(lon, lat):
     y = torch.cos(lat) * torch.sin(lon)
     z = torch.sin(lat)
     return (x, y, z)
+
+
+def vec2ang(x, y, z):
+    """convert lon,lat in radians to cartesian coordinates"""
+    lat = torch.asin(z)
+    lon = torch.atan2(y, x)
+    return lon, lat

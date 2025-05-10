@@ -13,10 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import numpy as np
-import torch
 
-from earth2grid import base
-from earth2grid._regrid import BilinearInterpolator
+from earth2grid import projections
 
 try:
     import pyvista as pv
@@ -31,7 +29,10 @@ __all__ = [
 ]
 
 
-class LambertConformalConicProjection:
+LambertConformalConicGrid = projections.Grid
+
+
+class LambertConformalConicProjection(projections.Projection):
     def __init__(self, lat0: float, lon0: float, lat1: float, lat2: float, radius: float):
         """
 
@@ -80,7 +81,7 @@ class LambertConformalConicProjection:
         delta_lon = delta_lon - np.round(delta_lon / 360) * 360  # convert to [-180, 180]
         return self.n * np.deg2rad(delta_lon)
 
-    def project(self, lat, lon):
+    def project(self, lon, lat):
         """
         Compute the projected x,y from lat,lon.
         """
@@ -100,75 +101,12 @@ class LambertConformalConicProjection:
 
         lat = np.rad2deg(2 * np.arctan(np.power(self.RF / rho, 1 / self.n))) - 90
         lon = self.lon0 + np.rad2deg(theta / self.n)
-        return lat, lon
+        return lon, lat
 
 
 # Projection used by HRRR CONUS (Continental US) data
 # https://rapidrefresh.noaa.gov/hrrr/HRRR_conus.domain.txt
 HRRR_CONUS_PROJECTION = LambertConformalConicProjection(lon0=-97.5, lat0=38.5, lat1=38.5, lat2=38.5, radius=6371229.0)
-
-
-class LambertConformalConicGrid(base.Grid):
-    # nothing here is specific to the projection, so could be shared by any projected rectilinear grid
-    def __init__(self, projection: LambertConformalConicProjection, x, y):
-        """
-        Args:
-            projection: LambertConformalConicProjection object
-            x: range of x values
-            y: range of y values
-
-        """
-        self.projection = projection
-
-        self.x = np.array(x)
-        self.y = np.array(y)
-
-    @property
-    def lat_lon(self):
-        mesh_x, mesh_y = np.meshgrid(self.x, self.y)
-        return self.projection.inverse_project(mesh_x, mesh_y)
-
-    @property
-    def lat(self):
-        return self.lat_lon[0]
-
-    @property
-    def lon(self):
-        return self.lat_lon[1]
-
-    @property
-    def shape(self):
-        return (len(self.y), len(self.x))
-
-    def __getitem__(self, idxs):
-        yidxs, xidxs = idxs
-        return LambertConformalConicGrid(self.projection, x=self.x[xidxs], y=self.y[yidxs])
-
-    def get_bilinear_regridder_to(self, lat: np.ndarray, lon: np.ndarray):
-        """Get regridder to the specified lat and lon points"""
-
-        x, y = self.projection.project(lat, lon)
-
-        return BilinearInterpolator(
-            x_coords=torch.from_numpy(self.x),
-            y_coords=torch.from_numpy(self.y),
-            x_query=torch.from_numpy(x),
-            y_query=torch.from_numpy(y),
-        )
-
-    def visualize(self, data):
-        raise NotImplementedError()
-
-    def to_pyvista(self):
-        if pv is None:
-            raise ImportError("Need to install pyvista")
-
-        lat, lon = self.lat_lon
-        y = np.cos(np.deg2rad(lat)) * np.sin(np.deg2rad(lon))
-        x = np.cos(np.deg2rad(lat)) * np.cos(np.deg2rad(lon))
-        z = np.sin(np.deg2rad(lat))
-        grid = pv.StructuredGrid(x, y, z)
-        return grid
 
 
 def hrrr_conus_grid(ix0=0, iy0=0, nx=1799, ny=1059):
@@ -178,12 +116,12 @@ def hrrr_conus_grid(ix0=0, iy0=0, nx=1799, ny=1059):
     # grid length (m)
     scale = 3000.0
     # coordinates on projected space
-    x0, y0 = HRRR_CONUS_PROJECTION.project(lat0, lon0)
+    x0, y0 = HRRR_CONUS_PROJECTION.project(lon0, lat0)
 
     x = [x0 + i * scale for i in range(ix0, ix0 + nx)]
     y = [y0 + i * scale for i in range(iy0, iy0 + ny)]
 
-    return LambertConformalConicGrid(HRRR_CONUS_PROJECTION, x, y)
+    return projections.Grid(HRRR_CONUS_PROJECTION, x, y)
 
 
 # Grid used by HRRR CONUS (Continental US) data
