@@ -62,7 +62,7 @@ def Ying(nlat: int, nlon: int, delta: int):
 
 
 class YangProjection(projections.Projection):
-    def project(self, lat: np.ndarray, lon: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    def project(self, lon: np.ndarray, lat: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """
         Compute the projected x,y from lat,lon.
         """
@@ -79,7 +79,7 @@ class YangProjection(projections.Projection):
         lat = torch.rad2deg(lat)
         lon = torch.rad2deg(lon)
 
-        return lat.numpy(), lon.numpy()
+        return lon.numpy(), lat.numpy()
 
     def inverse_project(self, x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -91,4 +91,4 @@ class YangProjection(projections.Projection):
 
 def Yang(nlat, nlon, delta):
     ying = Ying(nlat, nlon, delta)
-    return projections.Grid(YangProjection(), ying.lat, ying.lon)
+    return projections.Grid(YangProjection(), ying.lon, ying.lat)

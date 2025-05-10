@@ -81,7 +81,7 @@ class LambertConformalConicProjection(projections.Projection):
         delta_lon = delta_lon - np.round(delta_lon / 360) * 360  # convert to [-180, 180]
         return self.n * np.deg2rad(delta_lon)
 
-    def project(self, lat, lon):
+    def project(self, lon, lat):
         """
         Compute the projected x,y from lat,lon.
         """
@@ -101,7 +101,7 @@ class LambertConformalConicProjection(projections.Projection):
 
         lat = np.rad2deg(2 * np.arctan(np.power(self.RF / rho, 1 / self.n))) - 90
         lon = self.lon0 + np.rad2deg(theta / self.n)
-        return lat, lon
+        return lon, lat
 
 
 # Projection used by HRRR CONUS (Continental US) data
@@ -116,7 +116,7 @@ def hrrr_conus_grid(ix0=0, iy0=0, nx=1799, ny=1059):
     # grid length (m)
     scale = 3000.0
     # coordinates on projected space
-    x0, y0 = HRRR_CONUS_PROJECTION.project(lat0, lon0)
+    x0, y0 = HRRR_CONUS_PROJECTION.project(lon0, lat0)
 
     x = [x0 + i * scale for i in range(ix0, ix0 + nx)]
     y = [y0 + i * scale for i in range(iy0, iy0 + ny)]

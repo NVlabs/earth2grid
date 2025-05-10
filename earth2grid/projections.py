@@ -12,6 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Conventions:
+
+- lon,lat is preferred to lat,lon for projection equations (i.e. x=lon in Plate
+  Carree)
+- projected grids have shape [ny, nx]
+"""
 import abc
 
 import numpy as np
@@ -28,16 +35,17 @@ except ImportError:
 
 class Projection(abc.ABC):
     @abc.abstractmethod
-    def project(self, lat: np.ndarray, lon: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    def project(self, lon: np.ndarray, lat: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """
-        Compute the projected x,y from lat,lon.
+        Compute the projected x,y from lon,lat.
+
         """
         pass
 
     @abc.abstractmethod
     def inverse_project(self, x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """
-        Compute the lat,lon from the projected x,y.
+        Compute the lon,lat from the projected x,y.
         """
         pass
 
@@ -58,25 +66,25 @@ class Grid(base.Grid):
 
     @property
     def lat_lon(self):
-        mesh_x, mesh_y = np.meshgrid(self.x, self.y, indexing='ij')
+        mesh_y, mesh_x = np.meshgrid(self.y, self.x, indexing='ij')
         return self.projection.inverse_project(mesh_x, mesh_y)
 
     @property
     def lat(self):
-        return self.lat_lon[0]
-
-    @property
-    def lon(self):
         return self.lat_lon[1]
 
     @property
+    def lon(self):
+        return self.lat_lon[0]
+
+    @property
     def shape(self):
-        return (len(self.x), len(self.y))
+        return (len(self.y), len(self.x))
 
     def get_bilinear_regridder_to(self, lat: np.ndarray, lon: np.ndarray):
         """Get regridder to the specified lat and lon points"""
 
-        x, y = self.projection.project(lat, lon)
+        x, y = self.projection.project(lon, lat)
 
         return BilinearInterpolator(
             x_coords=torch.from_numpy(self.x),
@@ -84,6 +92,10 @@ class Grid(base.Grid):
             x_query=torch.from_numpy(x),
             y_query=torch.from_numpy(y),
         )
+
+    def __getitem__(self, idxs) -> "Grid":
+        yidxs, xidxs = idxs
+        return Grid(self.projection, x=self.x[xidxs], y=self.y[yidxs])
 
     def visualize(self, data):
         raise NotImplementedError()
