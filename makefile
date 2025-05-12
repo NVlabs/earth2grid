@@ -35,6 +35,7 @@ clean:
 .PHONY: docs
 docs:
 	$(MAKE) -C docs html
+	cd docs && quarto render wcrp_healpix_tutorial.qmd --to html --output-dir _build/html/wcrp_healpix_tutorial --output index.html
 
 push_docs: docs
 	docs/push_docs.sh

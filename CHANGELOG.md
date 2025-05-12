@@ -8,6 +8,7 @@ New APIs
   - ring2double
   - to_rotated_pixelization
   - to_double_pixelization
+  - pcolormesh
 - earth2grid.projections. Grids in arbitrary projections
 - earth2grid.yingyang
 
