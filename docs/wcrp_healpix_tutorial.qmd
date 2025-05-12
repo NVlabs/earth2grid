@@ -14,13 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License. -->
 ---
 title: "HEALPix Tutorial"
-format: 
+format:
   html:
     code-fold: false
     toc: true
     toc-depth: 3
     number-sections: true
     theme: cosmo
+    code-tools: true
 execute:
   echo: true
   warning: false
@@ -44,7 +45,7 @@ Earth2grid has some compiled components (in CUDA and C). So some care is require
 # python3 -m venv .venv # make venv
 # source .venv/bin/activate # activate venv
 pip install torch setuptools
-pip install --no-build-isolation https://github.com/NVlabs/earth2grid/archive/6a1fd7ef271b52ac240338efd5c2027cca317997.tar.gz 
+pip install --no-build-isolation https://github.com/NVlabs/earth2grid/archive/6a1fd7ef271b52ac240338efd5c2027cca317997.tar.gz
 ```
 ::: {.callout-warning}
 It is very important to use the `--no-build-isolation` flag. Otherwise, the library may be built against a different version of pytorch than you have installed, this will cause strange "missing symbols" errors.
@@ -82,7 +83,7 @@ def pcolor_hpx(z):
     i_ring = torch.arange(npix)
     nside = healpix.npix2nside(npix)
     grid = healpix.Grid(healpix.npix2level(npix))
-    y, x =healpix.ring2double(nside, i_ring) 
+    y, x =healpix.ring2double(nside, i_ring)
 
     # plt.imshow(healpix.to_double_pixelization(z, fill_value=float('nan')))
 
@@ -113,7 +114,7 @@ def label_pixels(z):
     npix = z.shape[0]
     i_ring = torch.arange(npix)
     nside = healpix.npix2nside(npix)
-    y, x =healpix.ring2double(nside, i_ring) 
+    y, x =healpix.ring2double(nside, i_ring)
     if label_pixels:
         for i in range(npix):
             plt.text((x[i] + nside).item() / 2, nside-(y[i] + 1).item() / 2, z[i].item(), ha='center', va='center', fontsize=12, color='white', clip_on=True)
@@ -432,4 +433,4 @@ In this tutorial, we've covered several key aspects of working with HEALPix data
 
 5. **Padding**: Implementing efficient CUDA-based padding operations for machine learning applications, particularly useful for spherical convolutions.
 
-These tools provide a comprehensive set of operations for working with global data on the sphere, making it easier to analyze, visualize, and process geophysical data for various applications including machine learning. 
+These tools provide a comprehensive set of operations for working with global data on the sphere, making it easier to analyze, visualize, and process geophysical data for various applications including machine learning.
