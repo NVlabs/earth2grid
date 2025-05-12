@@ -1,0 +1,980 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>HEALPix Tutorial &#8212; Earth2-Grid  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'tutorials/healpix';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Examples" href="../auto_examples/index.html" />
+    <link rel="prev" title="Tutorials" href="index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Earth2-Grid  documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Usage</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Tutorials</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">HEALPix Tutorial</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../auto_examples/index.html">Examples</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../auto_examples/healpix_pixelization.html">HealPIX Pixelization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../auto_examples/hpx2grid.html">HealPIX Image visualization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../auto_examples/latlon_to_healpix.html">HealPIX regridding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../auto_examples/pyvista_grids.html">Plot grids with PyVista</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/tutorials/healpix.md" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.md</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>HEALPix Tutorial</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#setup">Setup</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#visualization-using-double-pixelization">Visualization using Double Pixelization</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#zonal-averaging">Zonal Averaging</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#regridding">Regridding</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#regridding-to-lat-lon">Regridding to Lat-Lon</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#healpix-to-lat-lon">HEALPIX to Lat-Lon</a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lat-lon-to-healpix">Lat-Lon to HEALPIX</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#healpix-pixel-orders">HEALPix Pixel Orders</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#padding-and-convolutions">Padding and Convolutions</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#summary">Summary</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="healpix-tutorial">
+<h1>HEALPix Tutorial<a class="headerlink" href="#healpix-tutorial" title="Link to this heading">#</a></h1>
+<p>This tutorial demonstrates key HealPIX functionality including:</p>
+<ol class="arabic simple">
+<li><p>Visualization using double pixelization</p></li>
+<li><p>Zonal averaging</p></li>
+<li><p>Regridding between different grids</p></li>
+<li><p>Reordering between different pixel ordering schemes</p></li>
+<li><p>Padding for machine learning applications</p></li>
+</ol>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h2>
+<p>Earth2grid has some compiled components (in CUDA and C). So some care is required to install. First, install pytorch, and setuptools</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># python3 -m venv .venv # make venv</span>
+<span class="c1"># source .venv/bin/activate # activate venv</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="n">torch</span> <span class="n">setuptools</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">build</span><span class="o">-</span><span class="n">isolation</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">NVlabs</span><span class="o">/</span><span class="n">earth2grid</span><span class="o">/</span><span class="n">archive</span><span class="o">/</span><span class="mi">6</span><span class="n">a1fd7ef271b52ac240338efd5c2027cca317997</span><span class="o">.</span><span class="n">tar</span><span class="o">.</span><span class="n">gz</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>It is very important to use the <code class="docutils literal notranslate"><span class="pre">--no-build-isolation</span></code> flag. Otherwise, the library may be built against a different version of pytorch than you have installed, this will cause strange “missing symbols” errors.</p>
+</div>
+</section>
+<section id="setup">
+<h2>Setup<a class="headerlink" href="#setup" title="Link to this heading">#</a></h2>
+<p>First, let’s import the necessary libraries and create a sample HealPIX grid.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1">#| label: setup</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">earth2grid</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">earth2grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">healpix</span>
+
+<span class="c1"># Create a sample HealPIX grid</span>
+<span class="n">level</span> <span class="o">=</span> <span class="mi">3</span>  <span class="c1"># Resolution level (higher = finer resolution)</span>
+<span class="n">grid</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">Grid</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">level</span><span class="p">,</span> <span class="n">pixel_order</span><span class="o">=</span><span class="n">healpix</span><span class="o">.</span><span class="n">PixelOrder</span><span class="o">.</span><span class="n">RING</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">lat</span><span class="p">[:</span><span class="mi">5</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[84.14973294 84.14973294 84.14973294 84.14973294 78.28414761]
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/Users/nbrenowitz/workspace/nvidia/earth2grid/earth2grid/healpix/core.py:60: UserWarning: healpixpad_cuda module not available, reverting to CPU for all padding routines
+  warnings.warn(&quot;healpixpad_cuda module not available, reverting to CPU for all padding routines&quot;)
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell tag_hide-input docutils container">
+<details class="hide above-input">
+<summary aria-label="Toggle hidden content">
+<span class="collapsed">Show code cell source</span>
+<span class="expanded">Hide code cell source</span>
+</summary>
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">SHOW_AXES</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">label_pixels</span><span class="p">(</span><span class="n">z</span><span class="p">):</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+    <span class="n">npix</span> <span class="o">=</span> <span class="n">z</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">i_ring</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">npix</span><span class="p">)</span>
+    <span class="n">nside</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">npix2nside</span><span class="p">(</span><span class="n">npix</span><span class="p">)</span>
+    <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span><span class="n">healpix</span><span class="o">.</span><span class="n">ring2double</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="n">i_ring</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">label_pixels</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">npix</span><span class="p">):</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">text</span><span class="p">((</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">nside</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">nside</span><span class="o">-</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">z</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">,</span> <span class="n">clip_on</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</details>
+</div>
+</section>
+<section id="visualization-using-double-pixelization">
+<h2>Visualization using Double Pixelization<a class="headerlink" href="#visualization-using-double-pixelization" title="Link to this heading">#</a></h2>
+<p>Double pixelization provides a visually appealing way to view HealPIX data without interpolation, preserving the native pixel structure. This is particularly useful for quick visualization with image viewers without distorting the native pixels of the image.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Convert to double pixelization</span>
+<span class="n">field_double</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">to_double_pixelization</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">lat</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">field_double</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Field Value&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Double Pixelization Visualization&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/e1846a796e58f8517d531706393af7fdb27ae5c2a03f06c2b3d5bedee5f76aef.png" src="../_images/e1846a796e58f8517d531706393af7fdb27ae5c2a03f06c2b3d5bedee5f76aef.png" />
+</div>
+</div>
+</section>
+<section id="zonal-averaging">
+<h2>Zonal Averaging<a class="headerlink" href="#zonal-averaging" title="Link to this heading">#</a></h2>
+<p>Zonal averaging computes the mean value of a field along latitude circles. This is useful for analyzing latitudinal patterns in the data.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Compute the zonal average of the field</span>
+<span class="n">field</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">lat</span><span class="p">))</span>
+<span class="n">zonal_avg</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">zonal_average</span><span class="p">(</span><span class="n">field</span><span class="p">)</span>
+<span class="n">lat</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">zonal_average</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">lat</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell tag_hide-input docutils container">
+<details class="hide above-input">
+<summary aria-label="Toggle hidden content">
+<span class="collapsed">Show code cell source</span>
+<span class="expanded">Hide code cell source</span>
+</summary>
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Plot the zonal average</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">zonal_avg</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Latitude (degrees)&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Zonal Average&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Zonal Average of Sample Field&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</details>
+<div class="cell_output docutils container">
+<img alt="../_images/f7f25e9e9b8c00225b44ebac3729168dea314e7730cd5bf83f9a31a90770ce59.png" src="../_images/f7f25e9e9b8c00225b44ebac3729168dea314e7730cd5bf83f9a31a90770ce59.png" />
+</div>
+</div>
+</section>
+<section id="regridding">
+<h2>Regridding<a class="headerlink" href="#regridding" title="Link to this heading">#</a></h2>
+<p>Regridding allows us to transform data between different grid types. Here we demonstrate two types of regridding:</p>
+<ol class="arabic simple">
+<li><p>From HEALPix to a regular lat-lon grid</p></li>
+<li><p>Between HEALPix grids of different resolutions</p></li>
+</ol>
+<section id="regridding-to-lat-lon">
+<h3>Regridding to Lat-Lon<a class="headerlink" href="#regridding-to-lat-lon" title="Link to this heading">#</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">earth2grid</span></code> has builtin utilities for bilinear interpolation from any supported grid to arbitrary lat-lon points.</p>
+<section id="healpix-to-lat-lon">
+<h4>HEALPIX to Lat-Lon<a class="headerlink" href="#healpix-to-lat-lon" title="Link to this heading">#</a></h4>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1">#| label: regrid-latlon</span>
+<span class="c1"># Create a lat-lon grid</span>
+<span class="n">nlat</span><span class="p">,</span> <span class="n">nlon</span> <span class="o">=</span> <span class="mi">33</span><span class="p">,</span> <span class="mi">64</span>
+<span class="n">latlon_grid</span> <span class="o">=</span> <span class="n">earth2grid</span><span class="o">.</span><span class="n">latlon</span><span class="o">.</span><span class="n">equiangular_lat_lon_grid</span><span class="p">(</span><span class="n">nlat</span><span class="p">,</span> <span class="n">nlon</span><span class="p">)</span>
+
+<span class="c1"># Create regridder from HealPIX to lat-lon</span>
+<span class="n">regridder</span> <span class="o">=</span> <span class="n">earth2grid</span><span class="o">.</span><span class="n">get_regridder</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">latlon_grid</span><span class="p">)</span>
+
+<span class="c1"># Regrid the field</span>
+<span class="c1"># must be a torch tensor</span>
+<span class="n">field</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">lat</span><span class="o">+</span> <span class="mi">40</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">lon</span><span class="p">))</span>
+<span class="n">field_regridded</span> <span class="o">=</span> <span class="n">regridder</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">field</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell tag_hide-input docutils container">
+<details class="hide above-input">
+<summary aria-label="Toggle hidden content">
+<span class="collapsed">Show code cell source</span>
+<span class="expanded">Hide code cell source</span>
+</summary>
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Plot original and regridded fields</span>
+<span class="n">fig</span><span class="p">,</span> <span class="p">(</span><span class="n">ax1</span><span class="p">,</span> <span class="n">ax2</span><span class="p">)</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+
+<span class="c1"># Original HealPIX field</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">sca</span><span class="p">(</span><span class="n">ax1</span><span class="p">)</span>
+<span class="n">im1</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">pcolormesh</span><span class="p">(</span><span class="n">field</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Original HealPIX Field&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">im1</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax1</span><span class="p">)</span>
+
+<span class="c1"># Regridded field</span>
+<span class="n">im2</span> <span class="o">=</span> <span class="n">ax2</span><span class="o">.</span><span class="n">pcolormesh</span><span class="p">(</span><span class="n">latlon_grid</span><span class="o">.</span><span class="n">lon</span><span class="p">,</span> <span class="n">latlon_grid</span><span class="o">.</span><span class="n">lat</span><span class="p">,</span> <span class="n">field_regridded</span><span class="p">)</span>
+<span class="n">ax2</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Regridded to Lat-Lon&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">im2</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax2</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</details>
+<div class="cell_output docutils container">
+<img alt="../_images/401ac8b82d8f642fb6a366a6d74c898869a0aac3e03a080f84d6b00e32bf1e1d.png" src="../_images/401ac8b82d8f642fb6a366a6d74c898869a0aac3e03a080f84d6b00e32bf1e1d.png" />
+</div>
+</div>
+<p>A more verbose way, but flexible, way to do this is using the <code class="docutils literal notranslate"><span class="pre">.get_bilinear_regridder_to</span></code> method.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1">#| label: regrid-latlon-verbose</span>
+
+<span class="n">lat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">90</span><span class="p">,</span> <span class="mi">90</span><span class="p">,</span> <span class="mi">33</span><span class="p">)</span>
+<span class="n">lon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">360</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
+
+<span class="n">regridder</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">get_bilinear_regridder_to</span><span class="p">(</span><span class="n">lat</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span> <span class="n">lon</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:])</span>
+<span class="n">field_regridded</span> <span class="o">=</span> <span class="n">regridder</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">field</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">field_regridded</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>torch.Size([33, 64])
+</pre></div>
+</div>
+</div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Exercise: use <code class="docutils literal notranslate"><span class="pre">get_bilinear_regridder_to</span></code> to regrid to a list of unstructured points.</p>
+</div>
+<p>The regridding objects (and most operations in earth2grid) are fully differentiable and GPU capable</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="n">x</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">regridder</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="c1"># need to make sure the regridder is the same type as the input</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">regridder</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="p">(</span><span class="n">y</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">grad</span><span class="p">[:</span><span class="mi">5</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>tensor([35.3092, 29.9286, 37.5260, 36.7567,  4.0115])
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="lat-lon-to-healpix">
+<h3>Lat-Lon to HEALPIX<a class="headerlink" href="#lat-lon-to-healpix" title="Link to this heading">#</a></h3>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">earth2grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">latlon</span>
+<span class="n">llgrid</span> <span class="o">=</span> <span class="n">latlon</span><span class="o">.</span><span class="n">LatLonGrid</span><span class="p">(</span><span class="n">lat</span><span class="o">=</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="o">=</span><span class="n">lon</span><span class="p">)</span>
+<span class="n">hpxgrid</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">Grid</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+<span class="n">regridder</span> <span class="o">=</span> <span class="n">llgrid</span><span class="o">.</span><span class="n">get_bilinear_regridder_to</span><span class="p">(</span><span class="n">hpxgrid</span><span class="o">.</span><span class="n">lon</span><span class="p">,</span> <span class="n">hpxgrid</span><span class="o">.</span><span class="n">lat</span><span class="p">)</span>
+
+<span class="n">field</span> <span class="o">=</span> <span class="n">lat</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">+</span> <span class="mi">0</span> <span class="o">*</span> <span class="n">lon</span> <span class="c1"># trick to get (nlat, nlon) array</span>
+<span class="n">out</span> <span class="o">=</span> <span class="n">regridder</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">field</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>torch.Size([49152])
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="healpix-pixel-orders">
+<h2>HEALPix Pixel Orders<a class="headerlink" href="#healpix-pixel-orders" title="Link to this heading">#</a></h2>
+<p>earth2grid supports three main pixel ordering schemes:</p>
+<ul class="simple">
+<li><p>RING: Pixels are ordered in rings of constant latitude</p></li>
+<li><p>NEST: Pixels are ordered in a hierarchical, nested pattern</p></li>
+<li><p>XY: Pixels are ordered in a Cartesian-like grid within each face, with configurable origin and direction</p></li>
+</ul>
+<p>The ability to reorder between these schemes is crucial for compatibility with different HEALPix implementations and for certain operations.</p>
+<p>This is the default RING order:</p>
+<div class="cell tag_hide-input docutils container">
+<details class="hide above-input">
+<summary aria-label="Toggle hidden content">
+<span class="collapsed">Show code cell source</span>
+<span class="expanded">Hide code cell source</span>
+</summary>
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">show_pixel_order</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="n">pixel_order</span><span class="p">):</span>
+    <span class="n">npix</span> <span class="o">=</span> <span class="mi">12</span> <span class="o">*</span> <span class="n">nside</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">npix</span><span class="p">)</span>
+    <span class="n">ir</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">reorder</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">pixel_order</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">PixelOrder</span><span class="o">.</span><span class="n">RING</span><span class="p">)</span>
+    <span class="n">healpix</span><span class="o">.</span><span class="n">pcolormesh</span><span class="p">(</span><span class="n">ir</span><span class="p">)</span>
+    <span class="n">label_pixels</span><span class="p">(</span><span class="n">ir</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pixel_order</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">XY</span><span class="p">):</span>
+        <span class="n">clockwise</span> <span class="o">=</span> <span class="n">pixel_order</span><span class="o">.</span><span class="n">clockwise</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pixel_order</span><span class="o">.</span><span class="n">origin</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">clockwise</span><span class="si">=}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="n">show_pixel_order</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">PixelOrder</span><span class="o">.</span><span class="n">RING</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</details>
+<div class="cell_output docutils container">
+<img alt="../_images/7b6e1180fbd580f9c9bfa701f0c27182ec7335b25aec126329db326bce0c6038.png" src="../_images/7b6e1180fbd580f9c9bfa701f0c27182ec7335b25aec126329db326bce0c6038.png" />
+</div>
+</div>
+<p>And the NEST</p>
+<div class="cell tag_hide-input docutils container">
+<details class="hide above-input">
+<summary aria-label="Toggle hidden content">
+<span class="collapsed">Show code cell source</span>
+<span class="expanded">Hide code cell source</span>
+</summary>
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">show_pixel_order</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">PixelOrder</span><span class="o">.</span><span class="n">NEST</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</details>
+<div class="cell_output docutils container">
+<img alt="../_images/bbe79e44324a34621a9b21435e234ebe6584f60fe330c7b8c761ca69e5428319.png" src="../_images/bbe79e44324a34621a9b21435e234ebe6584f60fe330c7b8c761ca69e5428319.png" />
+</div>
+</div>
+<p>While NEST and RING are classic, we often want to treat each base pixel of the healpix grid as a 2d array. We have a XY pixel ordering object that allows us to do this.</p>
+<div class="cell tag_hide-input docutils container">
+<details class="hide above-input">
+<summary aria-label="Toggle hidden content">
+<span class="collapsed">Show code cell source</span>
+<span class="expanded">Hide code cell source</span>
+</summary>
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">show_pixel_order</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="n">pixel_order</span><span class="p">):</span>
+    <span class="n">npix</span> <span class="o">=</span> <span class="mi">12</span> <span class="o">*</span> <span class="n">nside</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">npix</span><span class="p">)</span>
+    <span class="n">ir</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">reorder</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">pixel_order</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">PixelOrder</span><span class="o">.</span><span class="n">RING</span><span class="p">)</span>
+    <span class="n">healpix</span><span class="o">.</span><span class="n">pcolormesh</span><span class="p">(</span><span class="n">ir</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">nside</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">label_pixels</span><span class="p">(</span><span class="n">ir</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pixel_order</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">XY</span><span class="p">):</span>
+        <span class="n">clockwise</span> <span class="o">=</span> <span class="n">pixel_order</span><span class="o">.</span><span class="n">clockwise</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;XY(origin=</span><span class="si">{</span><span class="n">pixel_order</span><span class="o">.</span><span class="n">origin</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">clockwise</span><span class="si">=}</span><span class="s2">)&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pixel_order</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="n">nrow</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">ncol</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">nrow</span><span class="p">,</span> <span class="n">ncol</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">show_pixel_order</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">PixelOrder</span><span class="o">.</span><span class="n">NEST</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">nrow</span><span class="p">,</span> <span class="n">ncol</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">show_pixel_order</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">XY</span><span class="p">())</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">nrow</span><span class="p">,</span> <span class="n">ncol</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+<span class="n">show_pixel_order</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">XY</span><span class="p">(</span><span class="n">origin</span><span class="o">=</span><span class="n">healpix</span><span class="o">.</span><span class="n">Compass</span><span class="o">.</span><span class="n">N</span><span class="p">,</span> <span class="n">clockwise</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">nrow</span><span class="p">,</span> <span class="n">ncol</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="n">show_pixel_order</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">XY</span><span class="p">(</span><span class="n">origin</span><span class="o">=</span><span class="n">healpix</span><span class="o">.</span><span class="n">Compass</span><span class="o">.</span><span class="n">N</span><span class="p">,</span> <span class="n">clockwise</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</details>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(2.0, 6.0)
+</pre></div>
+</div>
+<img alt="../_images/5c3f593b4d08f6cbf0adf7f86558bb2d42fca16f5e7da88005950567f88901d6.png" src="../_images/5c3f593b4d08f6cbf0adf7f86558bb2d42fca16f5e7da88005950567f88901d6.png" />
+</div>
+</div>
+<p>Why can convert between any two pixel orders like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">healpix</span><span class="o">.</span><span class="n">reorder</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">PixelOrder</span><span class="o">.</span><span class="n">RING</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">PixelOrder</span><span class="o">.</span><span class="n">NEST</span><span class="p">)</span> <span class="c1"># ring to nest</span>
+<span class="n">healpix</span><span class="o">.</span><span class="n">reorder</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">PixelOrder</span><span class="o">.</span><span class="n">NEST</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">PixelOrder</span><span class="o">.</span><span class="n">XY</span><span class="p">())</span> <span class="c1"># ring to XY</span>
+</pre></div>
+</div>
+<section id="padding-and-convolutions">
+<h3>Padding and Convolutions<a class="headerlink" href="#padding-and-convolutions" title="Link to this heading">#</a></h3>
+<p>The XY pixel order is useful for image analysis since it is a Cartesian-like grid. For example this is what the data looks like on each face of the sphere:</p>
+<div class="cell tag_hide-input docutils container">
+<details class="hide above-input">
+<summary aria-label="Toggle hidden content">
+<span class="collapsed">Show code cell source</span>
+<span class="expanded">Hide code cell source</span>
+</summary>
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">level</span> <span class="o">=</span> <span class="mi">6</span>
+<span class="n">nside</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">**</span> <span class="n">level</span>
+
+<span class="n">grid</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">Grid</span><span class="p">(</span><span class="n">level</span><span class="p">)</span>
+<span class="n">field</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">lat</span><span class="o">+</span> <span class="mi">40</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">lon</span><span class="p">))</span>
+<span class="n">field</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">field</span><span class="p">)</span>
+
+<span class="n">out</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">reorder</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">PixelOrder</span><span class="o">.</span><span class="n">RING</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">XY</span><span class="p">())</span>
+<span class="n">faces</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="mi">12</span><span class="p">,</span> <span class="n">nside</span><span class="p">,</span> <span class="n">nside</span><span class="p">])</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">12</span><span class="p">):</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">pcolormesh</span><span class="p">(</span><span class="n">faces</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">set_aspect</span><span class="p">(</span><span class="s1">&#39;equal&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;face </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</details>
+<div class="cell_output docutils container">
+<img alt="../_images/3e2ec280180048fa4fedfc02eb2d8f330d0cb195e48814a7bb66df1deee0292c.png" src="../_images/3e2ec280180048fa4fedfc02eb2d8f330d0cb195e48814a7bb66df1deee0292c.png" />
+</div>
+</div>
+<p>Padding is a basic primitive for many machine learning methods. For example, convolutions un the sphere can be implemented as a padding followed by a convolution. Because of this we have written a CUDA padding routine that works for the HEALPix grid. It requires (origin=N, orientation=clockwise) i.e. [N, E, S, W].  For convenience we have an alias for this <code class="docutils literal notranslate"><span class="pre">healpix.HEALPIX_PAD_XY</span></code>. Let’s now call the padding routine and plot the padded region.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">nside</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="n">pad_size</span> <span class="o">=</span> <span class="mi">4</span>
+
+<span class="c1"># Let&#39;s assume some data on the NEST grid (like is common for datasets)</span>
+<span class="n">grid</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">Grid</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">healpix</span><span class="o">.</span><span class="n">nside2level</span><span class="p">(</span><span class="n">nside</span><span class="p">),</span> <span class="n">pixel_order</span><span class="o">=</span><span class="n">healpix</span><span class="o">.</span><span class="n">PixelOrder</span><span class="o">.</span><span class="n">NEST</span><span class="p">)</span>
+<span class="n">field</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">lat</span><span class="o">+</span> <span class="mi">40</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">lon</span><span class="p">))</span>
+<span class="n">field</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">field</span><span class="p">)</span>
+
+<span class="c1"># now reorder, reshape and pad</span>
+<span class="n">out</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">reorder</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">pixel_order</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">HEALPIX_PAD_XY</span><span class="p">)</span>
+<span class="n">z</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="n">nside</span><span class="p">,</span> <span class="n">nside</span><span class="p">])</span> <span class="c1"># healpix.pad requires a 4d input</span>
+<span class="n">z_padded</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">pad_size</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell tag_hide-input docutils container">
+<details class="hide above-input">
+<summary aria-label="Toggle hidden content">
+<span class="collapsed">Show code cell source</span>
+<span class="expanded">Hide code cell source</span>
+</summary>
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># show the padded region</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.patches</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">patches</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">pcolormesh</span><span class="p">(</span><span class="n">z_padded</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<span class="n">rect</span> <span class="o">=</span> <span class="n">patches</span><span class="o">.</span><span class="n">Rectangle</span><span class="p">((</span><span class="n">pad_size</span><span class="p">,</span> <span class="n">pad_size</span><span class="p">),</span> <span class="n">nside</span><span class="p">,</span> <span class="n">nside</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">facecolor</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">add_patch</span><span class="p">(</span><span class="n">rect</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">set_aspect</span><span class="p">(</span><span class="s1">&#39;equal&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Pixel 0 w/ padding&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</details>
+<div class="cell_output docutils container">
+<img alt="../_images/bdb34abbf0e9757012aad280f57e2fac7985313c493a21184673943b7c4ecd0a.png" src="../_images/bdb34abbf0e9757012aad280f57e2fac7985313c493a21184673943b7c4ecd0a.png" />
+</div>
+</div>
+<p>To run convolutions on the sphere</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># convolution 3d is used to skip over the face dimension</span>
+<span class="n">conv</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Conv3d</span><span class="p">(</span>
+  <span class="n">in_channels</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">out_channels</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">padding</span><span class="o">=</span><span class="mi">0</span>
+<span class="p">)</span>
+
+<span class="n">pad_size</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">n</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="n">nside</span><span class="p">,</span> <span class="n">nside</span>
+
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">out</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span> <span class="c1"># some input data</span>
+
+<span class="c1"># start processing</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">x</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">b</span> <span class="o">*</span> <span class="n">c</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span> <span class="c1"># combine (b, c) dims, healpix.pad requires a 4d input</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">pad_size</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">n</span><span class="o">+</span><span class="mi">2</span> <span class="o">*</span> <span class="n">pad_size</span><span class="p">,</span> <span class="n">n</span><span class="o">+</span><span class="mi">2</span> <span class="o">*</span> <span class="n">pad_size</span><span class="p">)</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">conv</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+<span class="c1"># reshape back for visualization</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">reorder</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">f</span> <span class="o">*</span> <span class="n">n</span>  <span class="o">*</span> <span class="n">n</span><span class="p">),</span> <span class="n">healpix</span><span class="o">.</span><span class="n">HEALPIX_PAD_XY</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">PixelOrder</span><span class="o">.</span><span class="n">RING</span><span class="p">)</span>
+<span class="n">healpix</span><span class="o">.</span><span class="n">pcolormesh</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>torch.Size([1, 1, 12, 8, 8]) torch.Size([1, 1, 12, 8, 8])
+</pre></div>
+</div>
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;matplotlib.collections.QuadMesh at 0x140568f20&gt;
+</pre></div>
+</div>
+<img alt="../_images/aef708d56721d53be67614cf457ac4d1519dd059d1e05ac01ca4391073308b2d.png" src="../_images/aef708d56721d53be67614cf457ac4d1519dd059d1e05ac01ca4391073308b2d.png" />
+</div>
+</div>
+</section>
+</section>
+<section id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Link to this heading">#</a></h2>
+<p>In this tutorial, we’ve covered several key aspects of working with HEALPix data:</p>
+<ol class="arabic simple">
+<li><p><strong>Visualization</strong>: Using double pixelization to create visually appealing representations of HEALPix data while preserving the native pixel structure.</p></li>
+<li><p><strong>Zonal Averaging</strong>: Computing latitudinal averages to analyze patterns in the data.</p></li>
+<li><p><strong>Regridding</strong>: Transforming data between different grid types, including:</p>
+<ul class="simple">
+<li><p>HEALPix to regular lat-lon grid</p></li>
+<li><p>HEALPix to higher resolution HEALPix grid</p></li>
+</ul>
+</li>
+<li><p><strong>Reordering</strong>: Converting between different HEALPix pixel ordering schemes:</p>
+<ul class="simple">
+<li><p>RING: Pixels ordered in rings of constant latitude</p></li>
+<li><p>NEST: Pixels ordered in a hierarchical, nested pattern</p></li>
+<li><p>XY: Pixels ordered in a Cartesian-like grid within each face, with configurable origin and direction</p></li>
+</ul>
+</li>
+<li><p><strong>Padding</strong>: Implementing efficient CUDA-based padding operations for machine learning applications, particularly useful for spherical convolutions.</p></li>
+</ol>
+<p>These tools provide a comprehensive set of operations for working with global data on the sphere, making it easier to analyze, visualize, and process geophysical data for various applications including machine learning.</p>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="index.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Tutorials</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../auto_examples/index.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Examples</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#setup">Setup</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#visualization-using-double-pixelization">Visualization using Double Pixelization</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#zonal-averaging">Zonal Averaging</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#regridding">Regridding</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#regridding-to-lat-lon">Regridding to Lat-Lon</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#healpix-to-lat-lon">HEALPIX to Lat-Lon</a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#lat-lon-to-healpix">Lat-Lon to HEALPIX</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#healpix-pixel-orders">HEALPix Pixel Orders</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#padding-and-convolutions">Padding and Convolutions</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#summary">Summary</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By NVIDIA Research
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2024, NVIDIA Research.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
