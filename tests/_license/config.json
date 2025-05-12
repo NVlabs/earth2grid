@@ -2,11 +2,10 @@
     "copyright_file": "header.txt",
     "dir": "../../",
     "exclude-dir": [
-        "../../build/",
-        "../../docs/",
-        "../../earth2grid/third_party",
-        "../../.venv",
-        "."
+        "build/",
+        "docs/",
+        "earth2grid/third_party",
+        "tests/_license"
       ],
     "include-ext": [
         ".py"

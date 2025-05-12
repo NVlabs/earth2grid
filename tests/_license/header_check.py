@@ -16,9 +16,9 @@
 
 """A script to check that copyright headers exists"""
 
-import itertools
 import json
 import re
+import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -56,7 +56,6 @@ def main():
     current_year = int(datetime.today().year)
     starting_year = 2023
     python_header_path = Path(__file__).parent.resolve() / Path(config["copyright_file"])
-    working_path = Path(__file__).parent.resolve() / Path(config["dir"])
     exts = config["include-ext"]
 
     with open(python_header_path, "r", encoding="utf-8") as original:
@@ -64,11 +63,16 @@ def main():
         pyheader_lines = len(pyheader)
 
     # Build list of files to check
-    exclude_paths = [(Path(__file__).parent / Path(path)).resolve().rglob("*") for path in config["exclude-dir"]]
-    all_exclude_paths = itertools.chain.from_iterable(exclude_paths)
-    exclude_filenames = [p for p in all_exclude_paths if p.suffix in exts]
-    filenames = [p for p in working_path.resolve().rglob("*") if p.suffix in exts]
-    filenames = [filename for filename in filenames if filename not in exclude_filenames]
+    # has ext in include-ext but doesn't start with any of the exclude-dir
+    git_files_output = subprocess.check_output(["git", "ls-files"])  # noqa: S603, S607
+    filenames = [line.decode("utf-8").strip() for line in git_files_output.splitlines()]
+    filenames = [filename for filename in filenames if any(filename.endswith(ext) for ext in exts)]
+    filenames = [
+        filename
+        for filename in filenames
+        if not any(str(filename).startswith(str(exclude)) for exclude in config["exclude-dir"])
+    ]
+
     problematic_files = []
     gpl_files = []
 
