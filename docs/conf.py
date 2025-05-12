@@ -28,7 +28,7 @@ author = 'NVIDIA Research'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    'myst_parser',
+    'myst_nb',
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
     'sphinx_gallery.gen_gallery',
@@ -36,6 +36,25 @@ extensions = [
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+
+myst_enable_extensions = [
+    "colon_fence",
+]
+nb_custom_formats = {".qmd": ["jupytext.reads", {"fmt": "qmd"}]}
+
+# myst_nb configuration
+# myst_enable_extensions = [
+#     "amsmath",
+#     "colon_fence",
+#     "deflist",
+#     "dollarmath",
+#     "html_image",
+#     "html_admonition",
+#     "replacements",
+#     "smartquotes",
+#     "substitution",
+#     "tasklist",
+# ]
 
 # sphinx
 
@@ -85,3 +104,4 @@ sphinx_gallery_conf = {
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 html_static_path = ['_static']
+html_theme = 'sphinx_book_theme'

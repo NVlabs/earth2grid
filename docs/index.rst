@@ -12,11 +12,11 @@ Welcome to Earth2-Grid's documentation!
 
    installation.md
    usage.md
+   tutorials/index
+   auto_examples/index
    api
    changelog.md
    contributing.md
-   auto_examples/index
-
 
 
 

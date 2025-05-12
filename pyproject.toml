@@ -151,3 +151,9 @@ target-version = 'py38'
     "ARG", # Unused function args -> fixtures nevertheless are functionally relevant...
     "FBT", # Don't care about booleans as positional arguments in tests, e.g. via @pytest.mark.parametrize()
 ]
+
+[dependency-groups]
+doc = [
+    "jupytext>=1.17.1",
+    "myst-nb>=1.2.0",
+]
