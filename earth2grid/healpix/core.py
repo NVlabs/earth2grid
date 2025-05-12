@@ -45,7 +45,6 @@ import torch
 
 from earth2grid import _bit_ops, healpix_bare
 from earth2grid._regrid import Regridder
-from earth2grid.healpix_bare import ang2pix
 
 try:
     import pyvista as pv
@@ -68,8 +67,6 @@ try:
     import cuhpx
 except ImportError:
     cuhpx = None
-
-__all__ = ["pad", "PixelOrder", "XY", "Compass", "Grid", "HEALPIX_PAD_XY", "conv2d", "reorder", "ang2pix"]
 
 
 def _get_array_library(x):
@@ -112,9 +109,9 @@ def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
     if x.device.type != 'cuda' or not healpixpad_cuda_avail:
         return heapixpad_cpu(x, padding)
     elif x.ndim == 5:
-        return HEALPixPadFunction.apply(x, padding)
+        return _HEALPixPadFunction.apply(x, padding)
     else:
-        return HEALPixPadFunction.apply(x.unsqueeze(2), padding).squeeze(2)
+        return _HEALPixPadFunction.apply(x.unsqueeze(2), padding).squeeze(2)
 
 
 def _apply_cuhpx_remap(func, x, **kwargs):
@@ -425,7 +422,7 @@ class Grid(base.Grid):
         return to_rotated_pixelization(x, fill_value)
 
 
-class HEALPixPadFunction(torch.autograd.Function):
+class _HEALPixPadFunction(torch.autograd.Function):
     """
     A torch autograd class that pads a healpixpad xy tensor
     """

@@ -77,38 +77,6 @@ print(grid.lat[:5])
 
 SHOW_AXES = False
 
-def pcolor_hpx(z):
-    z = torch.as_tensor(z)
-    npix = z.shape[0]
-    i_ring = torch.arange(npix)
-    nside = healpix.npix2nside(npix)
-    grid = healpix.Grid(healpix.npix2level(npix))
-    y, x =healpix.ring2double(nside, i_ring)
-
-    # plt.imshow(healpix.to_double_pixelization(z, fill_value=float('nan')))
-
-    # rotate clockwise by 45 degrees
-    x, y = (x + y) // 2, (x - y) // 2
-
-    y -= y.min()
-    x -= x.min()
-
-
-    out = torch.full((x.max() + 1, y.max() + 1), torch.nan)
-    out[x, y] = z.float()
-
-    x, y = (x+y) /2, (x-y) / 2
-    xx, yy = torch.meshgrid(torch.arange(out.shape[0] + 1), torch.arange(out.shape[1] + 1))
-    # im = plt.pcolor(x, y, out)
-    im = plt.pcolormesh((xx+yy) / 2, -(xx-yy) / 2, out)
-    plt.ylim(-nside,nside)
-    plt.xlim((nside - 1) / 2, nside * 9 / 2)
-    plt.gca().set_aspect('equal')
-    if not SHOW_AXES:
-        plt.gca().set_axis_off()
-    return im
-
-
 def label_pixels(z):
     z = torch.as_tensor(z)
     npix = z.shape[0]
@@ -198,7 +166,7 @@ fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
 
 # Original HealPIX field
 plt.sca(ax1)
-im1 = pcolor_hpx(field)
+im1 = healpix.pcolormesh(field)
 ax1.set_title('Original HealPIX Field')
 plt.colorbar(im1, ax=ax1)
 
@@ -271,7 +239,7 @@ def show_pixel_order(nside, pixel_order):
     npix = 12 * nside ** 2
     i = torch.arange(npix)
     ir = healpix.reorder(i, pixel_order, healpix.PixelOrder.RING)
-    pcolor_hpx(ir)
+    healpix.pcolormesh(ir)
     label_pixels(ir)
     if isinstance(pixel_order, healpix.XY):
         clockwise = pixel_order.clockwise
@@ -295,7 +263,7 @@ def show_pixel_order(nside, pixel_order):
     npix = 12 * nside ** 2
     i = torch.arange(npix)
     ir = healpix.reorder(i, pixel_order, healpix.PixelOrder.RING)
-    pcolor_hpx(ir.clamp(0, nside**2))
+    healpix.pcolormesh(ir.clamp(0, nside**2))
     label_pixels(ir)
 
     if isinstance(pixel_order, healpix.XY):
@@ -410,7 +378,7 @@ print(x.shape, y.shape)
 
 # reshape back for visualization
 y = healpix.reorder(y.view(b, c, f * n  * n), healpix.HEALPIX_PAD_XY, healpix.PixelOrder.RING)
-pcolor_hpx(y[0,0].detach())
+healpix.pcolormesh(y[0,0].detach())
 ```
 
 

@@ -18,6 +18,8 @@ import pytest
 import torch
 
 from earth2grid import get_regridder, healpix
+from earth2grid.healpix.core import _rotate_index
+from earth2grid.healpix.visualization import _to_mesh
 
 
 @pytest.mark.xfail
@@ -26,6 +28,21 @@ def test_grid_visualize():
     z = np.cos(10 * np.deg2rad(grid.lat))
     grid.visualize(z)
     plt.savefig("test_grid_visualize.png")
+
+
+def test__to_mesh(regtest):
+    z = torch.arange(12 * 2 * 2)
+    xx, yy, out = _to_mesh(z)
+
+    assert out.shape == (10, 10)
+    assert xx.shape == (11, 11)
+    assert yy.shape == (11, 11)
+    np.savetxt(regtest, out, fmt="%.0f", delimiter="\t")
+
+
+def test_pcolormesh():
+    z = np.random.randn(12 * 16 * 16)
+    healpix.pcolormesh(z)
 
 
 @pytest.mark.parametrize("origin", list(healpix.Compass))
@@ -44,7 +61,7 @@ def test_grid_healpix_orientations(tmp_path, origin):
 def test_rotate_index_same_values(tmp_path, rot):
     n = 8
     i = np.arange(12 * n * n)
-    i_rot = healpix._rotate_index(n, rot, i=i)
+    i_rot = _rotate_index(n, rot, i=i)
     i = i.reshape(12, -1)
     i_rot = i_rot.reshape(12, -1)
     for f in range(12):
@@ -55,8 +72,8 @@ def test_rotate_index_same_values(tmp_path, rot):
 def test_rotate_index(rot):
     n = 32
     i = np.arange(12 * n * n)
-    i_rot = healpix._rotate_index(n, rot, i=i)
-    i_back = healpix._rotate_index(n, 4 - rot, i=i_rot)
+    i_rot = _rotate_index(n, rot, i=i)
+    i_back = _rotate_index(n, 4 - rot, i=i_rot)
     np.testing.assert_array_equal(i_back, i)
 
 
