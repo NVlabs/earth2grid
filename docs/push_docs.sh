@@ -4,6 +4,7 @@ set -ex
 
 make docs
 
+ref=$(git rev-parse HEAD)
 originalBranch=$(git rev-parse --abbrev-ref HEAD)
 # Function to switch back to the original branch
 function cleanup {
@@ -18,5 +19,5 @@ touch /tmp/earth2grid-pages/.nojekyll
 
 cd /tmp/earth2grid-pages
 git add -A
-git commit -m "update doc from $ref"
+git commit --no-verify -m "update doc from $ref"
 echo "To update the website: git push origin pages"
