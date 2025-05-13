@@ -22,7 +22,7 @@ Earth2grid has some compiled components (in CUDA and C). So some care is require
 # python3 -m venv .venv # make venv
 # source .venv/bin/activate # activate venv
 pip install torch setuptools
-pip install --no-build-isolation https://github.com/NVlabs/earth2grid/archive/6a1fd7ef271b52ac240338efd5c2027cca317997.tar.gz
+pip install --no-build-isolation https://github.com/NVlabs/earth2grid/archive/main.tar.gz
 ```
 :::{warning}
 It is very important to use the `--no-build-isolation` flag. Otherwise, the library may be built against a different version of pytorch than you have installed, this will cause strange "missing symbols" errors.
