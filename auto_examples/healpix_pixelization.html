@@ -159,10 +159,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../usage.html">Usage</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/healpix.html">HEALPix Tutorial</a></li>
-
-
-
-
 </ul>
 </details></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
@@ -229,7 +225,7 @@
       
       
       
-      <li><a href="../_sources/auto_examples/healpix_pixelization.ipynb" target="_blank"
+      <li><a href="../_sources/auto_examples/healpix_pixelization.rst" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -239,7 +235,7 @@
 <span class="btn__icon-container">
   <i class="fas fa-file"></i>
   </span>
-<span class="btn__text-container">.ipynb</span>
+<span class="btn__text-container">.rst</span>
 </a>
 </li>
       
@@ -325,14 +321,17 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="healpix-pixelization">
-<h1>HealPIX Pixelization<a class="headerlink" href="#healpix-pixelization" title="Link to this heading">#</a></h1>
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-healpix-pixelization-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code.</p>
+</div>
+<section class="sphx-glr-example-title" id="healpix-pixelization">
+<span id="sphx-glr-auto-examples-healpix-pixelization-py"></span><h1>HealPIX Pixelization<a class="headerlink" href="#healpix-pixelization" title="Link to this heading">#</a></h1>
 <p>HealPIX maps can be viewed as a 2D image rotated by 45 deg or alternatively with
 double pixelization that is not rotated.  This is useful for quick visualization
 with image viewers without distorting the native pixels of the image.</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">earth2grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">healpix</span>
@@ -350,18 +349,11 @@ with image viewers without distorting the native pixels of the image.</p>
 <span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
 </pre></div>
 </div>
-</div>
-<div class="cell_output docutils container">
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/Users/nbrenowitz/workspace/nvidia/earth2grid/earth2grid/healpix/core.py:60: UserWarning: healpixpad_cuda module not available, reverting to CPU for all padding routines
+<img src="../_images/sphx_glr_healpix_pixelization_001.png" srcset="../_images/sphx_glr_healpix_pixelization_001.png" alt="healpix pixelization" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>/Users/nbrenowitz/workspace/nvidia/earth2grid/earth2grid/healpix/core.py:112: UserWarning: healpixpad_cuda module not available, reverting to CPU for all padding routines
   warnings.warn(&quot;healpixpad_cuda module not available, reverting to CPU for all padding routines&quot;)
 </pre></div>
 </div>
-<img alt="../_images/21fa8cd1e198ef2e6b3d881a1646e14483c64d5d28cef513fad2c0d855d7bbe8.png" src="../_images/21fa8cd1e198ef2e6b3d881a1646e14483c64d5d28cef513fad2c0d855d7bbe8.png" />
-</div>
-</div>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">n</span> <span class="o">=</span> <span class="mi">4</span>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">n</span> <span class="o">=</span> <span class="mi">4</span>
 <span class="n">npix</span> <span class="o">=</span> <span class="mi">12</span> <span class="o">*</span> <span class="n">n</span> <span class="o">*</span> <span class="n">n</span>
 <span class="n">ncap</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">n</span> <span class="o">*</span> <span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
 <span class="n">p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">npix</span><span class="p">)</span>
@@ -371,28 +363,29 @@ with image viewers without distorting the native pixels of the image.</p>
 <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="cell_output docutils container">
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;matplotlib.image.AxesImage at 0x141e1f230&gt;
+<img src="../_images/sphx_glr_healpix_pixelization_002.png" srcset="../_images/sphx_glr_healpix_pixelization_002.png" alt="healpix pixelization" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;matplotlib.image.AxesImage object at 0x156acb4a0&gt;
 </pre></div>
 </div>
-<img alt="../_images/3c1fa3b6e68eff599c7f378db1c04ea808a685a53e0d4be7f0db43a2be18be13.png" src="../_images/3c1fa3b6e68eff599c7f378db1c04ea808a685a53e0d4be7f0db43a2be18be13.png" />
-</div>
-</div>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">out</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">to_rotated_pixelization</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">lon</span><span class="p">)</span>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">out</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">to_rotated_pixelization</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">lon</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="cell_output docutils container">
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;matplotlib.image.AxesImage at 0x141fa7020&gt;
+<img src="../_images/sphx_glr_healpix_pixelization_003.png" srcset="../_images/sphx_glr_healpix_pixelization_003.png" alt="healpix pixelization" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>&lt;matplotlib.image.AxesImage object at 0x156ab9bb0&gt;
 </pre></div>
 </div>
-<img alt="../_images/2fb1374350c25b5400a21246c529201596e685f607fce1ea64303cc06d62daa9.png" src="../_images/2fb1374350c25b5400a21246c529201596e685f607fce1ea64303cc06d62daa9.png" />
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 1.275 seconds)</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-healpix-pixelization-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/4ce3e205efd2858e449755e0ff8247ea/healpix_pixelization.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">healpix_pixelization.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/7ab75f1d57dad1af8db8e53d54dbd728/healpix_pixelization.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">healpix_pixelization.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-zip docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/34d31f5b1fbaea00471adddbaf6f0195/healpix_pixelization.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">healpix_pixelization.zip</span></code></a></p>
 </div>
 </div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
 </section>
 
 

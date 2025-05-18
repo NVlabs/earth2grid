@@ -159,10 +159,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../usage.html">Usage</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/healpix.html">HEALPix Tutorial</a></li>
-
-
-
-
 </ul>
 </details></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
@@ -229,7 +225,7 @@
       
       
       
-      <li><a href="../_sources/auto_examples/latlon_to_healpix.ipynb" target="_blank"
+      <li><a href="../_sources/auto_examples/latlon_to_healpix.rst" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -239,7 +235,7 @@
 <span class="btn__icon-container">
   <i class="fas fa-file"></i>
   </span>
-<span class="btn__text-container">.ipynb</span>
+<span class="btn__text-container">.rst</span>
 </a>
 </li>
       
@@ -325,16 +321,19 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="healpix-regridding">
-<h1>HealPIX regridding<a class="headerlink" href="#healpix-regridding" title="Link to this heading">#</a></h1>
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-latlon-to-healpix-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code.</p>
+</div>
+<section class="sphx-glr-example-title" id="healpix-regridding">
+<span id="sphx-glr-auto-examples-latlon-to-healpix-py"></span><h1>HealPIX regridding<a class="headerlink" href="#healpix-regridding" title="Link to this heading">#</a></h1>
 <p>In this notebook, I demonstrate bilinear regridding onto healpy grids in O(10)
 ms. this is a 3 order of magnitude speed-up compared to what Dale has reported.</p>
 <p>Now, lets define a healpix grid with indexing in the XY convention. we convert
-to NEST indexing in order to use the <code class="docutils literal notranslate"><span class="pre">healpy.pix2ang</span></code> to get the lat lon
+to NEST indexing in order to use the <cite>healpy.pix2ang</cite> to get the lat lon
 coordinates. This operation is near instant.</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 
@@ -361,21 +360,10 @@ coordinates. This operation is near instant.</p>
 <span class="n">b</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Healpix&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="cell_output docutils container">
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/Users/nbrenowitz/workspace/nvidia/earth2grid/earth2grid/healpix/core.py:60: UserWarning: healpixpad_cuda module not available, reverting to CPU for all padding routines
-  warnings.warn(&quot;healpixpad_cuda module not available, reverting to CPU for all padding routines&quot;)
+<img src="../_images/sphx_glr_latlon_to_healpix_001.png" srcset="../_images/sphx_glr_latlon_to_healpix_001.png" alt="Lat Lon Grid, Healpix" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>Text(0.5, 1.0, &#39;Healpix&#39;)
 </pre></div>
 </div>
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Text(0.5, 1.0, &#39;Healpix&#39;)
-</pre></div>
-</div>
-<img alt="../_images/a136b1c015f01903698002cd23ef0fa026125e15fcb551451b13e8d86e6adcf1.png" src="../_images/a136b1c015f01903698002cd23ef0fa026125e15fcb551451b13e8d86e6adcf1.png" />
-</div>
-</div>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">nside</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="n">level</span>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="n">nside</span> <span class="o">=</span> <span class="mi">2</span><span class="o">**</span><span class="n">level</span>
 <span class="n">reshaped</span> <span class="o">=</span> <span class="n">z_hpx</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="n">nside</span><span class="p">,</span> <span class="n">nside</span><span class="p">)</span>
 <span class="n">lat_r</span> <span class="o">=</span> <span class="n">hpx</span><span class="o">.</span><span class="n">lat</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="n">nside</span><span class="p">,</span> <span class="n">nside</span><span class="p">)</span>
 <span class="n">lon_r</span> <span class="o">=</span> <span class="n">hpx</span><span class="o">.</span><span class="n">lon</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="n">nside</span><span class="p">,</span> <span class="n">nside</span><span class="p">)</span>
@@ -388,15 +376,23 @@ coordinates. This operation is near instant.</p>
     <span class="n">axs</span><span class="p">[</span><span class="n">tile</span><span class="p">]</span><span class="o">.</span><span class="n">pcolormesh</span><span class="p">(</span><span class="n">lon_r</span><span class="p">[</span><span class="n">tile</span><span class="p">],</span> <span class="n">lat_r</span><span class="p">[</span><span class="n">tile</span><span class="p">],</span> <span class="n">reshaped</span><span class="p">[</span><span class="n">tile</span><span class="p">])</span>
 </pre></div>
 </div>
-</div>
-<div class="cell_output docutils container">
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/var/folders/wg/qjsgzzp1099fqblcnp0b0kk80000gp/T/ipykernel_62662/3901346369.py:11: UserWarning: The input coordinates to pcolormesh are interpreted as cell centers, but are not monotonically increasing or decreasing. This may lead to incorrectly calculated cell edges, in which case, please supply explicit cell edges to pcolormesh.
+<img src="../_images/sphx_glr_latlon_to_healpix_002.png" srcset="../_images/sphx_glr_latlon_to_healpix_002.png" alt="latlon to healpix" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>/Users/nbrenowitz/workspace/nvidia/earth2grid/examples/sphinx_gallery/latlon_to_healpix.py:66: UserWarning: The input coordinates to pcolormesh are interpreted as cell centers, but are not monotonically increasing or decreasing. This may lead to incorrectly calculated cell edges, in which case, please supply explicit cell edges to pcolormesh.
   axs[tile].pcolormesh(lon_r[tile], lat_r[tile], reshaped[tile])
 </pre></div>
 </div>
-<img alt="../_images/48f0aaebceb75d0f58993a1e31a6b4128fc8f1bf39903e6aea65751184d6b8d5.png" src="../_images/48f0aaebceb75d0f58993a1e31a6b4128fc8f1bf39903e6aea65751184d6b8d5.png" />
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 0.528 seconds)</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-latlon-to-healpix-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/f6888b7c20ca92b13107eb2bef6349b7/latlon_to_healpix.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">latlon_to_healpix.ipynb</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/326f1e4f381185b5da31cfd0fc7fb40e/latlon_to_healpix.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">latlon_to_healpix.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-zip docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/10974bd851bbfd7516af83b4e4e0ccc3/latlon_to_healpix.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">latlon_to_healpix.zip</span></code></a></p>
 </div>
 </div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
 </section>
 
 

@@ -159,10 +159,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../usage.html">Usage</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../tutorials/healpix.html">HEALPix Tutorial</a></li>
-
-
-
-
 </ul>
 </details></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Examples</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
@@ -229,7 +225,7 @@
       
       
       
-      <li><a href="../_sources/auto_examples/pyvista_grids.ipynb" target="_blank"
+      <li><a href="../_sources/auto_examples/pyvista_grids.rst" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -239,7 +235,7 @@
 <span class="btn__icon-container">
   <i class="fas fa-file"></i>
   </span>
-<span class="btn__text-container">.ipynb</span>
+<span class="btn__text-container">.rst</span>
 </a>
 </li>
       
@@ -325,18 +321,17 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="plot-grids-with-pyvista">
-<h1>Plot grids with PyVista<a class="headerlink" href="#plot-grids-with-pyvista" title="Link to this heading">#</a></h1>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pyvista</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pv</span>
+  <div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p><a class="reference internal" href="#sphx-glr-download-auto-examples-pyvista-grids-py"><span class="std std-ref">Go to the end</span></a>
+to download the full example code.</p>
+</div>
+<section class="sphx-glr-example-title" id="plot-grids-with-pyvista">
+<span id="sphx-glr-auto-examples-pyvista-grids-py"></span><h1>Plot grids with PyVista<a class="headerlink" href="#plot-grids-with-pyvista" title="Link to this heading">#</a></h1>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pyvista</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pv</span>
 </pre></div>
 </div>
-</div>
-</div>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">earth2grid</span>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">earth2grid</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">label</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">plotter</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
@@ -376,13 +371,7 @@ document.write(`
 <span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
-</div>
-<div class="cell_output docutils container">
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/Users/nbrenowitz/workspace/nvidia/earth2grid/earth2grid/healpix/core.py:60: UserWarning: healpixpad_cuda module not available, reverting to CPU for all padding routines
-  warnings.warn(&quot;healpixpad_cuda module not available, reverting to CPU for all padding routines&quot;)
-</pre></div>
-</div>
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[ -2.8125   2.8125   8.4375  14.0625  19.6875  25.3125  30.9375  36.5625
+<img src="../_images/sphx_glr_pyvista_grids_001.png" srcset="../_images/sphx_glr_pyvista_grids_001.png" alt="pyvista grids" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>[ -2.8125   2.8125   8.4375  14.0625  19.6875  25.3125  30.9375  36.5625
   42.1875  47.8125  53.4375  59.0625  64.6875  70.3125  75.9375  81.5625
   87.1875  92.8125  98.4375 104.0625 109.6875 115.3125 120.9375 126.5625
  132.1875 137.8125 143.4375 149.0625 154.6875 160.3125 165.9375 171.5625
@@ -393,17 +382,19 @@ document.write(`
  357.1875]
 </pre></div>
 </div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/Users/nbrenowitz/workspace/nvidia/earth2grid/.venv/lib/python3.12/site-packages/pyvista/jupyter/notebook.py:36: UserWarning: Failed to use notebook backend: 
-
-No module named &#39;trame&#39;
-
-Falling back to a static output.
-  warnings.warn(
-</pre></div>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 1.453 seconds)</p>
+<div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-pyvista-grids-py">
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/bc5f3d8ff2e85ce704e6bc194c4a1825/pyvista_grids.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">pyvista_grids.ipynb</span></code></a></p>
 </div>
-<img alt="../_images/63acf001d2adf14d33ce3ea9c9b75e490c3d7bc78f27b045cde1774277b9e121.png" src="../_images/63acf001d2adf14d33ce3ea9c9b75e490c3d7bc78f27b045cde1774277b9e121.png" />
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/a0fb23b6404ea0f060e2ee086a2a1fd2/pyvista_grids.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">pyvista_grids.py</span></code></a></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-zip docutils container">
+<p><a class="reference download internal" download="" href="../_downloads/765d0bf8ebf2eb81a30b5e0924811be9/pyvista_grids.zip"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">zipped:</span> <span class="pre">pyvista_grids.zip</span></code></a></p>
 </div>
 </div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
 </section>
 
 
