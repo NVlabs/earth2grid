@@ -17,9 +17,18 @@ import numpy as np
 import pytest
 import torch
 
-from earth2grid import get_regridder, healpix
+from earth2grid import get_regridder, healpix, healpix_bare
 from earth2grid.healpix.core import _rotate_index
 from earth2grid.healpix.visualization import _to_mesh
+
+
+def test_ring2xy():
+    nside = 4
+    p = torch.arange(12 * nside * nside)
+    xy = healpix.ring2xy(nside, p)
+    hpd = healpix_bare.ring2hpd(nside, p)
+    xy_from_c = hpd @ torch.tensor([nside * nside, nside, 1])
+    assert torch.allclose(xy.long(), xy_from_c)
 
 
 @pytest.mark.xfail

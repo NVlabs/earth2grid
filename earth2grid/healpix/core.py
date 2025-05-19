@@ -159,7 +159,7 @@ class PixelOrder(Enum):
     def to_nest_cuda(self, x: torch.Tensor):
         if self == PixelOrder.RING:
             if cuhpx is None:
-                return _reorder_via_permutation(x, self, PixelOrder.NEST)
+                return ring2nest(npix2nside(x.size(-1)), x)
             else:
                 return _apply_cuhpx_remap(cuhpx.ring2nest, x)
         elif self == PixelOrder.NEST:
@@ -644,6 +644,36 @@ def ring_length(nside: int, i: ArrayT) -> ArrayT:
     return length
 
 
+def double2xy(nside, i, j):
+    xp = _get_array_library(i)
+    i = i + 1
+    # make upper left corner j=-nside, i = 2 * nside
+    # y counts down from top left
+    #        x
+    #     |------
+    #   y |
+    #     |
+    #     ↓
+    # the diagonal blocks in this coordinate system are the equator-only tiles
+    y = (i + j - nside) >> 1
+    x = (j - i + 3 * nside - 1) >> 1
+
+    # local coordinates (w/ origin in S corner)
+    fx = x % nside
+    fy = (-y - 1) % nside
+
+    x_block = x // nside
+    y_block = y // nside
+
+    # north
+    face = xp.where(x_block > y_block, y_block, 0)
+    # equator
+    face = xp.where(x_block == y_block, x_block % 4 + 4, face)
+    # south
+    face = xp.where(x_block < y_block, x_block % 4 + 8, face)
+    return face * nside**2 + fy * nside + fx
+
+
 def ring2double(nside: int, p: ArrayT):
     """Compute the (i,j) index in the double pixelization scheme of Calabretta (2007)
 
@@ -672,6 +702,15 @@ def ring2double(nside: int, p: ArrayT):
     jp = xp.where(i >= 3 * n, jp_south, jp)
 
     return i, jp
+
+
+def ring2xy(nside, pix):
+    i, j = ring2double(nside, pix)
+    return double2xy(nside, i, j)
+
+
+def ring2nest(nside, pix):
+    return xy2nest(nside, ring2xy(nside, pix))
 
 
 def to_rotated_pixelization(x, fill_value=math.nan):
