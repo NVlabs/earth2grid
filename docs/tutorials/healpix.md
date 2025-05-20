@@ -62,7 +62,7 @@ def label_pixels(z):
     y, x =healpix.ring2double(nside, i_ring)
     if label_pixels:
         for i in range(npix):
-            plt.text((x[i] + nside).item() / 2, nside-(y[i] + 1).item() / 2, z[i].item(), ha='center', va='center', fontsize=12, color='white', clip_on=True)
+            plt.text((x[i] + nside).item() / 2, nside-(y[i]).item() / 2, z[i].item(), ha='center', va='center', fontsize=12, color='white', clip_on=True)
 
 ```
 

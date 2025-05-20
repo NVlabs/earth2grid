@@ -646,7 +646,6 @@ def ring_length(nside: int, i: ArrayT) -> ArrayT:
 
 def double2xy(nside, i, j):
     xp = _get_array_library(i)
-    i = i + 1
     # make upper left corner j=-nside, i = 2 * nside
     # y counts down from top left
     #        x
@@ -701,7 +700,7 @@ def ring2double(nside: int, p: ArrayT):
     jp = xp.where(i >= n, jp_eq, jp_north)
     jp = xp.where(i >= 3 * n, jp_south, jp)
 
-    return i, jp
+    return i + 1, jp
 
 
 def ring2xy(nside, pix):
