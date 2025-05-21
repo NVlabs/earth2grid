@@ -308,3 +308,14 @@ def test_local2xy():
 
     out = local2xy(4, torch.tensor([4]), torch.tensor([0]), torch.tensor([0]))
     assert out.item() == _pixel(0, 3, f=1)
+
+
+def test_pad_new():
+    from earth2grid.healpix import padding
+
+    nside = 8
+
+    pad_size = 3
+    x = torch.arange(nside**2 * 12).float().reshape(1, 1, 12, nside, nside)
+    out = padding.pad(x, pad_size)
+    assert out.shape == (1, 1, 12, nside + 2 * pad_size, nside + 2 * pad_size)

@@ -19,9 +19,10 @@ import torch
 
 from earth2grid.healpix import XY, Grid
 from earth2grid import healpix
-from earth2grid.healpix.padding import local2xy
+from earth2grid.healpix.padding import local2xy, _xy_with_filled_tile
+from earth2grid.healpix import padding
 
-order = 4
+order = 2
 nside = 2**order
 pad = pad_x = nside
 face = 5
@@ -37,20 +38,31 @@ f = torch.tensor([face])
 
 f, y, x = torch.meshgrid(f, y, x, indexing="ij")
 
-xy_loc = local2xy(nside, x, y, f)
-padded0 = lat[xy_loc]
-
-xy_loc = local2xy(nside, x, y, f, right_first=False)
-padded1 = lat[xy_loc]
-
-dist_x = torch.where(x < 0, -x, torch.where(x < nside, 0, x - nside))
-dist_y = torch.where(y < 0, -y, torch.where(y < nside, 0, y - nside))
-padded = torch.where(dist_x > dist_y, padded0, torch.where(dist_x == dist_y, (padded0 + padded1) / 2, padded1))
-# padded = (padded0 + padded1) / 2
+x1, y1, f1 = local2xy(nside, x, y, f)
 
 
-plt.imshow(padded0[0])
+xy_east, xy_west = _xy_with_filled_tile(nside, x1, y1, f1)
+xy = xy_east
+
+padded_from_west = torch.where(xy_west >= 0, lat[xy_west], 0)
+padded_from_east = torch.where(xy_east >= 0, lat[xy_east], 0)
+denom = (xy_west >= 0).int() + (xy_east >= 0).int()
+
+padded = (padded_from_east + padded_from_west) / denom
+
+
+z = padded[0]
+# z = torch.where(xy_west >= 0, xy_west % nside, torch.nan)[0]
+
+plt.pcolormesh((x - y)[0], (y + x)[0], z)
+# plt.xlabel("x")
+# plt.ylabel("y")
 plt.colorbar()
+
+
+# %%
+x = torch.from_numpy(grid.lat).reshape(1, 12, nside, nside)
+padding.pad(x, 3)
 
 # %%
 
