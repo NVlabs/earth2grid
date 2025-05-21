@@ -19,6 +19,7 @@ import torch
 
 from earth2grid import get_regridder, healpix, healpix_bare
 from earth2grid.healpix.core import _rotate_index
+from earth2grid.healpix.padding import local2xy
 from earth2grid.healpix.visualization import _to_mesh
 
 
@@ -291,10 +292,10 @@ def test_to_double_pixelization_cuda(device="cuda"):
 
 
 def test_local2xy():
-    out = healpix.local2xy(1, torch.tensor([1]), torch.tensor([0]), torch.tensor([0]))
+    out = local2xy(1, torch.tensor([1]), torch.tensor([0]), torch.tensor([0]))
     assert out.item() == 1
 
-    out = healpix.local2xy(1, torch.tensor([-1]), torch.tensor([0]), torch.tensor([0]))
+    out = local2xy(1, torch.tensor([-1]), torch.tensor([0]), torch.tensor([0]))
     assert out.item() == 4
 
     nside = 4
@@ -302,10 +303,8 @@ def test_local2xy():
     def _pixel(x, y, f):
         return f * nside * nside + y * nside + x
 
-    out = healpix.local2xy(4, torch.tensor([-1]), torch.tensor([0]), torch.tensor([0]))
+    out = local2xy(4, torch.tensor([-1]), torch.tensor([0]), torch.tensor([0]))
     assert out.item() == _pixel(3, 0, f=4)
 
-    out = healpix.local2xy(4, torch.tensor([4]), torch.tensor([0]), torch.tensor([0]))
+    out = local2xy(4, torch.tensor([4]), torch.tensor([0]), torch.tensor([0]))
     assert out.item() == _pixel(0, 3, f=1)
-
-    assert False

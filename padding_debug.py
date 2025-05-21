@@ -1,13 +1,29 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # ruff: noqa
 # %%
 import matplotlib.pyplot as plt
 import torch
 
-from earth2grid.healpix import XY, Grid, local2xy
+from earth2grid.healpix import XY, Grid
+from earth2grid import healpix
+from earth2grid.healpix.padding import local2xy
 
 order = 4
 nside = 2**order
-pad = pad_x = 16
+pad = pad_x = nside
 face = 5
 
 pix = torch.arange(12 * nside**2)
@@ -33,15 +49,18 @@ padded = torch.where(dist_x > dist_y, padded0, torch.where(dist_x == dist_y, (pa
 # padded = (padded0 + padded1) / 2
 
 
-plt.imshow(padded[0])
+plt.imshow(padded0[0])
 plt.colorbar()
 
 # %%
-from earth2grid import healpix
 
 padgrid = Grid(order, healpix.HEALPIX_PAD_XY)
 lat = torch.from_numpy(padgrid.lat).reshape([1, 12, nside, nside])
+pix = torch.arange(padgrid.shape[0]).float().reshape([1, 12, nside, nside])
 padded = healpix.pad(lat, pad)
-plt.imshow(padded[0, face])
+padded = torch.flip(padded[0, face], (0, 1))
+plt.imshow(padded)
+plt.title("Healpix PAD")
+plt.colorbar()
 
 # %%
