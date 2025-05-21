@@ -223,6 +223,11 @@ def show_pixel_order(nside, pixel_order):
 show_pixel_order(2, healpix.PixelOrder.RING)
 ```
 
+```{code-cell}
+:tags: [hide-input]
+show_pixel_order(1, healpix.PixelOrder.RING)
+```
+
 
 And the NEST
 ```{code-cell}

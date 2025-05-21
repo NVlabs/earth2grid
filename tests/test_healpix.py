@@ -288,3 +288,24 @@ def test_to_double_pixelization_cuda(device="cuda"):
     x = healpix.to_double_pixelization(x)
 
     np.testing.assert_array_equal(xnp, x.cpu().numpy())
+
+
+def test_local2xy():
+    out = healpix.local2xy(1, torch.tensor([1]), torch.tensor([0]), torch.tensor([0]))
+    assert out.item() == 1
+
+    out = healpix.local2xy(1, torch.tensor([-1]), torch.tensor([0]), torch.tensor([0]))
+    assert out.item() == 4
+
+    nside = 4
+
+    def _pixel(x, y, f):
+        return f * nside * nside + y * nside + x
+
+    out = healpix.local2xy(4, torch.tensor([-1]), torch.tensor([0]), torch.tensor([0]))
+    assert out.item() == _pixel(3, 0, f=4)
+
+    out = healpix.local2xy(4, torch.tensor([4]), torch.tensor([0]), torch.tensor([0]))
+    assert out.item() == _pixel(0, 3, f=1)
+
+    assert False
