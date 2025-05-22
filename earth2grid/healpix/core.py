@@ -41,7 +41,6 @@ missing face until they hit the diagonal until they intersect the diagonal.
 """
 
 import math
-import warnings
 from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
@@ -59,17 +58,7 @@ try:
 except ImportError:
     pv = None
 
-try:
-    import healpixpad_cuda
-
-    healpixpad_cuda_avail = True
-except ImportError:
-    healpixpad_cuda_avail = False
-    warnings.warn("healpixpad_cuda module not available, reverting to CPU for all padding routines")
-
-
 from earth2grid import base
-from earth2grid.third_party.zephyr.healpix import healpix_pad as heapixpad_cpu
 
 try:
     import cuhpx
@@ -85,41 +74,6 @@ def _get_array_library(x):
 
 
 ArrayT = TypeVar("ArrayT", np.ndarray, torch.Tensor)
-
-
-def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
-    """
-    Pad each face consistently with its according neighbors in the HEALPix
-
-    Args:
-        x: The input tensor of shape [N, F, H, W] or [N, F, C, H, W]. Must be
-            ordered in HEALPIX_PAD_XY pixel ordering.
-        padding: the amount of padding
-
-    Returns:
-        The padded tensor with shape [N, F, H+2*padding, W+2*padding]
-
-    Examples:
-
-        Ths example show to pad data described by a :py:class:`Grid` object.
-
-        >>> grid = Grid(level=4, pixel_order=PixelOrder.RING)
-        >>> lon = torch.from_numpy(grid.lon)
-        >>> faces = grid.reorder(HEALPIX_PAD_XY, lon)
-        >>> faces = faces.view(1, 12, grid._nside(), grid._nside())
-        >>> faces.shape
-        torch.Size([1, 12, 16, 16])
-        >>> padded = pad(faces, padding=1)
-        >>> padded.shape
-        torch.Size([1, 12, 18, 18])
-
-    """
-    if x.device.type != 'cuda' or not healpixpad_cuda_avail:
-        return heapixpad_cpu(x, padding)
-    elif x.ndim == 5:
-        return _HEALPixPadFunction.apply(x, padding)
-    else:
-        return _HEALPixPadFunction.apply(x.unsqueeze(2), padding).squeeze(2)
 
 
 def _apply_cuhpx_remap(func, x, **kwargs):
@@ -436,69 +390,6 @@ class Grid(base.Grid):
         return to_rotated_pixelization(x, fill_value)
 
 
-class _HEALPixPadFunction(torch.autograd.Function):
-    """
-    A torch autograd class that pads a healpixpad xy tensor
-    """
-
-    @staticmethod
-    def forward(ctx, input, pad):
-        """
-        The forward pass of the padding class
-
-        Parameters
-        ----------
-        input: torch.tensor
-            The tensor to pad, must have 5 dimensions and be in (B, F, C, H, W) format
-            where F == 12 and H == W
-        pad: int
-            The amount to pad each face of the tensor
-
-        Returns
-        -------
-        torch.tensor: The padded tensor
-        """
-        ctx.pad = pad
-        if input.ndim != 5:
-            raise ValueError(
-                f"Input tensor must be have 5 dimensions (B, F, C, H, W), got {len(input.shape)} dimensions instead"
-            )
-        if input.shape[1] != 12:
-            raise ValueError(
-                f"Input tensor must be have 5 dimensions (B, F, C, H, W), with F == 12, got {input.shape[1]}"
-            )
-        if input.shape[3] != input.shape[4]:
-            raise ValueError(
-                f"Input tensor must be have 5 dimensions (B, F, C, H, W), with H == @, got {input.shape[3]},  {input.shape[4]}"
-            )
-        # make contiguous
-        input = input.contiguous()
-        out = healpixpad_cuda.forward(input, pad)[0]
-        return out
-
-    @staticmethod
-    def backward(ctx, grad):
-        """
-        The forward pass of the padding class
-
-        Parameters
-        ----------
-        input: torch.tensor
-            The tensor to pad, must have 5 dimensions and be in (B, F, C, H, W) format
-            where F == 12 and H == W
-        pad: int
-            The amount to pad each face of the tensor
-
-        Returns
-        -------
-        torch.tensor: The padded tensor
-        """
-        pad = ctx.pad
-        grad = grad.contiguous()
-        out = healpixpad_cuda.backward(grad, pad)[0]
-        return out, None
-
-
 # nside = 2^ZOOM_LEVELS
 ZOOM_LEVELS = 20
 
@@ -571,45 +462,6 @@ def approx_grid_length_meters(nside):
     r_m = 6378140
     area = 4 * np.pi * r_m**2 / (12 * nside**2)
     return np.sqrt(area)
-
-
-def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    """conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1) -> Tensor
-
-    Applies a 2D convolution over an input image composed of several input
-    planes.
-
-    This operator supports :ref:`TensorFloat32<tf32_on_ampere>`.
-
-    See :class:`~torch.nn.Conv2d` for details and output shape.
-
-    """
-    px, py = padding
-    if px != py:
-        raise ValueError(f"Padding should be equal in x and y, got px={px}, py={py}")
-
-    n, c, x, y = input.shape
-    npix = input.size(-1)
-    nside2 = npix // 12
-    nside = int(math.sqrt(nside2))
-    if nside**2 * 12 != npix:
-        raise ValueError(f"Incompatible npix ({npix}) and nside ({nside})")
-
-    input = einops.rearrange(input, "n c () (f x y) -> (n c) f x y", f=12, x=nside)
-    input = pad(input, px)
-    input = einops.rearrange(input, "(n c) f x y -> n c f x y", c=c)
-    padding = (0, 0, 0)
-    padding = 'valid'
-
-    if not isinstance(stride, int):
-        stride = stride + (1,)
-
-    if not isinstance(dilation, int):
-        dilation = (1,) + dilation
-
-    weight = weight.unsqueeze(-3)
-    out = torch.nn.functional.conv3d(input, weight, bias, stride, padding, dilation, groups)
-    return einops.rearrange(out, "n c f x y -> n c () (f x y)")
 
 
 def _isqrt(x):
@@ -849,4 +701,108 @@ def zonal_average(x: ArrayT, dim=-1) -> ArrayT:
 
     if numpy:
         out = out.numpy()
+
     return out
+
+
+def local2xy(nside: int, x: torch.Tensor, y: torch.Tensor, face: torch.Tensor) -> torch.Tensor:
+    """Convert a local x, y coordinate in a given face (S origin) to a global pixel index
+
+    The local coordinates can be < 0 or > nside
+
+    This can be used to implement padding
+
+    Args:
+        nside: int
+        x: local coordinate [-nside, 2 * nside), origin=S
+        y: local coordinate [-nside, 2 * nside), origin=S
+        face: index of the face [0, 12)
+        right_first: if True then traverse to the face in the x-direction first
+
+    Returns:
+        x, y, f:  0 <= x,y< nside. f>12 are the missing faces.
+            See ``_xy_with_filled_tile`` and ``pad`` for the original hpxpad
+            methods for filling them in.
+    """
+    # adjacency graph (8 neighbors, counter-clockwise from S)
+    # Any faces > 11 are missing
+    neighbors = torch.tensor(
+        [
+            # pole
+            [8, 5, 1, 1, 2, 3, 3, 4],
+            [9, 6, 2, 2, 3, 0, 0, 5],
+            [10, 7, 3, 3, 0, 1, 1, 6],
+            [11, 4, 0, 0, 1, 2, 2, 7],
+            # equator
+            [16, 8, 5, 0, 12, 3, 7, 11],
+            [17, 9, 6, 1, 13, 0, 4, 8],
+            [18, 10, 7, 2, 14, 1, 5, 9],
+            [19, 11, 4, 3, 15, 2, 6, 10],
+            # south pole
+            [10, 9, 9, 5, 0, 4, 11, 11],
+            [11, 10, 10, 6, 1, 5, 8, 8],
+            [8, 11, 11, 7, 2, 6, 9, 9],
+            [9, 8, 8, 4, 3, 7, 10, 10],
+        ],
+        device=x.device,
+    )
+
+    # number of left turns the path takes while traversing from face i to j
+    turns = torch.tensor(
+        [
+            # pole
+            [0, 0, 0, 3, 2, 1, 0, 0],
+            # equator
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            # south pole
+            [2, 1, 0, 0, 0, 0, 0, 3],
+        ],
+        device=x.device,
+    )
+    # x direction
+    face_shift_x = x // nside
+    face_shift_y = y // nside
+
+    # TODO what if more face_shift_x, face_shift_y = 2, 1 or similar?
+    # which direction should we traverse faces in?
+    direction_lookup = torch.tensor([[0, 7, 6], [1, -1, 5], [2, 3, 4]], device=x.device)
+
+    direction = direction_lookup[face_shift_x + 1, face_shift_y + 1]
+    new_face = torch.where(direction != -1, neighbors[face, direction], face)
+    origin = torch.where(direction != -1, turns[face // 4, direction], 0)
+
+    # rotate back to origin = S convection
+    for i in range(1, 4):
+        nx, ny = _rotate(nside, i, x, y)
+        x = torch.where(origin == i, nx, x)
+        y = torch.where(origin == i, ny, y)
+
+    face = new_face
+    return x % nside, y % nside, face
+
+
+def local2local(nside: int, src: XY, dest: XY, x: torch.Tensor, y: torch.Tensor):
+    """Convert a local index (x, y) between different XY conventions"""
+    if src == dest:
+        return x, y
+
+    if src.clockwise != dest.clockwise:
+        x, y = y, x
+
+    rotations = dest.origin.value - src.origin.value
+    x, y = _rotate(nside=nside, rotations=-rotations if dest.clockwise else rotations, x=x, y=y)
+    return x, y
+
+
+def _rotate(nside: int, rotations: int, x, y):
+    """rotate (x,y) counter clockwise"""
+    k = rotations % 4
+    # Apply the rotation based on k
+    if k == 1:  # 90 degrees counterclockwise
+        return nside - y - 1, x
+    elif k == 2:  # 180 degrees
+        return nside - x - 1, nside - y - 1
+    elif k == 3:  # 270 degrees counterclockwise
+        return y, nside - x - 1
+    else:  # k == 0, no change
+        return x, y

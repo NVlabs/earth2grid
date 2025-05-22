@@ -20,98 +20,6 @@ from earth2grid.healpix import core
 PIXEL_ORDER = core.XY()
 
 
-def local2xy(
-    nside: int, x: torch.Tensor, y: torch.Tensor, face: torch.Tensor, right_first: bool = True
-) -> torch.Tensor:
-    """Convert a local x, y coordinate in a given face (S origin) to a global pixel index
-
-    The local coordinates can be < 0 or > nside
-
-    This can be used to implement padding
-
-    Args:
-        nside: int
-        x: local coordinate [-nside, 2 * nside), origin=S
-        y: local coordinate [-nside, 2 * nside), origin=S
-        face: index of the face [0, 12)
-        right_first: if True then traverse to the face in the x-direction first
-
-    Returns:
-        x, y, f:  0 <= x,y< nside. f>12 are the missing faces.
-            See ``_xy_with_filled_tile`` and ``pad`` for the original hpxpad
-            methods for filling them in.
-    """
-    # adjacency graph (8 neighbors, counter-clockwise from S)
-    # Any faces > 11 are missing
-    neighbors = torch.tensor(
-        [
-            # pole
-            [8, 5, 1, 1, 2, 3, 3, 4],
-            [9, 6, 2, 2, 3, 0, 0, 5],
-            [10, 7, 3, 3, 0, 1, 1, 6],
-            [11, 4, 0, 0, 1, 2, 2, 7],
-            # equator
-            [16, 8, 5, 0, 12, 3, 7, 11],
-            [17, 9, 6, 1, 13, 0, 4, 8],
-            [18, 10, 7, 2, 14, 1, 5, 9],
-            [19, 11, 4, 3, 15, 2, 6, 10],
-            # south pole
-            [10, 9, 9, 5, 0, 4, 11, 11],
-            [11, 10, 10, 6, 1, 5, 8, 8],
-            [8, 11, 11, 7, 2, 6, 9, 9],
-            [9, 8, 8, 4, 3, 7, 10, 10],
-        ],
-        device=x.device,
-    )
-
-    # number of left turns the path takes while traversing from face i to j
-    turns = torch.tensor(
-        [
-            # pole
-            [0, 0, 0, 3, 2, 1, 0, 0],
-            # equator
-            [0, 0, 0, 0, 0, 0, 0, 0],
-            # south pole
-            [2, 1, 0, 0, 0, 0, 0, 3],
-        ],
-        device=x.device,
-    )
-    # x direction
-    face_shift_x = x // nside
-    face_shift_y = y // nside
-
-    # TODO what if more face_shift_x, face_shift_y = 2, 1 or similar?
-    # which direction should we traverse faces in?
-    direction_lookup = torch.tensor([[0, 7, 6], [1, -1, 5], [2, 3, 4]], device=x.device)
-
-    direction = direction_lookup[face_shift_x + 1, face_shift_y + 1]
-    new_face = torch.where(direction != -1, neighbors[face, direction], face)
-    origin = torch.where(direction != -1, turns[face // 4, direction], 0)
-
-    # rotate back to origin = S convection
-    for i in range(1, 4):
-        nx, ny = _rotate(nside, i, x, y)
-        x = torch.where(origin == i, nx, x)
-        y = torch.where(origin == i, ny, y)
-
-    face = new_face
-    return x % nside, y % nside, face
-
-
-def _rotate(nside: int, rotations: int, x, y):
-    """rotate (x,y) counter clockwise"""
-    k = rotations % 4
-    # Apply the rotation based on k
-    if k == 1:  # 90 degrees counterclockwise
-        return nside - y - 1, x
-    elif k == 2:  # 180 degrees
-        return nside - x - 1, nside - y - 1
-    elif k == 3:  # 270 degrees counterclockwise
-        return y, nside - x - 1
-    else:  # k == 0, no change
-        return x, y
-
-
 def _xy_with_filled_tile(nside, x1, y1, f1):
     """Handles an points with missing tile information following the HPXPAD strategy
 
@@ -172,20 +80,7 @@ def _xy_with_filled_tile(nside, x1, y1, f1):
     return (x_west, y_west, f_west), (x_east, y_east, f_east)
 
 
-def local2local(nside: int, src: core.XY, dest: core.XY, x: torch.Tensor, y: torch.Tensor):
-    """Convert a local index (x, y) between different XY conventions"""
-    if src == dest:
-        return x, y
-
-    if src.clockwise != dest.clockwise:
-        x, y = y, x
-
-    rotations = dest.origin.value - src.origin.value
-    x, y = _rotate(nside=nside, rotations=-rotations if dest.clockwise else rotations, x=x, y=y)
-    return x, y
-
-
-def pad(x, padding, dim=1, pixel_order=core.XY()):
+def pad_with_dim(x, padding, dim=1, pixel_order=core.XY()):
     """
     x[dim] is the spatial dim
     """
@@ -201,17 +96,17 @@ def pad(x, padding, dim=1, pixel_order=core.XY()):
 
     # convert these ponints to origin=S, clockwise=False order
     # (this is the order expected by local2xy and _xy_with_filled_tile)
-    i, j = local2local(nside, pixel_order, PIXEL_ORDER, i, j)
+    i, j = core.local2local(nside, pixel_order, PIXEL_ORDER, i, j)
 
     # get indices in source data for target points
     f, j, i = torch.meshgrid(f, j, i, indexing="ij")
-    i1, j1, f1 = local2xy(nside, i, j, f)
+    i1, j1, f1 = core.local2xy(nside, i, j, f)
 
     (i1, j1, f1), (i2, j2, f2) = _xy_with_filled_tile(nside, i1, j1, f1)
     # convert these back to ``pixel_order`` since we will be grabbing
     # data from ``x`` in this order
-    i1, j1 = local2local(nside, PIXEL_ORDER, pixel_order, i1, j1)
-    i2, j2 = local2local(nside, PIXEL_ORDER, pixel_order, i2, j2)
+    i1, j1 = core.local2local(nside, PIXEL_ORDER, pixel_order, i1, j1)
+    i2, j2 = core.local2local(nside, PIXEL_ORDER, pixel_order, i2, j2)
 
     # prepare final flat indexes
     f1 = f1.where(f1 < 12, -1)
@@ -236,7 +131,7 @@ def _take(x, index, dim):
     return x[slicers]
 
 
-def pad_compatible(x, padding):
+def pad(x, padding):
     """A padding function compatible with healpixpad inputs
 
     Args:
@@ -251,7 +146,7 @@ def pad_compatible(x, padding):
     # x - (n, f, c, x, y) in origin=N hpx pad order
     n, f, c, nside, _ = x.shape
     x = torch.movedim(x, 1, 2).reshape(n, c, f * nside**2)
-    x = pad(x, padding, dim=-1, pixel_order=core.HEALPIX_PAD_XY)
+    x = pad_with_dim(x, padding, dim=-1, pixel_order=core.HEALPIX_PAD_XY)
     x = x.reshape(n, c, f, nside + 2 * padding, nside + 2 * padding).movedim(2, 1)
 
     if ndim == 4:

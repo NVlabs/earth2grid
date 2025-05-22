@@ -12,5 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from earth2grid.healpix._padding import *  # noqa: F403
 from earth2grid.healpix.core import *  # noqa: F403
+from earth2grid.healpix.nn import conv2d
 from earth2grid.healpix.visualization import *  # noqa: F403

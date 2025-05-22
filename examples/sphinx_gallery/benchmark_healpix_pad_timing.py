@@ -20,9 +20,8 @@ import time
 
 import torch
 
-from earth2grid.healpix import padding
-from earth2grid.healpix.core import pad as healpixpad
-from earth2grid.third_party.zephyr.healpix import healpix_pad as zephyr_pad
+from earth2grid import healpix
+from earth2grid.healpix import pad_backend
 
 # Print GPU information
 if torch.cuda.is_available():
@@ -41,8 +40,10 @@ nside = 128
 neval = 10
 
 
-def test_func(label, pad):
+def test_func(label, pad, compile=False):
     # warm up
+    if compile:
+        pad = torch.compile(pad)
     out = pad(p, padding=nside // 2)
     torch.cuda.synchronize()
     start = time.time()
@@ -61,22 +62,25 @@ for batch_size in [1, 2]:
     print(f"Benchmarking results {neval=} {p.size()=}")
 
     p = p.cuda()
-    test_func("Python", padding.pad_compatible)
-    pad = torch.compile(padding.pad_compatible)
-    # pad = padding.pad_compatible
-    out = pad(p, padding=nside // 2)
-    test_func("Python + torch.compile", pad)
-    test_func("HEALPix Pad", healpixpad)
 
-    test_func("Zephyr pad", zephyr_pad)
-    print("Zephyr pad doesn't work well with torch.compile. Doesn't finish compiling.")
-    # test_func("Zephyr pad (torch.compile)", torch.compile(zephyr_pad))
+    with pad_backend(healpix.PaddingBackends.indexing):
+        test_func("Python", healpix.pad)
+        test_func("Python + compile", healpix.pad, compile=True)
 
-    pad = torch.compile(padding.pad)
-    # pad = padding.pad
+    with pad_backend(healpix.PaddingBackends.cuda):
+        test_func("HEALPix Pad", healpix.pad)
+
+    with pad_backend(healpix.PaddingBackends.zephyr):
+        test_func("Zephyr pad", healpix.pad)
+        print("Zephyr pad doesn't work well with torch.compile. Doesn't finish compiling.")
+
     p = torch.randn(batch_size, 12 * nside * nside, 384).cuda()
-    pad(p, padding=nside // 2)
-    test_func("Python + torch.compile: channels dim last*", pad)
+    test_func("Python: channels dim last*", lambda x, padding: healpix.pad_with_dim(x, padding, dim=1), compile=False)
+    test_func(
+        "Python + torch.compile: channels dim last*",
+        lambda x, padding: healpix.pad_with_dim(x, padding, dim=1),
+        compile=True,
+    )
     print("")
 
 

@@ -18,8 +18,7 @@ import pytest
 import torch
 
 from earth2grid import get_regridder, healpix, healpix_bare
-from earth2grid.healpix.core import _rotate_index, ring2double
-from earth2grid.healpix.padding import local2xy
+from earth2grid.healpix.core import _rotate_index, local2xy, ring2double
 from earth2grid.healpix.visualization import _to_mesh
 
 
