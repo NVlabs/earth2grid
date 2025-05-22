@@ -18,7 +18,7 @@ import pytest
 import torch
 
 from earth2grid import get_regridder, healpix, healpix_bare
-from earth2grid.healpix.core import _rotate_index
+from earth2grid.healpix.core import _rotate_index, ring2double
 from earth2grid.healpix.padding import local2xy
 from earth2grid.healpix.visualization import _to_mesh
 
@@ -308,3 +308,10 @@ def test_local2xy():
 
     x, y, f = local2xy(4, torch.tensor([4]), torch.tensor([0]), torch.tensor([0]))
     assert (x.item(), y.item(), f.item()) == (0, 3, 1)
+
+
+def test_ring2double_preserves_dtype():
+    p = torch.tensor([0])
+    i, j = ring2double(1024, p)
+    assert i.dtype == p.dtype
+    assert j.dtype == p.dtype

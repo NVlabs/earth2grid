@@ -170,7 +170,10 @@ class PixelOrder(Enum):
     def to_nest_cuda(self, x: torch.Tensor):
         if self == PixelOrder.RING:
             if cuhpx is None:
-                return _reorder_via_permutation(x, self, PixelOrder.NEST)
+                pix = _arange_like(x, -1)
+                n = npix2nside(pix.numel())
+                pix_nest = ring2nest(n, pix)
+                return torch.empty_like(x).scatter_(-1, pix_nest.broadcast_to(x.shape), x)
             else:
                 return _apply_cuhpx_remap(cuhpx.ring2nest, x)
         elif self == PixelOrder.NEST:
@@ -609,34 +612,37 @@ def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
     return einops.rearrange(out, "n c f x y -> n c () (f x y)")
 
 
-def _pixels_to_rings(nside: int, p: ArrayT) -> ArrayT:
+def _isqrt(x):
+    return x.sqrt().to(x.dtype)
+
+
+def _pixels_to_rings(nside: int, p: torch.Tensor) -> torch.Tensor:
     """Get the ring number of a pixel ``i`` in RING order"""
     # See eq (2-5) of Gorski
-    xp = _get_array_library(p)
     npix = 12 * nside * nside
     ncap = 2 * nside * (nside - 1)
 
-    i_north = xp.floor(0.5 * (1 + xp.sqrt(1 + 2 * p)))
+    i_north = (1 + _isqrt(1 + 2 * p)) >> 1
     j_north = p - 2 * (i_north - 1) * i_north
 
     p_eq = p - ncap
-    i_eq = xp.floor(p_eq / (4 * nside)) + nside - 1
+    i_eq = p_eq // (4 * nside) + nside - 1
     j_eq = p_eq % (4 * nside)
 
     p_south = npix - p - 1
-    i_south = xp.floor(0.5 * (1 + xp.sqrt(1 + 2 * p_south)))
+    i_south = (1 + _isqrt(1 + 2 * p_south)) >> 1
     j_south = p_south - 2 * (i_south - 1) * i_south
     length_south = i_south * 4
 
     i = i_north - 1
-    i = xp.where(p >= ncap, i_eq, i)
-    i = xp.where(p >= (npix - ncap), 4 * nside - i_south - 1, i)
+    i = torch.where(p >= ncap, i_eq, i)
+    i = torch.where(p >= (npix - ncap), 4 * nside - i_south - 1, i)
 
     j = j_north
-    j = xp.where(p >= ncap, j_eq, j)
-    j = xp.where(p >= (npix - ncap), length_south - 1 - j_south, j)
+    j = torch.where(p >= ncap, j_eq, j)
+    j = torch.where(p >= (npix - ncap), length_south - 1 - j_south, j)
 
-    return _to_int(i), _to_int(j)
+    return i, j
 
 
 def ring_length(nside: int, i: ArrayT) -> ArrayT:
@@ -695,7 +701,11 @@ def ring2double(nside: int, p: ArrayT):
     Calabretta, M. R., & Roukema, B. F. (2007). Mapping on the HEALPix grid. Monthly Notices of the Royal Astronomical Society, 381(2), 865–872. https://doi.org/10.1111/j.1365-2966.2007.12297.x
 
     """
-    xp = _get_array_library(p)
+    numpy = False
+    if isinstance(p, np.ndarray):
+        numpy = True
+        p = torch.from_numpy(p)
+
     n = nside
     i, j = _pixels_to_rings(n, p)
     n_per_pyramid = ring_length(n, i) // 4
@@ -708,8 +718,12 @@ def ring2double(nside: int, p: ArrayT):
     left = i - 3 * n + 2
     jp_south = 2 * pyramid * n + left + 2 * (j % n_per_pyramid)
 
-    jp = xp.where(i >= n, jp_eq, jp_north)
-    jp = xp.where(i >= 3 * n, jp_south, jp)
+    jp = torch.where(i >= n, jp_eq, jp_north)
+    jp = torch.where(i >= 3 * n, jp_south, jp)
+
+    if numpy:
+        i = i.numpy()
+        jp = jp.numpy()
 
     return i + 1, jp
 
@@ -752,20 +766,13 @@ def to_rotated_pixelization(x, fill_value=math.nan):
         return output
 
 
-def _arange_like(x, dim):
+def _arange_like(x, dim, dtype=torch.int64):
     n = x.shape[dim]
     if isinstance(x, np.ndarray):
         batch = np.arange(n)
     else:
-        batch = torch.arange(n, device=x.device)
+        batch = torch.arange(n, device=x.device, dtype=dtype)
     return batch
-
-
-def _to_int(x):
-    if isinstance(x, np.ndarray):
-        return x.astype(int)
-    else:
-        return x.int()
 
 
 def _zeros_like(x, shape=None, dtype=None):
@@ -781,16 +788,19 @@ def to_double_pixelization(x: ArrayT, fill_value=0) -> ArrayT:
     ``x`` must be in RING pixel order
 
     """
-    xp = _get_array_library(x)
-    dtype = xp.float32
+    numpy = False
+    if isinstance(x, np.ndarray):
+        x = torch.from_numpy(x)
+        numpy = True
+
+    dtype = torch.float32
 
     n = npix2nside(x.shape[-1])
     i, jp = ring2double(n, _arange_like(x, dim=-1))
     out = _zeros_like(x, shape=x.shape[:-1] + (4 * n, 8 * n + 1), dtype=dtype)
-    num = _zeros_like(out, dtype=xp.int32)
+    num = _zeros_like(out, dtype=torch.int32)
 
-    if torch.is_tensor(x):
-        x = x.to(out)
+    x = x.to(out)
 
     out[i, jp] = x
     num[i, jp] += 1
@@ -803,16 +813,23 @@ def to_double_pixelization(x: ArrayT, fill_value=0) -> ArrayT:
     out[num == 0] = fill_value
     num[num == 0] = 1
     out /= num
+
+    if numpy:
+        out = out.numpy()
+
     return out
 
 
 def zonal_average(x: ArrayT, dim=-1) -> ArrayT:
     """Compute the zonal average of a map in ring format"""
-    xp = _get_array_library(x)
+    numpy = False
+    if isinstance(x, np.ndarray):
+        x = torch.from_numpy(x)
+        numpy = True
 
     dim = dim % x.ndim
     shape = [x.shape[i] for i in range(x.ndim) if i != dim]
-    x = xp.moveaxis(x, dim, -1)
+    x = torch.moveaxis(x, dim, -1)
     x = x.reshape([-1, x.shape[-1]])
 
     npix = x.shape[-1]
@@ -824,8 +841,12 @@ def zonal_average(x: ArrayT, dim=-1) -> ArrayT:
 
     i_flat = batch[:, None] * nring + iring
     i_flat = i_flat.ravel()
-    num = xp.bincount(i_flat, weights=x.ravel(), minlength=nring * x.shape[0])
-    denom = xp.bincount(i_flat, minlength=nring * x.shape[0])
+    num = torch.bincount(i_flat, weights=x.ravel(), minlength=nring * x.shape[0])
+    denom = torch.bincount(i_flat, minlength=nring * x.shape[0])
     average = num / denom
     average = average.reshape((*shape, nring))  # type: ignore
-    return xp.moveaxis(average, -1, dim)
+    out = torch.moveaxis(average, -1, dim)
+
+    if numpy:
+        out = out.numpy()
+    return out
