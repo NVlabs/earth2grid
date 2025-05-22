@@ -193,7 +193,6 @@ def pad(x, padding, dim=1):
     # get indices in source data for target points
     f, j, i = torch.meshgrid(f, j, i, indexing="ij")
     i1, j1, f1 = local2xy(nside, i, j, f)
-    xy_east, xy_west = _xy_with_filled_tile(nside, i1, j1, f1)
 
     (i1, j1, f1), (i2, j2, f2) = _xy_with_filled_tile(nside, i1, j1, f1)
 
@@ -203,12 +202,14 @@ def pad(x, padding, dim=1):
     xy_west = torch.flatten(f1 * (nside * nside) + j1 * nside + i1)
     xy_east = torch.flatten(f2 * (nside * nside) + j2 * nside + i2)
 
+    shape = [1] * x.ndim
+    shape[dim] = xy_west.numel()
+
     # average the potential ambiguous regions
-    padded_from_west = torch.where(xy_west[0] >= 0, _take(x, xy_west, dim), 0)
-    padded_from_east = torch.where(xy_east[0] >= 0, _take(x, xy_east, dim), 0)
+    padded_from_west = torch.where(xy_west.reshape(shape) >= 0, _take(x, xy_west, dim), 0)
+    padded_from_east = torch.where(xy_east.reshape(shape) >= 0, _take(x, xy_east, dim), 0)
     denom = (xy_west >= 0).int() + (xy_east >= 0).int()
 
-    shape = [padded_from_east.shape[d] if d == dim else 1 for d in range(padded_from_east.ndim)]
     return (padded_from_east + padded_from_west) / denom.reshape(shape)
 
 
@@ -226,11 +227,11 @@ def pad_compatible(x, padding):
         padding: int
     """
     if x.ndim == 4:
-        x = x.unsqueeze(1)
+        x = x.unsqueeze(2)
 
     # x - (n, f, c, x, y) in origin=N hpx pad order
     # TODO implement rotation
     n, f, c, nside, _ = x.shape
     x = torch.movedim(x, 1, 2).reshape(n, c, f * nside**2)
     x = pad(x, padding, dim=-1)
-    return x.reshape(n, c, f, nside + 2 * padding, nside + 2 * padding).movedim(2, 1)
+    return x.reshape(n, c, f, nside + 2 * padding, nside + 2 * padding).movedim(2, 1).squeeze(2)

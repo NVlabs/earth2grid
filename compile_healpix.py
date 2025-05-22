@@ -45,7 +45,7 @@ for batch_size in [1, 2]:
     p = p.cuda()
     test_func("Python", padding.pad_compatible)
     pad = torch.compile(padding.pad_compatible)
-    # pad = pad_compatible
+    # pad = padding.pad_compatible
     out = pad(p, padding=nside // 2)
     test_func("Python + torch.compile", pad)
     test_func("HEALPix Pad", healpixpad)
