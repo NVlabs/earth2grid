@@ -37,7 +37,9 @@ def local2xy(
         right_first: if True then traverse to the face in the x-direction first
 
     Returns:
-        global XY pixel index
+        x, y, f:  0 <= x,y< nside. f>12 are the missing faces.
+            See ``_xy_with_filled_tile`` and ``pad`` for the original hpxpad
+            methods for filling them in.
     """
     # adjacency graph (8 neighbors, counter-clockwise from S)
     # Any faces > 11 are missing
@@ -94,7 +96,6 @@ def local2xy(
 
     face = new_face
     return x % nside, y % nside, face
-    return torch.where(face != -1, face * (nside * nside) + (y % nside) * nside + (x % nside), -1)
 
 
 def _rotate(nside: int, rotations: int, x, y):
@@ -248,7 +249,6 @@ def pad_compatible(x, padding):
         ndim = 4
 
     # x - (n, f, c, x, y) in origin=N hpx pad order
-    # TODO implement rotation
     n, f, c, nside, _ = x.shape
     x = torch.movedim(x, 1, 2).reshape(n, c, f * nside**2)
     x = pad(x, padding, dim=-1, pixel_order=core.HEALPIX_PAD_XY)
