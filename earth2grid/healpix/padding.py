@@ -16,6 +16,9 @@ import torch
 
 from earth2grid.healpix import core
 
+# most routines in this module use the standard origin=S convention
+PIXEL_ORDER = core.XY()
+
 
 def local2xy(
     nside: int, x: torch.Tensor, y: torch.Tensor, face: torch.Tensor, right_first: bool = True
@@ -108,10 +111,6 @@ def _rotate(nside: int, rotations: int, x, y):
         return x, y
 
 
-def _get_xy(nside, f, x, y):
-    return torch.where(f < 12, f * nside**2 + y * nside + x, -1)
-
-
 def _xy_with_filled_tile(nside, x1, y1, f1):
     """Handles an points with missing tile information following the HPXPAD strategy
 
@@ -169,14 +168,7 @@ def _xy_with_filled_tile(nside, x1, y1, f1):
 
     x_west, y_west, f_west = _pad_from_east(x_west, y_west, east_face, f_west)
     y_east, x_east, f_east = _pad_from_east(y_east, x_east, west_face, f_east)
-
-    # xy_west = _get_xy(nside, f_west, x_west, y_west)
-    # xy_east = _get_xy(nside, f_east, x_east, y_east)
-
     return (x_west, y_west, f_west), (x_east, y_east, f_east)
-
-
-PIXEL_ORDER = core.XY()
 
 
 def local2local(nside: int, src: core.XY, dest: core.XY, x: torch.Tensor, y: torch.Tensor):
@@ -207,7 +199,7 @@ def pad(x, padding, dim=1, pixel_order=core.XY()):
     f = torch.arange(12, device=x.device)
 
     # convert these ponints to origin=S, clockwise=False order
-    # (this is the order expected by my padding routine)
+    # (this is the order expected by local2xy and _xy_with_filled_tile)
     i, j = local2local(nside, pixel_order, PIXEL_ORDER, i, j)
 
     # get indices in source data for target points
