@@ -26,6 +26,8 @@ around specific points on the sphere. We'll show:
 3. Extracting a local patch around a point
 4. Visualizing both global and local data
 
+Note that the patch can cover multiple HEALPix faces.
+
 The example uses a combination of HEALPix operations and Cartopy for visualization.
 """
 
