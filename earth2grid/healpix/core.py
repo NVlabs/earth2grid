@@ -160,14 +160,17 @@ class PixelOrder(Enum):
             return x
         elif self == PixelOrder.NEST:
             if cuhpx is None:
-                return _reorder_via_permutation(x, self, PixelOrder.RING)
+                pix = _arange_like(x, -1)
+                n = npix2nside(pix.numel())
+                pix_nest = ring2nest(n, pix)
+                return x[..., pix_nest]
             else:
                 return _apply_cuhpx_remap(cuhpx.nest2ring, x)
 
     def to_nest_cuda(self, x: torch.Tensor):
         if self == PixelOrder.RING:
             if cuhpx is None:
-                return ring2nest(npix2nside(x.size(-1)), x)
+                return _reorder_via_permutation(x, self, PixelOrder.NEST)
             else:
                 return _apply_cuhpx_remap(cuhpx.ring2nest, x)
         elif self == PixelOrder.NEST:
@@ -749,11 +752,12 @@ def to_rotated_pixelization(x, fill_value=math.nan):
         return output
 
 
-def _arange_like(n, like):
-    if isinstance(like, np.ndarray):
+def _arange_like(x, dim):
+    n = x.shape[dim]
+    if isinstance(x, np.ndarray):
         batch = np.arange(n)
     else:
-        batch = torch.arange(n, device=like.device)
+        batch = torch.arange(n, device=x.device)
     return batch
 
 
@@ -781,7 +785,7 @@ def to_double_pixelization(x: ArrayT, fill_value=0) -> ArrayT:
     dtype = xp.float32
 
     n = npix2nside(x.shape[-1])
-    i, jp = ring2double(n, _arange_like(12 * n * n, x))
+    i, jp = ring2double(n, _arange_like(x, dim=-1))
     out = _zeros_like(x, shape=x.shape[:-1] + (4 * n, 8 * n + 1), dtype=dtype)
     num = _zeros_like(out, dtype=xp.int32)
 
@@ -814,9 +818,9 @@ def zonal_average(x: ArrayT, dim=-1) -> ArrayT:
     npix = x.shape[-1]
     nside = npix2nside(npix)
 
-    iring, _ = _pixels_to_rings(nside, _arange_like(npix, like=x))
+    iring, _ = _pixels_to_rings(nside, _arange_like(x, dim=-1))
     nring = iring.max() + 1
-    batch = _arange_like(x.shape[0], x)
+    batch = _arange_like(x, dim=0)
 
     i_flat = batch[:, None] * nring + iring
     i_flat = i_flat.ravel()
