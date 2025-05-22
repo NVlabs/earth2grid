@@ -85,7 +85,7 @@ def local2xy(
 
     # rotate back to origin = S convection
     for i in range(1, 4):
-        nx, ny = _rotate(i, x, y)
+        nx, ny = _rotate(nside, i, x, y)
         x = torch.where(origin == i, nx, x)
         y = torch.where(origin == i, ny, y)
 
@@ -94,16 +94,16 @@ def local2xy(
     return torch.where(face != -1, face * (nside * nside) + (y % nside) * nside + (x % nside), -1)
 
 
-def _rotate(rotations: int, x, y):
+def _rotate(nside: int, rotations: int, x, y):
     """rotate (x,y) counter clockwise"""
     k = rotations % 4
     # Apply the rotation based on k
     if k == 1:  # 90 degrees counterclockwise
-        return -y - 1, x
+        return nside - y - 1, x
     elif k == 2:  # 180 degrees
-        return -x - 1, -y - 1
+        return nside - x - 1, nside - y - 1
     elif k == 3:  # 270 degrees counterclockwise
-        return y, -x - 1
+        return y, nside - x - 1
     else:  # k == 0, no change
         return x, y
 
@@ -176,7 +176,23 @@ def _xy_with_filled_tile(nside, x1, y1, f1):
     return (x_west, y_west, f_west), (x_east, y_east, f_east)
 
 
-def pad(x, padding, dim=1):
+PIXEL_ORDER = core.XY()
+
+
+def local2local(nside: int, src: core.XY, dest: core.XY, x: torch.Tensor, y: torch.Tensor):
+    """Convert a local index (x, y) between different XY conventions"""
+    if src == dest:
+        return x, y
+
+    if src.clockwise != dest.clockwise:
+        x, y = y, x
+
+    rotations = dest.origin.value - src.origin.value
+    x, y = _rotate(nside=nside, rotations=-rotations if dest.clockwise else rotations, x=x, y=y)
+    return x, y
+
+
+def pad(x, padding, dim=1, pixel_order=core.XY()):
     """
     x[dim] is the spatial dim
     """
@@ -190,15 +206,23 @@ def pad(x, padding, dim=1):
     j = torch.arange(-pad, nside + pad, device=x.device)
     f = torch.arange(12, device=x.device)
 
+    # convert these ponints to origin=S, clockwise=False order
+    # (this is the order expected by my padding routine)
+    i, j = local2local(nside, pixel_order, PIXEL_ORDER, i, j)
+
     # get indices in source data for target points
     f, j, i = torch.meshgrid(f, j, i, indexing="ij")
     i1, j1, f1 = local2xy(nside, i, j, f)
 
     (i1, j1, f1), (i2, j2, f2) = _xy_with_filled_tile(nside, i1, j1, f1)
+    # convert these back to ``pixel_order`` since we will be grabbing
+    # data from ``x`` in this order
+    i1, j1 = local2local(nside, PIXEL_ORDER, pixel_order, i1, j1)
+    i2, j2 = local2local(nside, PIXEL_ORDER, pixel_order, i2, j2)
 
+    # prepare final flat indexes
     f1 = f1.where(f1 < 12, -1)
     f2 = f2.where(f2 < 12, -1)
-
     xy_west = torch.flatten(f1 * (nside * nside) + j1 * nside + i1)
     xy_east = torch.flatten(f2 * (nside * nside) + j2 * nside + i2)
 
@@ -226,12 +250,19 @@ def pad_compatible(x, padding):
         x: (n, f, x, y) or (n, f, c, h, w)
         padding: int
     """
+    ndim = 5
     if x.ndim == 4:
         x = x.unsqueeze(2)
+        ndim = 4
 
     # x - (n, f, c, x, y) in origin=N hpx pad order
     # TODO implement rotation
     n, f, c, nside, _ = x.shape
     x = torch.movedim(x, 1, 2).reshape(n, c, f * nside**2)
-    x = pad(x, padding, dim=-1)
-    return x.reshape(n, c, f, nside + 2 * padding, nside + 2 * padding).movedim(2, 1).squeeze(2)
+    x = pad(x, padding, dim=-1, pixel_order=core.HEALPIX_PAD_XY)
+    x = x.reshape(n, c, f, nside + 2 * padding, nside + 2 * padding).movedim(2, 1)
+
+    if ndim == 4:
+        x = x.squeeze(2)
+
+    return x

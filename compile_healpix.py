@@ -18,6 +18,7 @@ import torch
 
 from earth2grid.healpix import padding
 from earth2grid.healpix.core import pad as healpixpad
+from earth2grid.third_party.zephyr.healpix import healpix_pad as zephyr_pad
 
 nside = 128
 
@@ -26,6 +27,8 @@ neval = 10
 
 
 def test_func(label, pad):
+    # warm up
+    out = pad(p, padding=nside // 2)
     torch.cuda.synchronize()
     start = time.time()
     for _ in range(neval):
@@ -50,11 +53,16 @@ for batch_size in [1, 2]:
     test_func("Python + torch.compile", pad)
     test_func("HEALPix Pad", healpixpad)
 
+    test_func("Zephyr pad", zephyr_pad)
+    print("Zephyr pad doesn't work well with torch.compile. Doesn't finish compiling.")
+    # test_func("Zephyr pad (torch.compile)", torch.compile(zephyr_pad))
+
     pad = torch.compile(padding.pad)
     # pad = padding.pad
     p = torch.randn(batch_size, 12 * nside * nside, 384).cuda()
     pad(p, padding=nside // 2)
     test_func("Python + torch.compile: channels dim last*", pad)
     print("")
+
 
 print(f"* shape for channel dim last: {p.shape}")
