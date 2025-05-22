@@ -17,6 +17,18 @@ import torch
 
 from earth2grid.healpix import XY, Grid, padding
 
+# Print GPU information
+if torch.cuda.is_available():
+    print("CUDA available: Yes")
+    print(f"Current device: {torch.cuda.current_device()}")
+    print(f"Device name: {torch.cuda.get_device_name()}")
+    print(f"Device count: {torch.cuda.device_count()}")
+    print(f"Device capability: {torch.cuda.get_device_capability()}")
+    print(f"Device memory allocated: {torch.cuda.memory_allocated() / 1024**2:.2f} MB")
+    print(f"Device memory reserved: {torch.cuda.memory_reserved() / 1024**2:.2f} MB")
+else:
+    print("CUDA not available")
+
 
 def test_hpx_pad(regtest):
     order = 2

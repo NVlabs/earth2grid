@@ -12,6 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License
+"""
+Benchmark different HEALPix padding implementations
+---------------------------------------------------
+"""
 import time
 
 import torch
@@ -19,6 +23,17 @@ import torch
 from earth2grid.healpix import padding
 from earth2grid.healpix.core import pad as healpixpad
 from earth2grid.third_party.zephyr.healpix import healpix_pad as zephyr_pad
+
+# Print GPU information
+if torch.cuda.is_available():
+    print("CUDA available: Yes")
+    print(f"Current device: {torch.cuda.current_device()}")
+    print(f"Device name: {torch.cuda.get_device_name()}")
+    print(f"Device count: {torch.cuda.device_count()}")
+    print(f"Device capability: {torch.cuda.get_device_capability()}")
+else:
+    print("CUDA not available")
+print("\n")
 
 nside = 128
 
