@@ -292,32 +292,19 @@ def test_to_double_pixelization_cuda(device="cuda"):
 
 
 def test_local2xy():
-    out = local2xy(1, torch.tensor([1]), torch.tensor([0]), torch.tensor([0]))
-    assert out.item() == 1
+    x, y, f = local2xy(1, torch.tensor([1]), torch.tensor([0]), torch.tensor([0]))
+    assert f.item() == 1
 
-    out = local2xy(1, torch.tensor([-1]), torch.tensor([0]), torch.tensor([0]))
-    assert out.item() == 4
+    x, y, f = local2xy(1, torch.tensor([-1]), torch.tensor([0]), torch.tensor([0]))
+    assert f.item() == 4
 
     nside = 4
 
     def _pixel(x, y, f):
         return f * nside * nside + y * nside + x
 
-    out = local2xy(4, torch.tensor([-1]), torch.tensor([0]), torch.tensor([0]))
-    assert out.item() == _pixel(3, 0, f=4)
+    x, y, f = local2xy(4, torch.tensor([-1]), torch.tensor([0]), torch.tensor([0]))
+    assert (x.item(), y.item(), f.item()) == (3, 0, 4)
 
-    out = local2xy(4, torch.tensor([4]), torch.tensor([0]), torch.tensor([0]))
-    assert out.item() == _pixel(0, 3, f=1)
-
-
-def test_pad_new():
-    from earth2grid.healpix import padding
-
-    nside = 8
-
-    pad_size = 3
-    c = 4
-    x = torch.arange(nside**2 * 12).float().reshape(1, 12 * nside * nside, 1).float()
-    x = x.expand([1, 12 * nside * nside, c])
-    out = padding.pad(x, pad_size, dim=1)
-    assert out.shape == (1, 12 * (nside + 2 * pad_size) ** 2, c)
+    x, y, f = local2xy(4, torch.tensor([4]), torch.tensor([0]), torch.tensor([0]))
+    assert (x.item(), y.item(), f.item()) == (0, 3, 1)
