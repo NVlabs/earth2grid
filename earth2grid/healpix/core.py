@@ -12,34 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-
-From this notebook: https://colab.research.google.com/drive/1MzTyeNFiy-7RNY6UtGKsmDavX5dk6epU
-
-
-Healpy has two indexing conventions NEST and RING. But for convolutions we want
-2D array indexing in row or column major order. Here are some vectorized
-routines `nest2xy` and `x2nest` for going in between these conventions. The
-previous code shared by Dale used string computations to handle these
-operations, which was probably quite slow. Here we use vectorized bit-shifting.
-
-## XY orientation
-
-For array-like indexing can have a different origin and orientation.  For
-example, the default is the origin is S and the data arr[f, y, x] follows the
-right hand rule.  In other words, (x + 1, y) being counterclockwise from (x, y)
-when looking down on the face.
-
-## HPXPad
-
-For the missing diamonds, N and S of the equatorial faces, the method is not
-what I expected. Instead of traversing the edge graph as I would expect, it
-fills in the missing diamond first, and then treats this as if it were an actual
-tile.  For, the NW tile, the rows (along x) are simply shifted along x into the
-missing face until they hit the diagonal until they intersect the diagonal.
-
-"""
-
 import math
 from dataclasses import dataclass
 from enum import Enum
@@ -100,6 +72,31 @@ def nside2level(nside: int):
 
 
 class PixelOrder(Enum):
+    """Healpy has two indexing conventions NEST and RING. But for convolutions we want
+    2D array indexing in row or column major order. Here are some vectorized
+    routines `nest2xy` and `x2nest` for going in between these conventions. The
+    previous code shared by Dale used string computations to handle these
+    operations, which was probably quite slow. Here we use vectorized bit-shifting.
+
+    XY orientation
+    --------------
+
+
+    For array-like indexing can have a different origin and orientation.  For
+    example, the default is the origin is S and the data arr[f, y, x] follows the
+    right hand rule.  In other words, (x + 1, y) being counterclockwise from (x, y)
+    when looking down on the face.
+
+    HPXPad
+    ------
+
+    For the missing diamonds, N and S of the equatorial faces, the method is not
+    what I expected. Instead of traversing the edge graph as I would expect, it
+    fills in the missing diamond first, and then treats this as if it were an actual
+    tile.  For, the NW tile, the rows (along x) are simply shifted along x into the
+    missing face until they hit the diagonal until they intersect the diagonal.
+    """
+
     RING = 0
     NEST = 1
 
@@ -161,14 +158,14 @@ class XY:
     Assumes
         - i = n * n * f + n * y + x
         - the origin (x,y)=(0,0) is South
-        - if clockwise=False follows the hand rule:
+        - if clockwise=False follows the hand rule::
 
-        Space
-          |
-          |
-          |  / y
-          | /
-          |/______ x
+            Space
+            |
+            |
+            |  / y
+            | /
+            |/______ x
 
         (Thumb points towards Space, index finger towards x, middle finger towards y)
     """

@@ -66,6 +66,7 @@ doc = [
     "sphinx",
     "myst-parser",
     "sphinx_gallery",
+    "cartopy",
 ]
 
 [tool.black]
