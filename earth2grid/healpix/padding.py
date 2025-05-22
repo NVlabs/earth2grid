@@ -180,6 +180,7 @@ def pad(x, padding, dim=1):
     """
     x[dim] is the spatial dim
     """
+    dim = dim % x.ndim
     pad = padding
     npix = x.shape[dim]
     nside = core.npix2nside(npix)
@@ -207,7 +208,8 @@ def pad(x, padding, dim=1):
     padded_from_east = torch.where(xy_east[0] >= 0, _take(x, xy_east, dim), 0)
     denom = (xy_west >= 0).int() + (xy_east >= 0).int()
 
-    return (padded_from_east + padded_from_west) / denom.unsqueeze(1)
+    shape = [padded_from_east.shape[d] if d == dim else 1 for d in range(padded_from_east.ndim)]
+    return (padded_from_east + padded_from_west) / denom.reshape(shape)
 
 
 def _take(x, index, dim):
@@ -223,42 +225,12 @@ def pad_compatible(x, padding):
         x: (n, f, x, y) or (n, f, c, h, w)
         padding: int
     """
-    pad = padding
     if x.ndim == 4:
         x = x.unsqueeze(1)
 
     # x - (n, f, c, x, y) in origin=N hpx pad order
     # TODO implement rotation
-
-    nside = x.shape[-1]
-    n = x.shape[0]
-    nc = x.shape[2]
-
-    # setup padded grid
-    # These are not running on the GPU for some reason
-    i = torch.arange(-pad, nside + pad, device=x.device)
-    j = torch.arange(-pad, nside + pad, device=x.device)
-    f = torch.arange(12, device=x.device)
-    c = torch.arange(nc, device=x.device)
-
-    # get indices in source data for target points
-    f, c, j, i = torch.meshgrid(f, c, j, i, indexing="ij")
-    i1, j1, f1 = local2xy(nside, i, j, f)
-
-    pix1 = f1 * (nc * nside * nside) + c * (nside * nside) + j1 * nside + i1
-
-    (i1, j1, f1), (i2, j2, f2) = _xy_with_filled_tile(nside, i1, j1, f1)
-
-    f1 = f1.where(f1 < 12, -1)
-    f2 = f2.where(f2 < 12, -1)
-
-    pix1 = f1 * (nc * nside * nside) + c * (nside * nside) + j1 * nside + i1
-    pix2 = f2 * (nc * nside * nside) + c * (nside * nside) + j2 * nside + i2
-
-    # average the potential ambiguous regions
-    x = x.view(n, -1)
-    padded_from_west = torch.where(f1 >= 0, x[:, pix1], 0)
-    padded_from_east = torch.where(f2 >= 0, x[:, pix2], 0)
-    denom = (f1 >= 0).int() + (f2 >= 0).int()
-
-    return (padded_from_east + padded_from_west) / denom
+    n, f, c, nside, _ = x.shape
+    x = torch.movedim(x, 1, 2).reshape(n, c, f * nside**2)
+    x = pad(x, padding, dim=-1)
+    return x.reshape(n, c, f, nside + 2 * padding, nside + 2 * padding).movedim(2, 1)

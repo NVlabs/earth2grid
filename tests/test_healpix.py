@@ -316,6 +316,8 @@ def test_pad_new():
     nside = 8
 
     pad_size = 3
-    x = torch.arange(nside**2 * 12).float().reshape(1, 1, 12, nside, nside)
-    out = padding.pad(x, pad_size)
-    assert out.shape == (1, 1, 12, nside + 2 * pad_size, nside + 2 * pad_size)
+    c = 4
+    x = torch.arange(nside**2 * 12).float().reshape(1, 12 * nside * nside, 1).float()
+    x = x.expand([1, 12 * nside * nside, c])
+    out = padding.pad(x, pad_size, dim=1)
+    assert out.shape == (1, 12 * (nside + 2 * pad_size) ** 2, c)
