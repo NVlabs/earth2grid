@@ -34,12 +34,19 @@ The example uses a combination of HEALPix operations and Cartopy for visualizati
 import matplotlib.pyplot as plt
 import torch
 import cartopy.crs
+import numpy as np
 
 from earth2grid.healpix import XY, Grid
 from earth2grid import healpix
 from earth2grid.healpix_bare import ang2pix
 from earth2grid.spatial import ang2vec
 from earth2grid.healpix import local2xy, ring2xy
+from earth2grid import latlon
+
+VMIN = -2
+VMAX = 2
+CMAP = 'viridis'
+PROJECTION = cartopy.crs.NorthPolarStereo()
 
 
 def create_healpix_grid(order):
@@ -52,7 +59,7 @@ def create_healpix_grid(order):
 def generate_example_data(lon, lat):
     """Generate example data on the sphere using spherical harmonics."""
     x, y, z = ang2vec(lon.deg2rad(), lat.deg2rad())
-    return torch.cos(x + 3 * y) + torch.sin(z)
+    return torch.cos(x + 3 * y) ** 5 + 0.5 * torch.sin(10 * (z - y))
 
 
 def extract_local_patch(nside, lon0, lat0, pad):
@@ -77,21 +84,49 @@ def extract_local_patch(nside, lon0, lat0, pad):
     return pix
 
 
-def plot_global_data(z):
+def plot_global_data(grid, z, lon0, lat0):
     """Plot the global data in HEALPix RING ordering."""
-    plt.figure(figsize=(10, 5))
-    plt.imshow(healpix.to_double_pixelization(healpix.reorder(z, healpix.XY(), healpix.PixelOrder.RING)))
+    # Create a regular lat-lon grid
+    import earth2grid
+
+    nlat, nlon = 180, 360  # 1-degree resolution
+    latlon_grid = latlon.equiangular_lat_lon_grid(nlat, nlon)
+
+    # Create regridder from HEALPix to lat-lon
+    regridder = earth2grid.get_regridder(grid, latlon_grid)
+
+    # Regrid the data
+    z_regridded = regridder(z)
+
+    fig = plt.figure(figsize=(10, 10))
+    ax = plt.subplot(projection=cartopy.crs.NorthPolarStereo())
+
+    # Set the extent to show from pole to 45 degrees latitude
+    ax.set_extent([-180, 180, 45, 90], crs=cartopy.crs.PlateCarree())
+
+    # Plot the regridded data
+    plt.pcolormesh(
+        latlon_grid.lon,
+        latlon_grid.lat,
+        z_regridded,
+        transform=cartopy.crs.PlateCarree(),
+        cmap=CMAP,
+        vmin=VMIN,
+        vmax=VMAX,
+    )
+
+    ax.coastlines()
     plt.colorbar(label='Value')
-    plt.title('Global HEALPix Data (RING ordering)')
+    plt.title('Global Data (Regridded to Lat-Lon)')
     plt.show()
 
 
 def plot_local_patch(lon, lat, z, pix, lon0, lat0):
     """Plot a local patch of data using Cartopy."""
     fig = plt.figure(figsize=(10, 10))
-    ax = plt.subplot(projection=cartopy.crs.Orthographic(central_latitude=lat0, central_longitude=lon0))
+    ax = plt.subplot(projection=PROJECTION)
 
-    plt.pcolormesh(lon[pix], lat[pix], z[pix], transform=cartopy.crs.PlateCarree(), cmap='RdBu_r')
+    plt.pcolormesh(lon[pix], lat[pix], z[pix], transform=cartopy.crs.PlateCarree(), cmap=CMAP, vmin=VMIN, vmax=VMAX)
 
     # Mark the center point
     ax.plot(lon0, lat0, marker="*", markersize=10.0, color='yellow')
@@ -121,7 +156,7 @@ def main():
     pix = extract_local_patch(nside, lon0, lat0, pad)
 
     # Visualize results
-    plot_global_data(z)
+    plot_global_data(grid, z, lon0, lat0)
     plot_local_patch(lon, lat, z, pix, lon0, lat0)
 
 
