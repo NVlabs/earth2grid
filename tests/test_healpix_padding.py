@@ -16,18 +16,7 @@ import numpy
 import torch
 
 from earth2grid.healpix import XY, Grid, pad_with_dim
-
-# Print GPU information
-if torch.cuda.is_available():
-    print("CUDA available: Yes")
-    print(f"Current device: {torch.cuda.current_device()}")
-    print(f"Device name: {torch.cuda.get_device_name()}")
-    print(f"Device count: {torch.cuda.device_count()}")
-    print(f"Device capability: {torch.cuda.get_device_capability()}")
-    print(f"Device memory allocated: {torch.cuda.memory_allocated() / 1024**2:.2f} MB")
-    print(f"Device memory reserved: {torch.cuda.memory_reserved() / 1024**2:.2f} MB")
-else:
-    print("CUDA not available")
+from earth2grid.third_party.zephyr.healpix import healpix_pad
 
 
 def test_hpx_pad(regtest):
@@ -42,3 +31,13 @@ def test_hpx_pad(regtest):
     padded = padded.reshape(12, m, m)
 
     numpy.savetxt(regtest, padded[face].cpu(), fmt="%.2f")
+
+
+def test_healpix_pad():
+    ntile = 12
+    nside = 32
+    padding = 1
+    n = 3
+    x = torch.ones([n, ntile, nside, nside])
+    out = healpix_pad(x, padding=padding)
+    assert out.shape == (n, ntile, nside + padding * 2, nside + padding * 2)
