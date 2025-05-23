@@ -42,7 +42,7 @@ def test_hpx_pad_versus_zephyr(tmp_path):
     lat = torch.from_numpy(grid.lat)
     lon = torch.from_numpy(grid.lon)
     z = lon + 3 * lat
-    z = torch.arange(grid.shape[0]) // (nside * nside)
+    z = torch.arange(grid.shape[0])
 
     z = z.reshape(1, 12, nside, nside).float()
 
