@@ -783,11 +783,12 @@ def local2local(nside: int, src: XY, dest: XY, x: torch.Tensor, y: torch.Tensor)
     if src == dest:
         return x, y
 
+    rotations = dest.origin.value - src.origin.value
+    x, y = _rotate(nside=nside, rotations=rotations, x=x, y=y)
+
     if src.clockwise != dest.clockwise:
         x, y = y, x
 
-    rotations = dest.origin.value - src.origin.value
-    x, y = _rotate(nside=nside, rotations=-rotations if dest.clockwise else rotations, x=x, y=y)
     return x, y
 
 

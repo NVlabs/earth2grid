@@ -93,13 +93,13 @@ def pad_with_dim(x, padding, dim=1, pixel_order=core.XY()):
     i = torch.arange(-pad, nside + pad, device=x.device)
     j = torch.arange(-pad, nside + pad, device=x.device)
     f = torch.arange(12, device=x.device)
+    f, j, i = torch.meshgrid(f, j, i, indexing="ij")
 
     # convert these ponints to origin=S, clockwise=False order
     # (this is the order expected by local2xy and _xy_with_filled_tile)
     i, j = core.local2local(nside, pixel_order, PIXEL_ORDER, i, j)
 
     # get indices in source data for target points
-    f, j, i = torch.meshgrid(f, j, i, indexing="ij")
     i1, j1, f1 = core.local2xy(nside, i, j, f)
 
     (i1, j1, f1), (i2, j2, f2) = _xy_with_filled_tile(nside, i1, j1, f1)

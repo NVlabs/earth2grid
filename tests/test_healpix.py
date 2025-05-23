@@ -18,7 +18,7 @@ import pytest
 import torch
 
 from earth2grid import get_regridder, healpix, healpix_bare
-from earth2grid.healpix.core import _rotate_index, local2xy, ring2double
+from earth2grid.healpix.core import _rotate_index, local2local, local2xy, ring2double
 from earth2grid.healpix.visualization import _to_mesh
 
 
@@ -314,3 +314,17 @@ def test_ring2double_preserves_dtype():
     i, j = ring2double(1024, p)
     assert i.dtype == p.dtype
     assert j.dtype == p.dtype
+
+
+def test_local2local_round_trip():
+    nside = 4
+    f = torch.arange(12)
+    i = torch.arange(nside)
+    j = torch.arange(nside)
+
+    f, j, i = torch.meshgrid(f, j, i, indexing="ij")
+    i1, j1 = local2local(nside, healpix.XY(), healpix.HEALPIX_PAD_XY, i, j)
+    i2, j2 = local2local(nside, healpix.HEALPIX_PAD_XY, healpix.XY(), i1, j1)
+
+    assert torch.all(i2 == i)
+    assert torch.all(j2 == j)
