@@ -27,11 +27,15 @@ def test_hpx_pad(regtest):
 
     grid = Grid(order, pixel_order=XY())
     lat = torch.from_numpy(grid.lat)
-    padded = pad_with_dim(lat, padding=nside, dim=-1)
+    lon = torch.from_numpy(grid.lon)
+    z = lon + 3 * lat
+    padded = pad_with_dim(z, padding=nside, dim=-1)
     m = nside + 2 * nside
     padded = padded.reshape(12, m, m)
 
-    numpy.savetxt(regtest, padded[face].cpu(), fmt="%.2f")
+    for face in range(padded.shape[0]):
+        print(f"{face=}", file=regtest)
+        numpy.savetxt(regtest, padded[face].cpu(), fmt="%.2f")
 
 
 def test_hpx_pad_versus_zephyr(tmp_path):
