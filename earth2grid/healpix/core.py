@@ -247,12 +247,9 @@ def xy2xy(nside: int, src: XY, dest: XY, i: torch.Tensor):
     if src == dest:
         return i
 
-    if src.clockwise != dest.clockwise:
-        i = _flip_xy(nside, i)
-
-    rotations = dest.origin.value - src.origin.value
-    i = _rotate_index(nside=nside, rotations=-rotations if dest.clockwise else rotations, i=i)
-    return i
+    x, y, f = xy2local(nside, i)
+    x, y = local2local(nside, src, dest, x, y)
+    return f * nside**2 + y * nside + x
 
 
 @dataclass
@@ -391,12 +388,12 @@ class Grid(base.Grid):
 ZOOM_LEVELS = 20
 
 
-def _flip_xy(nside: int, i):
+def xy2local(nside, i):
     n2 = nside * nside
     f = i // n2
     y = (i % n2) // nside
     x = i % nside
-    return n2 * f + nside * x + y
+    return x, y, f
 
 
 def _rotate_index(nside: int, rotations: int, i):
@@ -782,9 +779,8 @@ def local2local(nside: int, src: XY, dest: XY, x: torch.Tensor, y: torch.Tensor)
     """Convert a local index (x, y) between different XY conventions"""
     if src == dest:
         return x, y
-
-    rotations = dest.origin.value - src.origin.value
-    x, y = _rotate(nside=nside, rotations=rotations, x=x, y=y)
+    rotations = src.origin.value - dest.origin.value
+    x, y = _rotate(nside=nside, rotations=-rotations if dest.clockwise else rotations, x=x, y=y)
 
     if src.clockwise != dest.clockwise:
         x, y = y, x

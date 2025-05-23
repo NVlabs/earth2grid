@@ -18,7 +18,7 @@ import pytest
 import torch
 
 from earth2grid import get_regridder, healpix, healpix_bare
-from earth2grid.healpix.core import _rotate_index, local2local, local2xy, ring2double
+from earth2grid.healpix.core import _rotate, local2local, local2xy, ring2double
 from earth2grid.healpix.visualization import _to_mesh
 
 
@@ -67,23 +67,26 @@ def test_grid_healpix_orientations(tmp_path, origin):
 
 
 @pytest.mark.parametrize("rot", range(4))
-def test_rotate_index_same_values(tmp_path, rot):
+def test_xy2xy_index_same_values(tmp_path, rot):
     n = 8
-    i = np.arange(12 * n * n)
-    i_rot = _rotate_index(n, rot, i=i)
+    i = torch.arange(12 * n * n)
+    S = healpix.XY()
+    E = healpix.XY(origin=healpix.Compass.E)
+    i_rot = healpix.xy2xy(n, S, E, i)
     i = i.reshape(12, -1)
     i_rot = i_rot.reshape(12, -1)
     for f in range(12):
-        assert set(i[f]) == set(i_rot[f])
+        assert set(i[f].numpy()) == set(i_rot[f].numpy())
 
 
 @pytest.mark.parametrize("rot", range(4))
-def test_rotate_index(rot):
+def test_rotate(rot):
     n = 32
-    i = np.arange(12 * n * n)
-    i_rot = _rotate_index(n, rot, i=i)
-    i_back = _rotate_index(n, 4 - rot, i=i_rot)
-    np.testing.assert_array_equal(i_back, i)
+    x, y = torch.tensor([0, 0])
+    xr, yr = _rotate(n, rot, x, y)
+    xb, yb = _rotate(n, 4 - rot, xr, yr)
+    np.testing.assert_array_equal(xb, x)
+    np.testing.assert_array_equal(yb, y)
 
 
 @pytest.mark.parametrize("origin", list(healpix.Compass))
@@ -297,11 +300,6 @@ def test_local2xy():
     x, y, f = local2xy(1, torch.tensor([-1]), torch.tensor([0]), torch.tensor([0]))
     assert f.item() == 4
 
-    nside = 4
-
-    def _pixel(x, y, f):
-        return f * nside * nside + y * nside + x
-
     x, y, f = local2xy(4, torch.tensor([-1]), torch.tensor([0]), torch.tensor([0]))
     assert (x.item(), y.item(), f.item()) == (3, 0, 4)
 
@@ -328,3 +326,19 @@ def test_local2local_round_trip():
 
     assert torch.all(i2 == i)
     assert torch.all(j2 == j)
+
+
+def test_local2local_S_to_E():
+    nside = 4
+    i = torch.tensor([0])
+    j = torch.tensor([0])
+    S = healpix.XY()
+    E = healpix.XY(origin=healpix.Compass.E)
+
+    i1, j1 = local2local(nside, src=E, dest=S, x=i, y=j)
+
+    assert (i1.item(), j1.item()) == (nside - 1, 0)
+
+    pix = torch.tensor([0])
+    pix = healpix.xy2xy(nside, src=E, dest=S, i=pix)
+    assert pix.item() == nside - 1
