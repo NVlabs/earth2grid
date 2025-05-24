@@ -12,28 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
-
-From this notebook: https://colab.research.google.com/drive/1MzTyeNFiy-7RNY6UtGKsmDavX5dk6epU
-
-
-Healpy has two indexing conventions NEST and RING. But for convolutions we want
-2D array indexing in row or column major order. Here are some vectorized
-routines `nest2xy` and `x2nest` for going in between these conventions. The
-previous code shared by Dale used string computations to handle these
-operations, which was probably quite slow. Here we use vectorized bit-shifting.
-
-## XY orientation
-
-For array-like indexing can have a different origin and orientation.  For
-example, the default is the origin is S and the data arr[f, y, x] follows the
-right hand rule.  In other words, (x + 1, y) being counterclockwise from (x, y)
-when looking down on the face.
-
-"""
-
 import math
-import warnings
 from dataclasses import dataclass
 from enum import Enum
 from functools import lru_cache
@@ -51,17 +30,7 @@ try:
 except ImportError:
     pv = None
 
-try:
-    import healpixpad_cuda
-
-    healpixpad_cuda_avail = True
-except ImportError:
-    healpixpad_cuda_avail = False
-    warnings.warn("healpixpad_cuda module not available, reverting to CPU for all padding routines")
-
-
 from earth2grid import base
-from earth2grid.third_party.zephyr.healpix import healpix_pad as heapixpad_cpu
 
 try:
     import cuhpx
@@ -77,41 +46,6 @@ def _get_array_library(x):
 
 
 ArrayT = TypeVar("ArrayT", np.ndarray, torch.Tensor)
-
-
-def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
-    """
-    Pad each face consistently with its according neighbors in the HEALPix
-
-    Args:
-        x: The input tensor of shape [N, F, H, W] or [N, F, C, H, W]. Must be
-            ordered in HEALPIX_PAD_XY pixel ordering.
-        padding: the amount of padding
-
-    Returns:
-        The padded tensor with shape [N, F, H+2*padding, W+2*padding]
-
-    Examples:
-
-        Ths example show to pad data described by a :py:class:`Grid` object.
-
-        >>> grid = Grid(level=4, pixel_order=PixelOrder.RING)
-        >>> lon = torch.from_numpy(grid.lon)
-        >>> faces = grid.reorder(HEALPIX_PAD_XY, lon)
-        >>> faces = faces.view(1, 12, grid._nside(), grid._nside())
-        >>> faces.shape
-        torch.Size([1, 12, 16, 16])
-        >>> padded = pad(faces, padding=1)
-        >>> padded.shape
-        torch.Size([1, 12, 18, 18])
-
-    """
-    if x.device.type != 'cuda' or not healpixpad_cuda_avail:
-        return heapixpad_cpu(x, padding)
-    elif x.ndim == 5:
-        return _HEALPixPadFunction.apply(x, padding)
-    else:
-        return _HEALPixPadFunction.apply(x.unsqueeze(2), padding).squeeze(2)
 
 
 def _apply_cuhpx_remap(func, x, **kwargs):
@@ -138,6 +72,31 @@ def nside2level(nside: int):
 
 
 class PixelOrder(Enum):
+    """Healpy has two indexing conventions NEST and RING. But for convolutions we want
+    2D array indexing in row or column major order. Here are some vectorized
+    routines `nest2xy` and `x2nest` for going in between these conventions. The
+    previous code shared by Dale used string computations to handle these
+    operations, which was probably quite slow. Here we use vectorized bit-shifting.
+
+    XY orientation
+    --------------
+
+
+    For array-like indexing can have a different origin and orientation.  For
+    example, the default is the origin is S and the data arr[f, y, x] follows the
+    right hand rule.  In other words, (x + 1, y) being counterclockwise from (x, y)
+    when looking down on the face.
+
+    HPXPad
+    ------
+
+    For the missing diamonds, N and S of the equatorial faces, the method is not
+    what I expected. Instead of traversing the edge graph as I would expect, it
+    fills in the missing diamond first, and then treats this as if it were an actual
+    tile.  For, the NW tile, the rows (along x) are simply shifted along x into the
+    missing face until they hit the diagonal until they intersect the diagonal.
+    """
+
     RING = 0
     NEST = 1
 
@@ -152,14 +111,20 @@ class PixelOrder(Enum):
             return x
         elif self == PixelOrder.NEST:
             if cuhpx is None:
-                return _reorder_via_permutation(x, self, PixelOrder.RING)
+                pix = _arange_like(x, -1)
+                n = npix2nside(pix.numel())
+                pix_nest = ring2nest(n, pix)
+                return x[..., pix_nest]
             else:
                 return _apply_cuhpx_remap(cuhpx.nest2ring, x)
 
     def to_nest_cuda(self, x: torch.Tensor):
         if self == PixelOrder.RING:
             if cuhpx is None:
-                return _reorder_via_permutation(x, self, PixelOrder.NEST)
+                pix = _arange_like(x, -1)
+                n = npix2nside(pix.numel())
+                pix_nest = ring2nest(n, pix)
+                return torch.empty_like(x).scatter_(-1, pix_nest.broadcast_to(x.shape), x)
             else:
                 return _apply_cuhpx_remap(cuhpx.ring2nest, x)
         elif self == PixelOrder.NEST:
@@ -193,14 +158,14 @@ class XY:
     Assumes
         - i = n * n * f + n * y + x
         - the origin (x,y)=(0,0) is South
-        - if clockwise=False follows the hand rule:
+        - if clockwise=False follows the hand rule::
 
-        Space
-          |
-          |
-          |  / y
-          | /
-          |/______ x
+            Space
+            |
+            |
+            |  / y
+            | /
+            |/______ x
 
         (Thumb points towards Space, index finger towards x, middle finger towards y)
     """
@@ -282,12 +247,9 @@ def xy2xy(nside: int, src: XY, dest: XY, i: torch.Tensor):
     if src == dest:
         return i
 
-    if src.clockwise != dest.clockwise:
-        i = _flip_xy(nside, i)
-
-    rotations = dest.origin.value - src.origin.value
-    i = _rotate_index(nside=nside, rotations=-rotations if dest.clockwise else rotations, i=i)
-    return i
+    x, y, f = xy2local(nside, i)
+    x, y = local2local(nside, src, dest, x, y)
+    return f * nside**2 + y * nside + x
 
 
 @dataclass
@@ -422,79 +384,16 @@ class Grid(base.Grid):
         return to_rotated_pixelization(x, fill_value)
 
 
-class _HEALPixPadFunction(torch.autograd.Function):
-    """
-    A torch autograd class that pads a healpixpad xy tensor
-    """
-
-    @staticmethod
-    def forward(ctx, input, pad):
-        """
-        The forward pass of the padding class
-
-        Parameters
-        ----------
-        input: torch.tensor
-            The tensor to pad, must have 5 dimensions and be in (B, F, C, H, W) format
-            where F == 12 and H == W
-        pad: int
-            The amount to pad each face of the tensor
-
-        Returns
-        -------
-        torch.tensor: The padded tensor
-        """
-        ctx.pad = pad
-        if input.ndim != 5:
-            raise ValueError(
-                f"Input tensor must be have 5 dimensions (B, F, C, H, W), got {len(input.shape)} dimensions instead"
-            )
-        if input.shape[1] != 12:
-            raise ValueError(
-                f"Input tensor must be have 5 dimensions (B, F, C, H, W), with F == 12, got {input.shape[1]}"
-            )
-        if input.shape[3] != input.shape[4]:
-            raise ValueError(
-                f"Input tensor must be have 5 dimensions (B, F, C, H, W), with H == @, got {input.shape[3]},  {input.shape[4]}"
-            )
-        # make contiguous
-        input = input.contiguous()
-        out = healpixpad_cuda.forward(input, pad)[0]
-        return out
-
-    @staticmethod
-    def backward(ctx, grad):
-        """
-        The forward pass of the padding class
-
-        Parameters
-        ----------
-        input: torch.tensor
-            The tensor to pad, must have 5 dimensions and be in (B, F, C, H, W) format
-            where F == 12 and H == W
-        pad: int
-            The amount to pad each face of the tensor
-
-        Returns
-        -------
-        torch.tensor: The padded tensor
-        """
-        pad = ctx.pad
-        grad = grad.contiguous()
-        out = healpixpad_cuda.backward(grad, pad)[0]
-        return out, None
-
-
 # nside = 2^ZOOM_LEVELS
 ZOOM_LEVELS = 20
 
 
-def _flip_xy(nside: int, i):
+def xy2local(nside, i):
     n2 = nside * nside
     f = i // n2
     y = (i % n2) // nside
     x = i % nside
-    return n2 * f + nside * x + y
+    return x, y, f
 
 
 def _rotate_index(nside: int, rotations: int, i):
@@ -559,73 +458,37 @@ def approx_grid_length_meters(nside):
     return np.sqrt(area)
 
 
-def conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    """conv2d(input, weight, bias=None, stride=1, padding=0, dilation=1, groups=1) -> Tensor
-
-    Applies a 2D convolution over an input image composed of several input
-    planes.
-
-    This operator supports :ref:`TensorFloat32<tf32_on_ampere>`.
-
-    See :class:`~torch.nn.Conv2d` for details and output shape.
-
-    """
-    px, py = padding
-    if px != py:
-        raise ValueError(f"Padding should be equal in x and y, got px={px}, py={py}")
-
-    n, c, x, y = input.shape
-    npix = input.size(-1)
-    nside2 = npix // 12
-    nside = int(math.sqrt(nside2))
-    if nside**2 * 12 != npix:
-        raise ValueError(f"Incompatible npix ({npix}) and nside ({nside})")
-
-    input = einops.rearrange(input, "n c () (f x y) -> (n c) f x y", f=12, x=nside)
-    input = pad(input, px)
-    input = einops.rearrange(input, "(n c) f x y -> n c f x y", c=c)
-    padding = (0, 0, 0)
-    padding = 'valid'
-
-    if not isinstance(stride, int):
-        stride = stride + (1,)
-
-    if not isinstance(dilation, int):
-        dilation = (1,) + dilation
-
-    weight = weight.unsqueeze(-3)
-    out = torch.nn.functional.conv3d(input, weight, bias, stride, padding, dilation, groups)
-    return einops.rearrange(out, "n c f x y -> n c () (f x y)")
+def _isqrt(x):
+    return x.sqrt().to(x.dtype)
 
 
-def _pixels_to_rings(nside: int, p: ArrayT) -> ArrayT:
+def _pixels_to_rings(nside: int, p: torch.Tensor) -> torch.Tensor:
     """Get the ring number of a pixel ``i`` in RING order"""
     # See eq (2-5) of Gorski
-    xp = _get_array_library(p)
     npix = 12 * nside * nside
     ncap = 2 * nside * (nside - 1)
 
-    i_north = xp.floor(0.5 * (1 + xp.sqrt(1 + 2 * p)))
+    i_north = (1 + _isqrt(1 + 2 * p)) >> 1
     j_north = p - 2 * (i_north - 1) * i_north
 
     p_eq = p - ncap
-    i_eq = xp.floor(p_eq / (4 * nside)) + nside - 1
+    i_eq = p_eq // (4 * nside) + nside - 1
     j_eq = p_eq % (4 * nside)
 
     p_south = npix - p - 1
-    i_south = xp.floor(0.5 * (1 + xp.sqrt(1 + 2 * p_south)))
+    i_south = (1 + _isqrt(1 + 2 * p_south)) >> 1
     j_south = p_south - 2 * (i_south - 1) * i_south
     length_south = i_south * 4
 
     i = i_north - 1
-    i = xp.where(p >= ncap, i_eq, i)
-    i = xp.where(p >= (npix - ncap), 4 * nside - i_south - 1, i)
+    i = torch.where(p >= ncap, i_eq, i)
+    i = torch.where(p >= (npix - ncap), 4 * nside - i_south - 1, i)
 
     j = j_north
-    j = xp.where(p >= ncap, j_eq, j)
-    j = xp.where(p >= (npix - ncap), length_south - 1 - j_south, j)
+    j = torch.where(p >= ncap, j_eq, j)
+    j = torch.where(p >= (npix - ncap), length_south - 1 - j_south, j)
 
-    return _to_int(i), _to_int(j)
+    return i, j
 
 
 def ring_length(nside: int, i: ArrayT) -> ArrayT:
@@ -644,6 +507,35 @@ def ring_length(nside: int, i: ArrayT) -> ArrayT:
     return length
 
 
+def double2xy(nside, i, j):
+    xp = _get_array_library(i)
+    # make upper left corner j=-nside, i = 2 * nside
+    # y counts down from top left
+    #        x
+    #     |------
+    #   y |
+    #     |
+    #     ↓
+    # the diagonal blocks in this coordinate system are the equator-only tiles
+    y = (i + j - nside) >> 1
+    x = (j - i + 3 * nside - 1) >> 1
+
+    # local coordinates (w/ origin in S corner)
+    fx = x % nside
+    fy = (-y - 1) % nside
+
+    x_block = x // nside
+    y_block = y // nside
+
+    # north
+    face = xp.where(x_block > y_block, y_block, 0)
+    # equator
+    face = xp.where(x_block == y_block, x_block % 4 + 4, face)
+    # south
+    face = xp.where(x_block < y_block, x_block % 4 + 8, face)
+    return face * nside**2 + fy * nside + fx
+
+
 def ring2double(nside: int, p: ArrayT):
     """Compute the (i,j) index in the double pixelization scheme of Calabretta (2007)
 
@@ -655,7 +547,11 @@ def ring2double(nside: int, p: ArrayT):
     Calabretta, M. R., & Roukema, B. F. (2007). Mapping on the HEALPix grid. Monthly Notices of the Royal Astronomical Society, 381(2), 865–872. https://doi.org/10.1111/j.1365-2966.2007.12297.x
 
     """
-    xp = _get_array_library(p)
+    numpy = False
+    if isinstance(p, np.ndarray):
+        numpy = True
+        p = torch.from_numpy(p)
+
     n = nside
     i, j = _pixels_to_rings(n, p)
     n_per_pyramid = ring_length(n, i) // 4
@@ -668,10 +564,23 @@ def ring2double(nside: int, p: ArrayT):
     left = i - 3 * n + 2
     jp_south = 2 * pyramid * n + left + 2 * (j % n_per_pyramid)
 
-    jp = xp.where(i >= n, jp_eq, jp_north)
-    jp = xp.where(i >= 3 * n, jp_south, jp)
+    jp = torch.where(i >= n, jp_eq, jp_north)
+    jp = torch.where(i >= 3 * n, jp_south, jp)
 
-    return i, jp
+    if numpy:
+        i = i.numpy()
+        jp = jp.numpy()
+
+    return i + 1, jp
+
+
+def ring2xy(nside, pix):
+    i, j = ring2double(nside, pix)
+    return double2xy(nside, i, j)
+
+
+def ring2nest(nside, pix):
+    return xy2nest(nside, ring2xy(nside, pix))
 
 
 def to_rotated_pixelization(x, fill_value=math.nan):
@@ -703,19 +612,13 @@ def to_rotated_pixelization(x, fill_value=math.nan):
         return output
 
 
-def _arange_like(n, like):
-    if isinstance(like, np.ndarray):
+def _arange_like(x, dim, dtype=torch.int64):
+    n = x.shape[dim]
+    if isinstance(x, np.ndarray):
         batch = np.arange(n)
     else:
-        batch = torch.arange(n, device=like.device)
+        batch = torch.arange(n, device=x.device, dtype=dtype)
     return batch
-
-
-def _to_int(x):
-    if isinstance(x, np.ndarray):
-        return x.astype(int)
-    else:
-        return x.int()
 
 
 def _zeros_like(x, shape=None, dtype=None):
@@ -731,16 +634,19 @@ def to_double_pixelization(x: ArrayT, fill_value=0) -> ArrayT:
     ``x`` must be in RING pixel order
 
     """
-    xp = _get_array_library(x)
-    dtype = xp.float32
+    numpy = False
+    if isinstance(x, np.ndarray):
+        x = torch.from_numpy(x)
+        numpy = True
+
+    dtype = torch.float32
 
     n = npix2nside(x.shape[-1])
-    i, jp = ring2double(n, _arange_like(12 * n * n, x))
+    i, jp = ring2double(n, _arange_like(x, dim=-1))
     out = _zeros_like(x, shape=x.shape[:-1] + (4 * n, 8 * n + 1), dtype=dtype)
-    num = _zeros_like(out, dtype=xp.int32)
+    num = _zeros_like(out, dtype=torch.int32)
 
-    if torch.is_tensor(x):
-        x = x.to(out)
+    x = x.to(out)
 
     out[i, jp] = x
     num[i, jp] += 1
@@ -753,29 +659,144 @@ def to_double_pixelization(x: ArrayT, fill_value=0) -> ArrayT:
     out[num == 0] = fill_value
     num[num == 0] = 1
     out /= num
+
+    if numpy:
+        out = out.numpy()
+
     return out
 
 
 def zonal_average(x: ArrayT, dim=-1) -> ArrayT:
     """Compute the zonal average of a map in ring format"""
-    xp = _get_array_library(x)
+    numpy = False
+    if isinstance(x, np.ndarray):
+        x = torch.from_numpy(x)
+        numpy = True
 
     dim = dim % x.ndim
     shape = [x.shape[i] for i in range(x.ndim) if i != dim]
-    x = xp.moveaxis(x, dim, -1)
+    x = torch.moveaxis(x, dim, -1)
     x = x.reshape([-1, x.shape[-1]])
 
     npix = x.shape[-1]
     nside = npix2nside(npix)
 
-    iring, _ = _pixels_to_rings(nside, _arange_like(npix, like=x))
+    iring, _ = _pixels_to_rings(nside, _arange_like(x, dim=-1))
     nring = iring.max() + 1
-    batch = _arange_like(x.shape[0], x)
+    batch = _arange_like(x, dim=0)
 
     i_flat = batch[:, None] * nring + iring
     i_flat = i_flat.ravel()
-    num = xp.bincount(i_flat, weights=x.ravel(), minlength=nring * x.shape[0])
-    denom = xp.bincount(i_flat, minlength=nring * x.shape[0])
+    num = torch.bincount(i_flat, weights=x.ravel(), minlength=nring * x.shape[0])
+    denom = torch.bincount(i_flat, minlength=nring * x.shape[0])
     average = num / denom
     average = average.reshape((*shape, nring))  # type: ignore
-    return xp.moveaxis(average, -1, dim)
+    out = torch.moveaxis(average, -1, dim)
+
+    if numpy:
+        out = out.numpy()
+
+    return out
+
+
+def local2xy(nside: int, x: torch.Tensor, y: torch.Tensor, face: torch.Tensor) -> torch.Tensor:
+    """Convert a local x, y coordinate in a given face (S origin) to a global pixel index
+
+    The local coordinates can be < 0 or > nside
+
+    This can be used to implement padding
+
+    Args:
+        nside: int
+        x: local coordinate [-nside, 2 * nside), origin=S
+        y: local coordinate [-nside, 2 * nside), origin=S
+        face: index of the face [0, 12)
+        right_first: if True then traverse to the face in the x-direction first
+
+    Returns:
+        x, y, f:  0 <= x,y< nside. f>12 are the missing faces.
+            See ``_xy_with_filled_tile`` and ``pad`` for the original hpxpad
+            methods for filling them in.
+    """
+    # adjacency graph (8 neighbors, counter-clockwise from S)
+    # Any faces > 11 are missing
+    neighbors = torch.tensor(
+        [
+            # pole
+            [8, 5, 1, 1, 2, 3, 3, 4],
+            [9, 6, 2, 2, 3, 0, 0, 5],
+            [10, 7, 3, 3, 0, 1, 1, 6],
+            [11, 4, 0, 0, 1, 2, 2, 7],
+            # equator
+            [16, 8, 5, 0, 12, 3, 7, 11],
+            [17, 9, 6, 1, 13, 0, 4, 8],
+            [18, 10, 7, 2, 14, 1, 5, 9],
+            [19, 11, 4, 3, 15, 2, 6, 10],
+            # south pole
+            [10, 9, 9, 5, 0, 4, 11, 11],
+            [11, 10, 10, 6, 1, 5, 8, 8],
+            [8, 11, 11, 7, 2, 6, 9, 9],
+            [9, 8, 8, 4, 3, 7, 10, 10],
+        ],
+        device=x.device,
+    )
+
+    # number of left turns the path takes while traversing from face i to j
+    turns = torch.tensor(
+        [
+            # pole
+            [0, 0, 0, 3, 2, 1, 0, 0],
+            # equator
+            [0, 0, 0, 0, 0, 0, 0, 0],
+            # south pole
+            [2, 1, 0, 0, 0, 0, 0, 3],
+        ],
+        device=x.device,
+    )
+    # x direction
+    face_shift_x = x // nside
+    face_shift_y = y // nside
+
+    # TODO what if more face_shift_x, face_shift_y = 2, 1 or similar?
+    # which direction should we traverse faces in?
+    direction_lookup = torch.tensor([[0, 7, 6], [1, -1, 5], [2, 3, 4]], device=x.device)
+
+    direction = direction_lookup[face_shift_x + 1, face_shift_y + 1]
+    new_face = torch.where(direction != -1, neighbors[face, direction], face)
+    origin = torch.where(direction != -1, turns[face // 4, direction], 0)
+
+    # rotate back to origin = S convection
+    for i in range(1, 4):
+        nx, ny = _rotate(nside, i, x, y)
+        x = torch.where(origin == i, nx, x)
+        y = torch.where(origin == i, ny, y)
+
+    face = new_face
+    return x % nside, y % nside, face
+
+
+def local2local(nside: int, src: XY, dest: XY, x: torch.Tensor, y: torch.Tensor):
+    """Convert a local index (x, y) between different XY conventions"""
+    if src == dest:
+        return x, y
+    rotations = src.origin.value - dest.origin.value
+    x, y = _rotate(nside=nside, rotations=-rotations if dest.clockwise else rotations, x=x, y=y)
+
+    if src.clockwise != dest.clockwise:
+        x, y = y, x
+
+    return x, y
+
+
+def _rotate(nside: int, rotations: int, x, y):
+    """rotate (x,y) counter clockwise"""
+    k = rotations % 4
+    # Apply the rotation based on k
+    if k == 1:  # 90 degrees counterclockwise
+        return nside - y - 1, x
+    elif k == 2:  # 180 degrees
+        return nside - x - 1, nside - y - 1
+    elif k == 3:  # 270 degrees counterclockwise
+        return y, nside - x - 1
+    else:  # k == 0, no change
+        return x, y

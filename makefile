@@ -34,7 +34,8 @@ clean:
 
 .PHONY: docs
 docs:
-	$(MAKE) -C docs html
+	# without setting the MPLBACKEND the build will stall on the pyvista
+	MPLBACKEND=agg $(MAKE) -C docs html
 
 push_docs: docs
 	docs/push_docs.sh

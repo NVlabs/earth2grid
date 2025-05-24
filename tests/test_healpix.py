@@ -17,9 +17,18 @@ import numpy as np
 import pytest
 import torch
 
-from earth2grid import get_regridder, healpix
-from earth2grid.healpix.core import _rotate_index
+from earth2grid import get_regridder, healpix, healpix_bare
+from earth2grid.healpix.core import _rotate, local2local, local2xy, ring2double
 from earth2grid.healpix.visualization import _to_mesh
+
+
+def test_ring2xy():
+    nside = 4
+    p = torch.arange(12 * nside * nside)
+    xy = healpix.ring2xy(nside, p)
+    hpd = healpix_bare.ring2hpd(nside, p)
+    xy_from_c = hpd @ torch.tensor([nside * nside, nside, 1])
+    assert torch.allclose(xy.long(), xy_from_c)
 
 
 @pytest.mark.xfail
@@ -58,23 +67,26 @@ def test_grid_healpix_orientations(tmp_path, origin):
 
 
 @pytest.mark.parametrize("rot", range(4))
-def test_rotate_index_same_values(tmp_path, rot):
+def test_xy2xy_index_same_values(tmp_path, rot):
     n = 8
-    i = np.arange(12 * n * n)
-    i_rot = _rotate_index(n, rot, i=i)
+    i = torch.arange(12 * n * n)
+    S = healpix.XY()
+    E = healpix.XY(origin=healpix.Compass.E)
+    i_rot = healpix.xy2xy(n, S, E, i)
     i = i.reshape(12, -1)
     i_rot = i_rot.reshape(12, -1)
     for f in range(12):
-        assert set(i[f]) == set(i_rot[f])
+        assert set(i[f].numpy()) == set(i_rot[f].numpy())
 
 
 @pytest.mark.parametrize("rot", range(4))
-def test_rotate_index(rot):
+def test_rotate(rot):
     n = 32
-    i = np.arange(12 * n * n)
-    i_rot = _rotate_index(n, rot, i=i)
-    i_back = _rotate_index(n, 4 - rot, i=i_rot)
-    np.testing.assert_array_equal(i_back, i)
+    x, y = torch.tensor([0, 0])
+    xr, yr = _rotate(n, rot, x, y)
+    xb, yb = _rotate(n, 4 - rot, xr, yr)
+    np.testing.assert_array_equal(xb, x)
+    np.testing.assert_array_equal(yb, y)
 
 
 @pytest.mark.parametrize("origin", list(healpix.Compass))
@@ -279,3 +291,54 @@ def test_to_double_pixelization_cuda(device="cuda"):
     x = healpix.to_double_pixelization(x)
 
     np.testing.assert_array_equal(xnp, x.cpu().numpy())
+
+
+def test_local2xy():
+    x, y, f = local2xy(1, torch.tensor([1]), torch.tensor([0]), torch.tensor([0]))
+    assert f.item() == 1
+
+    x, y, f = local2xy(1, torch.tensor([-1]), torch.tensor([0]), torch.tensor([0]))
+    assert f.item() == 4
+
+    x, y, f = local2xy(4, torch.tensor([-1]), torch.tensor([0]), torch.tensor([0]))
+    assert (x.item(), y.item(), f.item()) == (3, 0, 4)
+
+    x, y, f = local2xy(4, torch.tensor([4]), torch.tensor([0]), torch.tensor([0]))
+    assert (x.item(), y.item(), f.item()) == (0, 3, 1)
+
+
+def test_ring2double_preserves_dtype():
+    p = torch.tensor([0])
+    i, j = ring2double(1024, p)
+    assert i.dtype == p.dtype
+    assert j.dtype == p.dtype
+
+
+def test_local2local_round_trip():
+    nside = 4
+    f = torch.arange(12)
+    i = torch.arange(nside)
+    j = torch.arange(nside)
+
+    f, j, i = torch.meshgrid(f, j, i, indexing="ij")
+    i1, j1 = local2local(nside, healpix.XY(), healpix.HEALPIX_PAD_XY, i, j)
+    i2, j2 = local2local(nside, healpix.HEALPIX_PAD_XY, healpix.XY(), i1, j1)
+
+    assert torch.all(i2 == i)
+    assert torch.all(j2 == j)
+
+
+def test_local2local_S_to_E():
+    nside = 4
+    i = torch.tensor([0])
+    j = torch.tensor([0])
+    S = healpix.XY()
+    E = healpix.XY(origin=healpix.Compass.E)
+
+    i1, j1 = local2local(nside, src=E, dest=S, x=i, y=j)
+
+    assert (i1.item(), j1.item()) == (nside - 1, 0)
+
+    pix = torch.tensor([0])
+    pix = healpix.xy2xy(nside, src=E, dest=S, i=pix)
+    assert pix.item() == nside - 1

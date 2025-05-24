@@ -9,8 +9,14 @@ New APIs
   - to_rotated_pixelization
   - to_double_pixelization
   - pcolormesh
+  - pad_with_dim
+  - pad_context - switches between padding backends
 - earth2grid.projections. Grids in arbitrary projections
 - earth2grid.yingyang
+
+Enhancements:
+  - pure python implementations of healpix padding and reordering operations,
+    that are efficient on GPU when used with torch.compile
 
 Breaking changes:
 
