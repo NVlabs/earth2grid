@@ -42,7 +42,7 @@ class _HEALPixPadFunction(torch.autograd.Function):
         -------
         torch.tensor: The padded tensor
         """
-        # ctx.pad = pad
+        ctx.pad = pad
         if input.ndim != 5:
             raise ValueError(
                 f"Input tensor must be have 5 dimensions (B, F, C, H, W), got {len(input.shape)} dimensions instead"
