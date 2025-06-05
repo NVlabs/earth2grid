@@ -60,35 +60,43 @@ def test_hpx_pad_versus_zephyr(tmp_path):
         fig, axs = plt.subplots(3, 12, figsize=(20, 5))
         for i in range(12):
             # Plot expected values
-            axs[0, i].imshow(expected[0, i].cpu(), cmap='viridis')
-            axs[0, i].set_title(f'Expected Face {i}')
-            axs[0, i].axis('off')
+            axs[0, i].imshow(expected[0, i].cpu(), cmap="viridis")
+            axs[0, i].set_title(f"Expected Face {i}")
+            axs[0, i].axis("off")
 
             # Plot actual values
-            axs[1, i].imshow(ans[0, i].cpu(), cmap='viridis')
-            axs[1, i].set_title(f'Actual Face {i}')
-            axs[1, i].axis('off')
+            axs[1, i].imshow(ans[0, i].cpu(), cmap="viridis")
+            axs[1, i].set_title(f"Actual Face {i}")
+            axs[1, i].axis("off")
 
             # Plot difference
             diff = expected[0, i].cpu() - ans[0, i].cpu()
-            axs[2, i].imshow(diff, cmap='RdBu')
-            axs[2, i].set_title(f'Diff Face {i}')
-            axs[2, i].axis('off')
+            axs[2, i].imshow(diff, cmap="RdBu")
+            axs[2, i].set_title(f"Diff Face {i}")
+            axs[2, i].axis("off")
 
         plt.tight_layout(pad=1.0)
-        fig_path = tmp_path / 'healpix_padding_comparison.png'
-        plt.savefig(fig_path, dpi=300, bbox_inches='tight')
+        fig_path = tmp_path / "healpix_padding_comparison.png"
+        plt.savefig(fig_path, dpi=300, bbox_inches="tight")
         plt.close()
         raise AssertionError(f"Padding results differ between backends. Check the saved visualization {fig_path}")
 
 
 @pytest.mark.parametrize("backend", list(PaddingBackends))
-def test_healpix_pad(backend):
+@pytest.mark.parametrize("device", ["cpu", "cuda"])
+def test_healpix_pad(backend, device):
+    if not torch.cuda.is_available() and device == "cuda":
+        pytest.skip("CUDA not available.")
+    if backend == PaddingBackends.cuda and device == "cpu":
+        pytest.skip("CUDA padding backend not supported on CPU")
+
     ntile = 12
     nside = 32
     padding = 1
     n = 3
-    x = torch.ones([n, ntile, nside, nside])
+    x = torch.ones([n, ntile, nside, nside], device=device, requires_grad=True)
     with pad_backend(backend):
         out = pad(x, padding=padding)
+    out.mean().backward()
     assert out.shape == (n, ntile, nside + padding * 2, nside + padding * 2)
+    assert x.grad.shape == (n, ntile, nside, nside)
