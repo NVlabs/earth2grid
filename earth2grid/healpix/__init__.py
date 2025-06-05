@@ -31,6 +31,7 @@ from earth2grid.healpix.core import (
     Compass,
     Grid,
     PixelOrder,
+    Projection,
     local2xy,
     nest2xy,
     npix2level,
@@ -71,4 +72,5 @@ __all__ = [
     "xy2xy",
     "conv2d",
     "pcolormesh",
+    "Projection",
 ]
