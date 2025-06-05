@@ -41,6 +41,10 @@ neval = 10
 
 
 def test_func(label, pad, compile=False):
+    # Reset memory stats and clear cache
+    torch.cuda.empty_cache()
+    torch.cuda.reset_peak_memory_stats()
+
     # warm up
     if compile:
         pad = torch.compile(pad)
@@ -52,9 +56,10 @@ def test_func(label, pad, compile=False):
     torch.cuda.synchronize()
     stop = time.time()
     gb_per_sec = out.nbytes * neval / (stop - start) / 1e9
+    peak_memory = torch.cuda.max_memory_allocated() / 1024 / 1024
     label = label + ":"
     label = label + max(30 - len(label), 0) * " "
-    print(f"{label} {gb_per_sec=:.2f}")
+    print(f"{label} {gb_per_sec=:.2f} peak_memory={peak_memory:.2f}MB")
 
 
 for batch_size in [1, 2]:
