@@ -100,5 +100,3 @@ def test_healpix_pad(backend, device):
     out.mean().backward()
     assert out.shape == (n, ntile, nside + padding * 2, nside + padding * 2)
     assert x.grad.shape == (n, ntile, nside, nside)
-
-
