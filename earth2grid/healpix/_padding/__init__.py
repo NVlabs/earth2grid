@@ -48,7 +48,7 @@ def pad_backend(backend: PaddingBackends):
     _backend = old_backend
 
 
-def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
+def pad(x: torch.Tensor, padding: int, channels_last: bool = False) -> torch.Tensor:
     """
     Pad each face consistently with its according neighbors in the HEALPix
 
@@ -56,9 +56,12 @@ def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
         x: The input tensor of shape [N, F, H, W] or [N, F, C, H, W]. Must be
             ordered in HEALPIX_PAD_XY pixel ordering.
         padding: the amount of padding
+        channels_last: whether input is in [N, F, H, W, C] manifest channels last format (for cuda backend only)
 
     Returns:
-        The padded tensor with shape [N, F, H+2*padding, W+2*padding]
+        The tensor padded along the spatial dimensions. For 4D input [N, F, H, W], returns shape [N, F, H+2*padding, W+2*padding].
+        For 5D input, if channels_last=False returns [N, F, C, H+2*padding, W+2*padding],
+        if channels_last=True returns [N, F, H+2*padding, W+2*padding, C].
 
     Examples:
 
@@ -85,6 +88,6 @@ def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
         return pad_python(x, padding)
     elif backend == PaddingBackends.cuda:
         if x.ndim == 5:
-            return cuda._HEALPixPadFunction.apply(x, padding)
+            return cuda._HEALPixPadFunction.apply(x, padding, channels_last)
         else:
-            return cuda._HEALPixPadFunction.apply(x.unsqueeze(2), padding).squeeze(2)
+            return cuda._HEALPixPadFunction.apply(x.unsqueeze(2), padding, channels_last).squeeze(2)

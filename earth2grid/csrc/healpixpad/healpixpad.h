@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Written by Mauro Bisson <maurob@nvidia.com> and THorsten Kurth <tkurth@nvidia.com>
+ * Written by Mauro Bisson <maurob@nvidia.com> and Thorsten Kurth <tkurth@nvidia.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,50 +20,54 @@
 #ifndef __HEALPIX_H__
 #define __HEALPIX_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+template<typename T>
+struct VecTraits {
+    using VecT = T;
+    static constexpr int LANE_WIDTH = 1;
+};
 
-// forward kernels
-void HEALPixPad_fwd_fp32(int dimI, // batch size
-			 int dimJ, // 12
-			 int dimK, // no. of channels
-			 int dimL, // face no. of rows
-			 int dimM, // face no. of cols
-			 float *dataIn_d,
-			 float *dataOut_d,
-			 cudaStream_t stream=0);
+template<>
+struct VecTraits<double> {
+    using VecT = double2;
+    static constexpr int LANE_WIDTH = 2;
+};
 
-void HEALPixPad_fwd_fp64(int dimI, // batch size
-			 int dimJ, // 12
-			 int dimK, // no. of channels
-			 int dimL, // face no. of rows
-			 int dimM, // face no. of cols
-			 double *dataIn_d,
-			 double *dataOut_d,
-			 cudaStream_t stream=0);
+template<>
+struct VecTraits<float> {
+    using VecT = float4;
+    static constexpr int LANE_WIDTH = 4;
+};
 
-// backward kernels
-void HEALPixPad_bwd_fp32(int dimI, // batch size
-			 int dimJ, // 12
-			 int dimK, // no. of channels
-			 int dimL, // face no. of rows of dataOut_d (dataIn_d has dimL+2 rows)
-			 int dimM, // face no. of cols of dataOut_d (dataIn_d has dimM+2 cols)
-			 float *dataIn_d,
-			 float *dataOut_d,
-			 cudaStream_t stream=0);
+template<>
+struct VecTraits<at::Half> {
+    using VecT = uint4;
+    static constexpr int LANE_WIDTH = 8;
+};
 
-void HEALPixPad_bwd_fp64(int dimI, // batch size
-			 int dimJ, // 12
-			 int dimK, // no. of channels
-			 int dimL, // face no. of rows of dataOut_d (dataIn_d has dimL+2 rows)
-			 int dimM, // face no. of cols of dataOut_d (dataIn_d has dimM+2 cols)
-			 double *dataIn_d,
-			 double *dataOut_d,
-			 cudaStream_t stream=0);
+template<>
+struct VecTraits<at::BFloat16> {
+    using VecT = uint4;
+    static constexpr int LANE_WIDTH = 8;
+};
 
-#ifdef __cplusplus
+template<typename REAL_T, bool CHANNELS_LAST>
+__device__ const REAL_T& getElem(const torch::PackedTensorAccessor32<REAL_T, 5, torch::RestrictPtrTraits> sphr,
+               const int i, const int j, const int k, const int l, const int m) {
+    if constexpr(CHANNELS_LAST) {
+        return sphr[i][j][l][m][k];
+    } else {
+        return sphr[i][j][k][l][m];
+    }
 }
-#endif
+
+template<typename REAL_T, bool CHANNELS_LAST>
+__device__ REAL_T& getElemMutable(torch::PackedTensorAccessor32<REAL_T, 5, torch::RestrictPtrTraits> sphr,
+                const int i, const int j, const int k, const int l, const int m) {
+    if constexpr(CHANNELS_LAST) {
+        return sphr[i][j][l][m][k];
+    } else {
+        return sphr[i][j][k][l][m];
+    }
+}
 
 #endif

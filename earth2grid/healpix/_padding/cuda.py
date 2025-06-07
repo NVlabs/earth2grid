@@ -26,7 +26,7 @@ class _HEALPixPadFunction(torch.autograd.Function):
     """
 
     @staticmethod
-    def forward(ctx, input, pad):
+    def forward(ctx, input, pad, channels_last):
         """
         The forward pass of the padding class
 
@@ -43,6 +43,7 @@ class _HEALPixPadFunction(torch.autograd.Function):
         torch.tensor: The padded tensor
         """
         ctx.pad = pad
+        ctx.channels_last = channels_last
         if input.ndim != 5:
             raise ValueError(
                 f"Input tensor must be have 5 dimensions (B, F, C, H, W), got {len(input.shape)} dimensions instead"
@@ -51,13 +52,17 @@ class _HEALPixPadFunction(torch.autograd.Function):
             raise ValueError(
                 f"Input tensor must be have 5 dimensions (B, F, C, H, W), with F == 12, got {input.shape[1]}"
             )
-        if input.shape[3] != input.shape[4]:
+        if not channels_last and input.shape[3] != input.shape[4]:
             raise ValueError(
-                f"Input tensor must be have 5 dimensions (B, F, C, H, W), with H == @, got {input.shape[3]},  {input.shape[4]}"
+                f"Input tensor must be have 5 dimensions (B, F, C, H, W), with H == W, got {input.shape[3]},  {input.shape[4]}"
+            )
+        elif channels_last and input.shape[2] != input.shape[3]:
+            raise ValueError(
+                f"Input tensor must be have 5 dimensions (B, F, H, W, C), with H == W, got {input.shape[2]},  {input.shape[3]}"
             )
         # make contiguous
         input = input.contiguous()
-        out = healpixpad_cuda.forward(input, pad)[0]
+        out = healpixpad_cuda.forward(input, pad, channels_last)[0]
         return out
 
     @staticmethod
@@ -68,7 +73,7 @@ class _HEALPixPadFunction(torch.autograd.Function):
         Parameters
         ----------
         input: torch.tensor
-            The tensor to pad, must have 5 dimensions and be in (B, F, C, H, W) format
+            The tensor to pad, must have 5 dimensions and be in (B, F, C, H, W) or (B, F, H, W, C) for channels last format
             where F == 12 and H == W
         pad: int
             The amount to pad each face of the tensor
@@ -78,6 +83,7 @@ class _HEALPixPadFunction(torch.autograd.Function):
         torch.tensor: The padded tensor
         """
         pad = ctx.pad
+        channels_last = ctx.channels_last
         grad = grad.contiguous()
-        out = healpixpad_cuda.backward(grad, pad)[0]
-        return out, None
+        out = healpixpad_cuda.backward(grad, pad, channels_last)[0]
+        return out, None, None

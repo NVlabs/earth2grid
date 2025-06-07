@@ -100,3 +100,26 @@ def test_healpix_pad(backend, device):
     out.mean().backward()
     assert out.shape == (n, ntile, nside + padding * 2, nside + padding * 2)
     assert x.grad.shape == (n, ntile, nside, nside)
+
+
+@pytest.mark.parametrize("nchannels", [128, 129])
+@pytest.mark.parametrize("dtype", [torch.float32, torch.float64, torch.bfloat16, torch.float16])
+def test_healpix_pad_cuda_channels_last(nchannels, dtype):
+    if not torch.cuda.is_available():
+        pytest.skip("CUDA not available.")
+
+    ntile = 12
+    nside = 32
+    padding = 1
+    n = 3
+    x = torch.randn([n, ntile, nchannels, nside, nside], device="cuda", dtype=dtype)
+    x_channels_last = x.permute(0, 1, 3, 4, 2).contiguous()
+    x.requires_grad = True
+    x_channels_last.requires_grad = True
+    with pad_backend(PaddingBackends.cuda):
+        out_channels_first = pad(x, padding=padding)
+        out_channels_last = pad(x_channels_last, padding=padding, channels_last=True)
+    out_channels_first.mean().backward()
+    out_channels_last.mean().backward()
+    assert torch.allclose(out_channels_first, out_channels_last.permute(0, 1, 4, 2, 3))
+    assert torch.allclose(x.grad, x_channels_last.grad.permute(0, 1, 4, 2, 3))

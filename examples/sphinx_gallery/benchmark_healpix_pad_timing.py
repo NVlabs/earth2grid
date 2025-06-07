@@ -35,7 +35,9 @@ else:
 print("\n")
 
 nside = 128
-
+padding = nside // 2
+channels = 384
+dtype = torch.float32
 
 neval = 10
 
@@ -63,7 +65,7 @@ def test_func(label, pad, compile=False):
 
 
 for batch_size in [1, 2]:
-    p = torch.randn(batch_size, 12, 384, nside, nside)
+    p = torch.randn(size=(batch_size, 12, channels, nside, nside), dtype=dtype)
     print(f"Benchmarking results {neval=} {p.size()=}")
 
     p = p.cuda()
@@ -79,13 +81,20 @@ for batch_size in [1, 2]:
         test_func("Zephyr pad", healpix.pad)
         print("Zephyr pad doesn't work well with torch.compile. Doesn't finish compiling.")
 
-    p = torch.randn(batch_size, 12 * nside * nside, 384).cuda()
+    p = torch.randn(size=(batch_size, 12 * nside * nside, channels), dtype=dtype).cuda()
     test_func("Python: channels dim last*", lambda x, padding: healpix.pad_with_dim(x, padding, dim=1), compile=False)
     test_func(
         "Python + torch.compile: channels dim last*",
         lambda x, padding: healpix.pad_with_dim(x, padding, dim=1),
         compile=True,
     )
+
+    p = p.view(batch_size, 12, nside, nside, channels)
+    with pad_backend(healpix.PaddingBackends.cuda):
+        test_func(
+            "HealPix Pad: channels last dim",
+            lambda x, padding: healpix.pad(x, padding, channels_last=True),
+        )
     print("")
 
 
