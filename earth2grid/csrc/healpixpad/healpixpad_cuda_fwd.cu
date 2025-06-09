@@ -89,7 +89,7 @@ __global__ void HEALPixPadFwd_bulk_vec_k(
   if (!CHANNELS_LAST && ((padSize & (W - 1)) != 0)) {
     // Store unvectorized as padding makes output unaligned
     const VAL_T* lanes = reinterpret_cast<const VAL_T*>(&srcVec);
-  #pragma unroll
+#pragma unroll
     for (int w = 0; w < W; ++w) {
         getElemMutable<VAL_T,CHANNELS_LAST>(
             vout, i, j, k, padSize + l, padSize + m + w) = lanes[w];
@@ -342,11 +342,9 @@ __device__ VAL_T getTR_d(const int padSize,
   VAL_T ret = VAL_T(0);
 
   const int pinv = padSize-1 - p;
-  //const int padOff = -pinv*dimM + q;
 
   switch(faceId) {
     // north faces
-    //facePtr[k*dimL*dimM + (dimL-1)*dimM];
   case  0: ret = getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId,  1, k, dimL-1-pinv, q); break;
   case  1: ret = getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId,  2, k, dimL-1-pinv, q); break;
   case  2: ret = getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId,  3, k, dimL-1-pinv, q); break;

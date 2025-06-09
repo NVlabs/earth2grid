@@ -60,7 +60,6 @@ __global__ void HEALPixPadBck_bulk_vec_k(const int padSize,
   constexpr int W = VecTraits<VAL_T>::LANE_WIDTH;
 
   const long long tid = ((long long)blockIdx.x)*blockDim.x + threadIdx.x;
-
   if (tid >= ((long long)dimI)*dimJ*dimK*dimL*dimM) {
     return;
   }
@@ -92,7 +91,7 @@ __global__ void HEALPixPadBck_bulk_vec_k(const int padSize,
     VecT tmp;
     VAL_T* lanes = reinterpret_cast<VAL_T*>(&tmp);
 
-    #pragma unroll
+#pragma unroll
     for (int w = 0; w < W; ++w) {
         lanes[w] = getElem<VAL_T, CHANNELS_LAST>(
             vin, i, j, k, padSize + l, padSize + m + w);
@@ -192,7 +191,6 @@ __device__ VAL_T getB_d(const int padSize,
 
   switch(faceId) {
     // north faces
-    //facePtr[k*dimL*dimM + m]
   case  0: ret = getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId,  4, k, p, padSize+m); break;
   case  1: ret = getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId,  5, k, p, padSize+m); break;
   case  2: ret = getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId,  6, k, p, padSize+m); break;
@@ -203,7 +201,6 @@ __device__ VAL_T getB_d(const int padSize,
   case  6: ret = getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId,  9, k, p, padSize+m); break;
   case  7: ret = getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId, 10, k, p, padSize+m); break;
     // south faces
-    // facePtr[k*dimL*dimM + l*dimM + dimM-1];
   case  8: ret = getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId, 11, k, padSize+m, dimM-1-p); break;
   case  9: ret = getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId,  8, k, padSize+m, dimM-1-p); break;
   case 10: ret = getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId,  9, k, padSize+m, dimM-1-p); break;
@@ -392,7 +389,6 @@ __device__ VAL_T getTL_d(const int padSize,
   case  6:
   case  7: break;
     // south faces
-    // facePtr[k*dimL*dimM + dimL*dimM-1];
   case  8: ret = getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId, 0, k, dimL-pinv, -qinv-1); break;
   case  9: ret = getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId, 1, k, dimL-pinv, -qinv-1); break;
   case 10: ret = getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId, 2, k, dimL-pinv, -qinv-1); break;
@@ -458,7 +454,6 @@ __device__ VAL_T getTR_d(const int padSize,
   if (p+q > padSize-1) {
     switch(faceId) {
       // south faces
-      //facePtr[k*dimL*dimM + dimL*dimM-1];
     case  8: ret += getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId,  5, k, dimL-pinv, -(pinv+1+qinv)-1); break;
     case  9: ret += getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId,  6, k, dimL-pinv, -(pinv+1+qinv)-1); break;
     case 10: ret += getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId,  7, k, dimL-pinv, -(pinv+1+qinv)-1); break;
@@ -580,7 +575,6 @@ __device__ VAL_T getBR_d(const int padSize,
   case  6:
   case  7: break;
     // south faces
-    // facePtr[k*dimL*dimM + dimL*dimM-1];
   case  8: ret = getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId, 10, k, dimL-p, -1-q); break;
   case  9: ret = getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId, 11, k, dimL-p, -1-q); break;
   case 10: ret = getElem<VAL_T, CHANNELS_LAST>(sphr, sphrId,  8, k, dimL-p, -1-q); break;
