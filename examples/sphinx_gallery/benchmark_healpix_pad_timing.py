@@ -50,11 +50,11 @@ def test_func(label, pad, compile=False):
     # warm up
     if compile:
         pad = torch.compile(pad)
-    out = pad(p, padding=nside // 2)
+    out = pad(p, padding=padding)
     torch.cuda.synchronize()
     start = time.time()
     for _ in range(neval):
-        out = pad(p, padding=nside // 2)
+        out = pad(p, padding=padding)
     torch.cuda.synchronize()
     stop = time.time()
     gb_per_sec = out.nbytes * neval / (stop - start) / 1e9
@@ -66,7 +66,7 @@ def test_func(label, pad, compile=False):
 
 for batch_size in [1, 2]:
     p = torch.randn(size=(batch_size, 12, channels, nside, nside), dtype=dtype)
-    print(f"Benchmarking results {neval=} {p.size()=}")
+    print(f"Benchmarking results {neval=} {p.size()=} {padding=} {dtype=}")
 
     p = p.cuda()
 
@@ -88,14 +88,14 @@ for batch_size in [1, 2]:
         lambda x, padding: healpix.pad_with_dim(x, padding, dim=1),
         compile=True,
     )
+    p_python_shape = p.shape
 
-    p = p.view(batch_size, 12, nside, nside, channels)
+    p = p.view(batch_size, 12, nside, nside, channels).permute(0, 1, 4, 2, 3)
     with pad_backend(healpix.PaddingBackends.cuda):
-        test_func(
-            "HealPix Pad: channels last dim",
-            lambda x, padding: healpix.pad(x, padding, channels_last=True),
-        )
+        test_func("HEALPix Pad: channels dim last", healpix.pad)
+
     print("")
 
 
-print(f"* shape for channel dim last: {p.shape}")
+print(f"* shape for Python channels dim last: {p_python_shape}")
+print(f"* shape for HEALPix Pad channels dim last: {p.shape}")

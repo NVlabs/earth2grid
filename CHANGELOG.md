@@ -17,6 +17,7 @@ New APIs
 Enhancements:
   - pure python implementations of healpix padding and reordering operations,
     that are efficient on GPU when used with torch.compile
+  - more performant CUDA healpix padding and channels last padding support
 
 Breaking changes:
 

@@ -33,7 +33,7 @@ class _HEALPixPadFunction(torch.autograd.Function):
         Parameters
         ----------
         input: torch.tensor
-            The tensor to pad, must have 5 dimensions and be in (B, F, C, H, W) format
+            The tensor to pad, must have 5 dimensions and be in (B, F, C, H, W) or (B, F, H, W, C) for channels last format
             where F == 12 and H == W
         pad: int
             The amount to pad each face of the tensor
