@@ -24,6 +24,7 @@ import torch
 
 from earth2grid import _bit_ops, healpix_bare
 from earth2grid._regrid import Regridder
+from earth2grid.healpix import coordinates
 
 try:
     import pyvista as pv
@@ -306,8 +307,8 @@ class Grid(base.Grid):
     def ang2pix(self, lon: torch.Tensor, lat: torch.Tensor) -> torch.Tensor:
         """Get the pixel index containing the given longitude and latitude"""
         n = self.nside
-        xs, ys = Projection.project(lon, lat)
-        x, y, f = Projection._xs_ys_to_xyf(xs, ys)
+        xs, ys = coordinates.angular_to_global(lon, lat)
+        x, y, f = coordinates.global_to_face(xs, ys)
         x = (x * n).long()
         y = (y * n).long()
         nest = _xyf_to_nest(n, x, y, f)
@@ -551,164 +552,6 @@ def double2xy(nside, i, j):
     # south
     face = xp.where(x_block < y_block, x_block % 4 + 8, face)
     return face * nside**2 + fy * nside + fx
-
-
-# TODO move to healpix/continuous.py
-class Projection:
-    """
-    From Gorski (2005), the forward projection is given by::
-
-            xs = φ                                             (26)
-            ys = (3π / 8) * z                                  (27)
-
-            and in the HEALPix polar caps (|z| > 2/3):
-
-            xs = φ - (|σ(z)| - 1) * (φ_t - π/4)                 (28)
-            ys = (π / 4) * σ(z)                                (29)
-
-            where:
-            z = cos(θ)
-            φ_t = φ mod (π/2)
-            σ(z) = 2 - sqrt(3 * (1 - z))   for z > 0
-            σ(-z) = -σ(z)
-
-    And, the inverse projection in the polar cap is given by::
-
-        Inverse mapping from the (xs, ys) plane to the sphere (θ, φ).
-
-        In the HEALPix Equatorial zone (|ys| < π/4):
-            φ = xs                                      (31)
-            cos(θ) = (8 / (3 * π)) * ys                 (32)
-
-        In the HEALPix polar caps (|ys| > π/4):
-            φ = xs - (|ys| - π/4) / (|ys| - π/2) * (xt - π/4)    (33)
-
-            cos(θ) = [1 - (1/3) * (2 - (4 * |ys|) / π)^2] * (ys / |ys|)    (34)
-
-        Note:
-        - xt = xs mod (π/2)
-        - |ys| denotes the absolute value of ys
-        - The term (ys / |ys|) ensures the correct sign for cos(θ) in the polar region
-    """
-
-    @staticmethod
-    def project(lon: torch.Tensor, lat: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        """
-        Convert longitude and latitude to HEALPix coordinates (xs, ys).
-
-        Args:
-            lon: Longitude in degrees East
-            lat: Latitude in degrees North
-
-        Returns:
-            tuple of (xs, ys) coordinates
-        """
-        # Convert to radians
-        phi = torch.deg2rad(lon % 360)
-        theta = torch.deg2rad(90 - lat)  # Convert to colatitude
-        z = torch.cos(theta)
-
-        # Calculate φ_t = φ mod (π/2)
-        phi_t = phi % (np.pi / 2)
-
-        # Calculate σ(z)
-        # σ(z) = 2 - sqrt(3 * (1 - z))   for z > 0
-        sigma_z = 2 - torch.sqrt(3 * (1 - torch.abs(z)))
-        sigma_z = torch.where(z < 0, -sigma_z, sigma_z)
-
-        # Determine if we're in polar caps (|z| > 2/3)
-        in_polar_cap = torch.abs(z) > 2 / 3
-
-        # Calculate ys
-        ys = torch.where(
-            in_polar_cap,
-            # ys = (π / 4) * σ(z)                                (29)
-            (math.pi / 4) * sigma_z,  # Polar cap formula
-            (3 * math.pi / 8) * z,  # Equatorial formula
-        )
-
-        # Calculate xs
-        xs = torch.where(
-            in_polar_cap,
-            # xs = φ - (|σ(z)| - 1) * (φ_t - π/4)                 (28)
-            phi - (torch.abs(sigma_z) - 1) * (phi_t - np.pi / 4),  # Polar cap formula
-            phi,  # Equatorial formula
-        )
-
-        return xs, ys
-
-    @staticmethod
-    def inverse_project(xs: torch.Tensor, ys: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        """
-        Inverse HEALPix projection equations.
-
-        Returns:
-            tuple of (longitude, latitude) in degrees
-        """
-        # Determine if we're in polar caps (|ys| > π/4)
-        abs_ys = torch.abs(ys)
-        in_polar_cap = abs_ys > (math.pi / 4)
-
-        # xt = xs mod (π/2)
-        xt = xs % (math.pi / 2)
-
-        # φ (phi)
-        phi_equator = xs
-        phi_polar = xs - ((abs_ys - (math.pi / 4)) / (abs_ys - (math.pi / 2))) * (xt - (math.pi / 4))
-        phi = torch.where(in_polar_cap, phi_polar, phi_equator)
-
-        # cos(θ) (z)
-        z_equator = (8 / (3 * math.pi)) * ys
-        # [1 - (1/3) * (2 - (4 * |ys|) / π)^2] * (ys / |ys|)
-        sign_ys = torch.sign(ys)
-        term = 2 - (4 * abs_ys) / math.pi
-        z_polar = (1 - (1 / 3) * term**2) * sign_ys
-        z = torch.where(in_polar_cap, z_polar, z_equator)
-
-        # Clamp z to [-1, 1] to avoid NaNs from arccos
-        z = torch.clamp(z, -1.0, 1.0)
-
-        # θ = arccos(z)
-        theta = torch.arccos(z)
-        # latitude = 90 - θ (in degrees)
-        lat = 90 - torch.rad2deg(theta)
-
-        lon = torch.rad2deg(phi)
-        return lon, lat
-
-    @staticmethod
-    def _xs_ys_to_xyf(xs: torch.Tensor, ys: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Convert xs, ys to x, y, f
-
-        Continuous version of ``double2xy``
-
-        Args:
-            xs: xs coordinate [0, 2 pi)
-            ys: ys coordinate [-pi / 2, pi / 2]
-
-        Returns:
-            tuple of (x, y, f)
-        """
-        # map to [0, 8] x [-2, 2]
-        xs, ys = xs / (math.pi / 4), ys / (math.pi / 4)
-
-        # pivot clockwise 45 deg around lower left corner
-        # (-1, 0) -> (0, 0)
-        x = (xs + ys + 1.0) / 2.0
-        y = (ys - xs - 1.0) / 2.0
-
-        x_block = x.floor().int()
-        # faces are ordered N to S
-        y_block = (-y).floor().int()
-
-        # north
-        face = torch.where(x_block > y_block, y_block, 0)
-        # equator
-        face = torch.where(x_block == y_block, x_block % 4 + 4, face)
-        # south
-        face = torch.where(x_block < y_block, x_block % 4 + 8, face)
-
-        return x % 1.0, y % 1.0, face
 
 
 def ring2double(nside: int, p: ArrayT):

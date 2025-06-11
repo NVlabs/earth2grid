@@ -353,10 +353,10 @@ def test_healpix_projection():
     lat = torch.tensor([0.0, 30.0, 45.0, 89.9, -89.9])  # Latitude points (moved from 90.0/-90.0 to 89.9/-89.9)
 
     # Forward projection
-    xs, ys = healpix.Projection.project(lon, lat)
+    xs, ys = healpix.angular_to_global(lon, lat)
 
     # Inverse projection
-    lon_back, lat_back = healpix.Projection.inverse_project(xs, ys)
+    lon_back, lat_back = healpix.global_to_angular(xs, ys)
 
     # Check that we get back what we put in (within numerical precision)
     assert torch.allclose(lon, lon_back, rtol=1e-5, atol=1e-5)
@@ -365,13 +365,13 @@ def test_healpix_projection():
     # Test specific values at equator (z = 0)
     equator_lon = torch.tensor([0.0])
     equator_lat = torch.tensor([0.0])
-    xs_eq, ys_eq = healpix.Projection.project(equator_lon, equator_lat)
+    xs_eq, ys_eq = healpix.angular_to_global(equator_lon, equator_lat)
     assert torch.allclose(ys_eq, torch.tensor([0.0]), rtol=1e-5, atol=1e-5)
 
     # Test specific values at poles (z = ±1)
     pole_lon = torch.tensor([0.0])
     pole_lat = torch.tensor([90.0])
-    xs_pole, ys_pole = healpix.Projection.project(pole_lon, pole_lat)
+    xs_pole, ys_pole = healpix.angular_to_global(pole_lon, pole_lat)
     assert torch.allclose(ys_pole, torch.tensor([np.pi / 2]), rtol=1e-5, atol=1e-5)
 
 
@@ -405,7 +405,7 @@ def test_xs_ys_to_xyf():
     def _test(input, expected):
         xs, ys = torch.tensor(input)
 
-        x, y, f = healpix.Projection._xs_ys_to_xyf(xs, ys)
+        x, y, f = healpix.global_to_face(xs, ys)
         xe, ye, fe = expected
         assert torch.all(f == torch.tensor([fe]))
         assert torch.allclose(x, torch.tensor([xe]))

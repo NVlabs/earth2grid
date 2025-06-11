@@ -11,9 +11,12 @@ New APIs
   - pcolormesh
   - pad_with_dim
   - pad_context - switches between padding backends
-  - Projection
   - Grid.nside
   - Grid.ang2pix
+  - Continuous coordinate transformations:
+    - angular_to_global
+    - global_to_angular
+    - global_to_face
 - earth2grid.projections. Grids in arbitrary projections
 - earth2grid.yingyang
 
