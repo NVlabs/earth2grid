@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.""
 """
-Continuous functions for the HEALPix projection.
+Coordinate transformations for HEALPix
 
-This module contains transformatios between these coordinate systems:
+This module contains transformations between these coordinate systems:
 - angular coordinates (lon, lat)
 - face coordinates (x, y, f)
 - global HEALPix projection (xₛ, yₛ)
