@@ -143,7 +143,7 @@ def global_to_angular(xs: torch.Tensor, ys: torch.Tensor) -> tuple[torch.Tensor,
     # latitude = 90 - θ (in degrees)
     lat = 90 - torch.rad2deg(theta)
 
-    lon = torch.rad2deg(phi)
+    lon = torch.rad2deg(phi) % 360
     return lon, lat
 
 

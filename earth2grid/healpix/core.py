@@ -304,6 +304,16 @@ class Grid(base.Grid):
             i_me = ipix
         return i_me
 
+    def _me2xy(self, ipix: torch.Tensor) -> torch.Tensor:
+        if isinstance(self.pixel_order, XY):
+            return xy2xy(self.nside, src=self.pixel_order, dest=XY(), i=ipix)
+        elif self.pixel_order == PixelOrder.RING:
+            return ring2xy(self.nside, ipix)
+        elif self.pixel_order == PixelOrder.NEST:
+            return nest2xy(self.nside, ipix, XY())
+        else:
+            raise ValueError(self.pixel_order)
+
     def ang2pix(self, lon: torch.Tensor, lat: torch.Tensor) -> torch.Tensor:
         """Get the pixel index containing the given longitude and latitude"""
         n = self.nside
@@ -314,17 +324,24 @@ class Grid(base.Grid):
         nest = _xyf_to_nest(n, x, y, f)
         return self._nest2me(nest)
 
+    def pix2ang(self, pix: torch.Tensor, dtype=torch.float64) -> tuple[torch.Tensor, torch.Tensor]:
+        """Pixel to (lon, lat)"""
+        pix = self._me2xy(pix)
+        x, y, f = xy2local(self.nside, pix)
+        x = (x.to(dtype) + 1 / 2) / self.nside
+        y = (y.to(dtype) + 1 / 2) / self.nside
+        xs, ys = coordinates.face_to_global(x, y, f)
+        return coordinates.global_to_angular(xs, ys)
+
     @property
     def lat(self):
-        ipix = self._nest_ipix()
-        _, lat = healpix_bare.pix2ang(self._nside(), ipix, lonlat=True, nest=True)
-        return lat.numpy()
+        pix = torch.arange(self.shape[0], device="cpu")
+        return self.pix2ang(pix)[1].numpy()
 
     @property
     def lon(self):
-        ipix = self._nest_ipix()
-        lon, _ = healpix_bare.pix2ang(self._nside(), ipix, lonlat=True, nest=True)
-        return lon.numpy()
+        pix = torch.arange(self.shape[0], device="cpu")
+        return self.pix2ang(pix)[0].numpy()
 
     @property
     def shape(self) -> tuple[int, ...]:

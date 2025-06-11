@@ -426,3 +426,11 @@ def test_face_to_global_roundtrip():
     assert torch.all(face_roundtrip == face)
     assert torch.allclose(x_roundtrip, x)
     assert torch.allclose(y_roundtrip, y)
+
+
+def test_latlon_regression(regtest):
+    grid = healpix.Grid(1)
+    ll = np.stack([grid.lon, grid.lat], axis=-1)
+    with regtest:
+        print("Longitude, latitude:\n")
+        np.savetxt(regtest, ll, fmt="%.3f", delimiter="\t")
