@@ -27,6 +27,7 @@ From this notebook: https://colab.research.google.com/drive/1MzTyeNFiy-7RNY6UtGK
 from earth2grid.healpix._padding import PaddingBackends, pad, pad_backend, pad_with_dim
 from earth2grid.healpix.coordinates import (
     angular_to_global,
+    face_to_global,
     global_to_angular,
     global_to_face,
 )
@@ -56,6 +57,7 @@ __all__ = [
     "angular_to_global",
     "Compass",
     "conv2d",
+    "face_to_global",
     "global_to_angular",
     "global_to_face",
     "Grid",

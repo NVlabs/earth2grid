@@ -179,3 +179,38 @@ def global_to_face(xs: torch.Tensor, ys: torch.Tensor) -> tuple[torch.Tensor, to
     face = torch.where(x_block < y_block, x_block % 4 + 8, face)
 
     return x % 1.0, y % 1.0, face
+
+
+def face_to_global(x: torch.Tensor, y: torch.Tensor, face: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    """Convert (x, y, f) to (xₛ, yₛ)
+
+    Inverse of ``global_to_face``
+
+    Args:
+        x: x coordinate [0, 1) within face
+        y: y coordinate [0, 1) within face
+        face: face index [0, 11]
+
+    Returns:
+        tuple of (xs, ys) coordinates
+    """
+    # Create lookup table mapping face -> (x_block, y_block)
+    face_to_x_origin = torch.tensor([1, 2, 3, 4, 0, 1, 2, 3, 0, 1, 2, 3], dtype=x.dtype, device=x.device)
+    face_to_y_origin = torch.tensor([1, 2, 3, 4, 1, 2, 3, 4, 2, 3, 4, 5], dtype=x.dtype, device=x.device)
+
+    # Use tensor indexing to get block coordinates
+    x_origin = face_to_x_origin[face.long()]
+    y_origin = face_to_y_origin[face.long()]
+
+    # in rotated coordinates
+    x_rot = x_origin + x
+    y_rot = -y_origin + y
+
+    xs = x_rot - y_rot - 1.0
+    ys = x_rot + y_rot
+
+    # Scale back to original coordinate system
+    xs = xs * (math.pi / 4)
+    ys = ys * (math.pi / 4)
+
+    return xs, ys

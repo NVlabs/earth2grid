@@ -413,3 +413,16 @@ def test_xs_ys_to_xyf():
 
     _test([math.pi / 4, math.pi / 4], [0.5, 0.5, 0])
     _test([0.0, 0.0], [0.5, 0.5, 4])
+
+
+def test_face_to_global_roundtrip():
+    """Test round-trip accuracy of global_to_face and face_to_global."""
+    # Test with various xs, ys coordinates covering different regions
+    face = torch.arange(12)
+    x = torch.ones(12) * 0.5
+    y = torch.ones(12) * 0.5
+    xs, ys = healpix.face_to_global(x, y, face)
+    x_roundtrip, y_roundtrip, face_roundtrip = healpix.global_to_face(xs, ys)
+    assert torch.all(face_roundtrip == face)
+    assert torch.allclose(x_roundtrip, x)
+    assert torch.allclose(y_roundtrip, y)
