@@ -286,7 +286,7 @@ class Grid(base.Grid):
             i_xy = xy2xy(nside=self._nside(), src=self.pixel_order, dest=XY(), i=i)
             i = xy2nest(self._nside(), i_xy)
         elif self.pixel_order == PixelOrder.RING:
-            i = healpix_bare.ring2nest(self._nside(), i)
+            i = ring2nest(self._nside(), i)
         elif self.pixel_order == PixelOrder.NEST:
             pass
         else:
