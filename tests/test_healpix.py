@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import math
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
@@ -371,3 +373,43 @@ def test_healpix_projection():
     pole_lat = torch.tensor([90.0])
     xs_pole, ys_pole = healpix.Projection.project(pole_lon, pole_lat)
     assert torch.allclose(ys_pole, torch.tensor([np.pi / 2]), rtol=1e-5, atol=1e-5)
+
+
+def test_ang2pix_python_implementation():
+    grid = healpix.Grid(8)
+    lat = torch.tensor([0.0])
+    lon = torch.tensor([0.0001])
+    pix = grid.ang2pix(lon, lat)
+    pix_from_healpix_bare = healpix_bare.ang2pix(grid.nside, lon, lat, lonlat=True)
+    assert torch.all(pix == pix_from_healpix_bare)
+
+    lat = torch.rand(100) * 180 - 90
+    lon = torch.rand(100) * 360
+    assert torch.all(grid.ang2pix(lon, lat) == healpix_bare.ang2pix(grid.nside, lon, lat, lonlat=True))
+
+
+def test_ang2pix_assert_lat_lon_in_pixels():
+    """this test asserts that::
+
+    ang2pix(lat[pix], lon[pix]) == pix
+
+    """
+    grid = healpix.Grid(8)
+    lon = torch.from_numpy(grid.lon)
+    lat = torch.from_numpy(grid.lat)
+    pix = grid.ang2pix(lon, lat)
+    assert torch.all(pix == torch.arange(grid.shape[-1]))
+
+
+def test_xs_ys_to_xyf():
+    def _test(input, expected):
+        xs, ys = torch.tensor(input)
+
+        x, y, f = healpix.Projection._xs_ys_to_xyf(xs, ys)
+        xe, ye, fe = expected
+        assert torch.all(f == torch.tensor([fe]))
+        assert torch.allclose(x, torch.tensor([xe]))
+        assert torch.allclose(y, torch.tensor([ye]))
+
+    _test([math.pi / 4, math.pi / 4], [0.5, 0.5, 0])
+    _test([0.0, 0.0], [0.5, 0.5, 4])

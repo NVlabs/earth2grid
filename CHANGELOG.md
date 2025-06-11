@@ -11,6 +11,9 @@ New APIs
   - pcolormesh
   - pad_with_dim
   - pad_context - switches between padding backends
+  - Projection
+  - Grid.nside
+  - Grid.ang2pix
 - earth2grid.projections. Grids in arbitrary projections
 - earth2grid.yingyang
 

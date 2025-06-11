@@ -268,7 +268,11 @@ class Grid(base.Grid):
         if self.level > ZOOM_LEVELS:
             raise ValueError(f"`level` must be less than or equal to {ZOOM_LEVELS}")
 
-    def _nside(self):
+    @property
+    def nside(self) -> int:
+        return self._nside()
+
+    def _nside(self) -> int:
         return 2**self.level
 
     def _npix(self):
@@ -298,6 +302,16 @@ class Grid(base.Grid):
         elif self.pixel_order == PixelOrder.NEST:
             i_me = ipix
         return i_me
+
+    def ang2pix(self, lon: torch.Tensor, lat: torch.Tensor) -> torch.Tensor:
+        """Get the pixel index containing the given longitude and latitude"""
+        n = self.nside
+        xs, ys = Projection.project(lon, lat)
+        x, y, f = Projection._xs_ys_to_xyf(xs, ys)
+        x = (x * n).long()
+        y = (y * n).long()
+        nest = _xyf_to_nest(n, x, y, f)
+        return self._nest2me(nest)
 
     @property
     def lat(self):
@@ -439,17 +453,20 @@ def nest2xy(nside, i, pixel_order: XY = XY()):
     return xy
 
 
+def _xyf_to_nest(nside, x, y, f):
+    result = 0
+    result |= _bit_ops.spread_bits(x)
+    result |= _bit_ops.spread_bits(y) << 1
+    return result | (f * nside**2)
+
+
 def xy2nest(nside, i, pixel_order: XY = XY()):
     """convert XY index to NEST"""
     i = xy2xy(nside, pixel_order, XY(), i)
     tile = i // (nside**2)
     y = (i % (nside**2)) // nside
     x = i % nside
-
-    result = 0
-    result |= _bit_ops.spread_bits(x)
-    result |= _bit_ops.spread_bits(y) << 1
-    return result | (tile * nside**2)
+    return _xyf_to_nest(nside, x, y, tile)
 
 
 def approx_grid_length_meters(nside):
@@ -536,6 +553,7 @@ def double2xy(nside, i, j):
     return face * nside**2 + fy * nside + fx
 
 
+# TODO move to healpix/continuous.py
 class Projection:
     """
     From Gorski (2005), the forward projection is given by::
@@ -657,6 +675,40 @@ class Projection:
 
         lon = torch.rad2deg(phi)
         return lon, lat
+
+    @staticmethod
+    def _xs_ys_to_xyf(xs: torch.Tensor, ys: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Convert xs, ys to x, y, f
+
+        Continuous version of ``double2xy``
+
+        Args:
+            xs: xs coordinate [0, 2 pi)
+            ys: ys coordinate [-pi / 2, pi / 2]
+
+        Returns:
+            tuple of (x, y, f)
+        """
+        # map to [0, 8] x [-2, 2]
+        xs, ys = xs / (math.pi / 4), ys / (math.pi / 4)
+
+        # pivot clockwise 45 deg around lower left corner
+        # (-1, 0) -> (0, 0)
+        x = (xs + ys + 1.0) / 2.0
+        y = (ys - xs - 1.0) / 2.0
+
+        x_block = x.floor().int()
+        # faces are ordered N to S
+        y_block = (-y).floor().int()
+
+        # north
+        face = torch.where(x_block > y_block, y_block, 0)
+        # equator
+        face = torch.where(x_block == y_block, x_block % 4 + 4, face)
+        # south
+        face = torch.where(x_block < y_block, x_block % 4 + 8, face)
+
+        return x % 1.0, y % 1.0, face
 
 
 def ring2double(nside: int, p: ArrayT):
