@@ -377,7 +377,7 @@ class Grid(base.Grid):
         """Get regridder to the specified lat and lon points"""
         lat, lon = np.broadcast_arrays(lat, lon)
         i_ring, weights = healpix_bare.get_interp_weights(self._nside(), torch.tensor(lon), torch.tensor(lat))
-        i_nest = healpix_bare.ring2nest(self._nside(), i_ring.ravel())
+        i_nest = ring2nest(self._nside(), i_ring.ravel())
         i_me = self._nest2me(i_nest).reshape(i_ring.shape)
 
         # reshape to (*, p)
