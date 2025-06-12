@@ -24,6 +24,7 @@ import torch
 
 from earth2grid import _bit_ops, healpix_bare
 from earth2grid._regrid import Regridder
+from earth2grid.healpix import coordinates
 
 try:
     import pyvista as pv
@@ -268,7 +269,11 @@ class Grid(base.Grid):
         if self.level > ZOOM_LEVELS:
             raise ValueError(f"`level` must be less than or equal to {ZOOM_LEVELS}")
 
-    def _nside(self):
+    @property
+    def nside(self) -> int:
+        return self._nside()
+
+    def _nside(self) -> int:
         return 2**self.level
 
     def _npix(self):
@@ -281,7 +286,7 @@ class Grid(base.Grid):
             i_xy = xy2xy(nside=self._nside(), src=self.pixel_order, dest=XY(), i=i)
             i = xy2nest(self._nside(), i_xy)
         elif self.pixel_order == PixelOrder.RING:
-            i = healpix_bare.ring2nest(self._nside(), i)
+            i = ring2nest(self._nside(), i)
         elif self.pixel_order == PixelOrder.NEST:
             pass
         else:
@@ -299,17 +304,44 @@ class Grid(base.Grid):
             i_me = ipix
         return i_me
 
+    def _me2xy(self, ipix: torch.Tensor) -> torch.Tensor:
+        if isinstance(self.pixel_order, XY):
+            return xy2xy(self.nside, src=self.pixel_order, dest=XY(), i=ipix)
+        elif self.pixel_order == PixelOrder.RING:
+            return ring2xy(self.nside, ipix)
+        elif self.pixel_order == PixelOrder.NEST:
+            return nest2xy(self.nside, ipix, XY())
+        else:
+            raise ValueError(self.pixel_order)
+
+    def ang2pix(self, lon: torch.Tensor, lat: torch.Tensor) -> torch.Tensor:
+        """Get the pixel index containing the given longitude and latitude"""
+        n = self.nside
+        xs, ys = coordinates.angular_to_global(lon, lat)
+        x, y, f = coordinates.global_to_face(xs, ys)
+        x = (x * n).long()
+        y = (y * n).long()
+        nest = _xyf_to_nest(n, x, y, f)
+        return self._nest2me(nest)
+
+    def pix2ang(self, pix: torch.Tensor, dtype=torch.float64) -> tuple[torch.Tensor, torch.Tensor]:
+        """Pixel to (lon, lat)"""
+        pix = self._me2xy(pix)
+        x, y, f = xy2local(self.nside, pix)
+        x = (x.to(dtype) + 1 / 2) / self.nside
+        y = (y.to(dtype) + 1 / 2) / self.nside
+        xs, ys = coordinates.face_to_global(x, y, f)
+        return coordinates.global_to_angular(xs, ys)
+
     @property
     def lat(self):
-        ipix = self._nest_ipix()
-        _, lat = healpix_bare.pix2ang(self._nside(), ipix, lonlat=True, nest=True)
-        return lat.numpy()
+        pix = torch.arange(self.shape[0], device="cpu")
+        return self.pix2ang(pix)[1].numpy()
 
     @property
     def lon(self):
-        ipix = self._nest_ipix()
-        lon, _ = healpix_bare.pix2ang(self._nside(), ipix, lonlat=True, nest=True)
-        return lon.numpy()
+        pix = torch.arange(self.shape[0], device="cpu")
+        return self.pix2ang(pix)[0].numpy()
 
     @property
     def shape(self) -> tuple[int, ...]:
@@ -345,7 +377,7 @@ class Grid(base.Grid):
         """Get regridder to the specified lat and lon points"""
         lat, lon = np.broadcast_arrays(lat, lon)
         i_ring, weights = healpix_bare.get_interp_weights(self._nside(), torch.tensor(lon), torch.tensor(lat))
-        i_nest = healpix_bare.ring2nest(self._nside(), i_ring.ravel())
+        i_nest = ring2nest(self._nside(), i_ring.ravel())
         i_me = self._nest2me(i_nest).reshape(i_ring.shape)
 
         # reshape to (*, p)
@@ -439,17 +471,20 @@ def nest2xy(nside, i, pixel_order: XY = XY()):
     return xy
 
 
+def _xyf_to_nest(nside, x, y, f):
+    result = 0
+    result |= _bit_ops.spread_bits(x)
+    result |= _bit_ops.spread_bits(y) << 1
+    return result | (f * nside**2)
+
+
 def xy2nest(nside, i, pixel_order: XY = XY()):
     """convert XY index to NEST"""
     i = xy2xy(nside, pixel_order, XY(), i)
     tile = i // (nside**2)
     y = (i % (nside**2)) // nside
     x = i % nside
-
-    result = 0
-    result |= _bit_ops.spread_bits(x)
-    result |= _bit_ops.spread_bits(y) << 1
-    return result | (tile * nside**2)
+    return _xyf_to_nest(nside, x, y, tile)
 
 
 def approx_grid_length_meters(nside):

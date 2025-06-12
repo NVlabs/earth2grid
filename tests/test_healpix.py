@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import math
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
@@ -342,3 +344,108 @@ def test_local2local_S_to_E():
     pix = torch.tensor([0])
     pix = healpix.xy2xy(nside, src=E, dest=S, i=pix)
     assert pix.item() == nside - 1
+
+
+@pytest.mark.parametrize('compile', [False, True])
+def test_healpix_projection(compile: bool):
+    """Test the forward and inverse projection of the Projection class."""
+    # Test points at key locations, but avoid the exact poles
+    lon = torch.tensor([0.0, 90.0, 90.0, 180.0, 270.0])  # Longitude points
+    lat = torch.tensor([0.0, 30.0, 45.0, 89.9, -89.9])  # Latitude points (moved from 90.0/-90.0 to 89.9/-89.9)
+
+    angular_to_global = torch.compile(healpix.angular_to_global, disable=not compile)
+    global_to_angular = torch.compile(healpix.global_to_angular, disable=not compile)
+
+    # Forward projection
+    xs, ys = angular_to_global(lon, lat)
+
+    # Inverse projection
+    lon_back, lat_back = global_to_angular(xs, ys)
+
+    # Check that we get back what we put in (within numerical precision)
+    assert torch.allclose(lon, lon_back, rtol=1e-5, atol=1e-5)
+    assert torch.allclose(lat, lat_back, rtol=1e-4, atol=1e-5)
+
+    # Test specific values at equator (z = 0)
+    equator_lon = torch.tensor([0.0])
+    equator_lat = torch.tensor([0.0])
+    xs_eq, ys_eq = angular_to_global(equator_lon, equator_lat)
+    assert torch.allclose(ys_eq, torch.tensor([0.0]), rtol=1e-5, atol=1e-5)
+
+    # Test specific values at poles (z = ±1)
+    pole_lon = torch.tensor([0.0])
+    pole_lat = torch.tensor([90.0])
+    xs_pole, ys_pole = angular_to_global(pole_lon, pole_lat)
+    assert torch.allclose(ys_pole, torch.tensor([np.pi / 2]), rtol=1e-5, atol=1e-5)
+
+
+@pytest.mark.parametrize('compile', [False, True])
+def test_ang2pix_python_implementation(compile: bool):
+    grid = healpix.Grid(8)
+    lat = torch.tensor([0.0])
+    lon = torch.tensor([0.0001])
+    ang2pix = torch.compile(grid.ang2pix, disable=not compile)
+    pix = ang2pix(lon, lat)
+    pix_from_healpix_bare = healpix_bare.ang2pix(grid.nside, lon, lat, lonlat=True)
+    assert torch.all(pix == pix_from_healpix_bare)
+
+    lat = torch.rand(100) * 180 - 90
+    lon = torch.rand(100) * 360
+    assert torch.all(ang2pix(lon, lat) == healpix_bare.ang2pix(grid.nside, lon, lat, lonlat=True))
+
+
+@pytest.mark.parametrize('compile', [False, True])
+def test_pix2ang(compile: bool):
+    grid = healpix.Grid(8)
+    pix = torch.arange(grid.shape[-1])
+    pix2ang = torch.compile(grid.pix2ang, disable=not compile)
+
+    assert torch.all(grid.ang2pix(*pix2ang(pix)) == pix)
+
+
+def test_ang2pix_assert_lat_lon_in_pixels():
+    """this test asserts that::
+
+    ang2pix(lat[pix], lon[pix]) == pix
+
+    """
+    grid = healpix.Grid(8)
+    lon = torch.from_numpy(grid.lon)
+    lat = torch.from_numpy(grid.lat)
+    pix = grid.ang2pix(lon, lat)
+    assert torch.all(pix == torch.arange(grid.shape[-1]))
+
+
+def test_xs_ys_to_xyf():
+    def _test(input, expected):
+        xs, ys = torch.tensor(input)
+
+        x, y, f = healpix.global_to_face(xs, ys)
+        xe, ye, fe = expected
+        assert torch.all(f == torch.tensor([fe]))
+        assert torch.allclose(x, torch.tensor([xe]))
+        assert torch.allclose(y, torch.tensor([ye]))
+
+    _test([math.pi / 4, math.pi / 4], [0.5, 0.5, 0])
+    _test([0.0, 0.0], [0.5, 0.5, 4])
+
+
+def test_face_to_global_roundtrip():
+    """Test round-trip accuracy of global_to_face and face_to_global."""
+    # Test with various xs, ys coordinates covering different regions
+    face = torch.arange(12)
+    x = torch.ones(12) * 0.5
+    y = torch.ones(12) * 0.5
+    xs, ys = healpix.face_to_global(x, y, face)
+    x_roundtrip, y_roundtrip, face_roundtrip = healpix.global_to_face(xs, ys)
+    assert torch.all(face_roundtrip == face)
+    assert torch.allclose(x_roundtrip, x)
+    assert torch.allclose(y_roundtrip, y)
+
+
+def test_latlon_regression(regtest):
+    grid = healpix.Grid(1)
+    ll = np.stack([grid.lon, grid.lat], axis=-1)
+    with regtest:
+        print("Longitude, latitude:\n")
+        np.savetxt(regtest, ll, fmt="%.3f", delimiter="\t")

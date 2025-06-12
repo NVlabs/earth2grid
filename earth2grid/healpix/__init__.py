@@ -25,6 +25,12 @@ From this notebook: https://colab.research.google.com/drive/1MzTyeNFiy-7RNY6UtGK
 
 
 from earth2grid.healpix._padding import PaddingBackends, pad, pad_backend, pad_with_dim
+from earth2grid.healpix.coordinates import (
+    angular_to_global,
+    face_to_global,
+    global_to_angular,
+    global_to_face,
+)
 from earth2grid.healpix.core import (
     HEALPIX_PAD_XY,
     XY,
@@ -48,27 +54,31 @@ from earth2grid.healpix.nn import conv2d
 from earth2grid.healpix.visualization import pcolormesh
 
 __all__ = [
-    "nside2level",
-    "npix2nside",
-    "npix2level",
-    "PaddingBackends",
-    "pad_backend",
-    "pad",
-    "pad_with_dim",
-    "reorder",
-    "Grid",
-    "PixelOrder",
-    "XY",
+    "angular_to_global",
     "Compass",
-    "zonal_average",
-    "to_double_pixelization",
-    "to_rotated_pixelization",
+    "conv2d",
+    "face_to_global",
+    "global_to_angular",
+    "global_to_face",
+    "Grid",
     "HEALPIX_PAD_XY",
-    "ring2xy",
-    "ring2double",
     "local2xy",
     "nest2xy",
-    "xy2xy",
-    "conv2d",
+    "npix2level",
+    "npix2nside",
+    "nside2level",
+    "pad_backend",
+    "pad_with_dim",
+    "pad",
+    "PaddingBackends",
     "pcolormesh",
+    "PixelOrder",
+    "reorder",
+    "ring2double",
+    "ring2xy",
+    "to_double_pixelization",
+    "to_rotated_pixelization",
+    "XY",
+    "xy2xy",
+    "zonal_average",
 ]

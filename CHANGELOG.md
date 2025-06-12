@@ -11,11 +11,18 @@ New APIs
   - pcolormesh
   - pad_with_dim
   - pad_context - switches between padding backends
+  - Grid.nside
+  - Grid.{ang2pix,pix2ang}
+  - Continuous coordinate transformations:
+    - angular_to_global
+    - global_to_angular
+    - global_to_face
+    - face_to_global
 - earth2grid.projections. Grids in arbitrary projections
 - earth2grid.yingyang
 
 Enhancements:
-  - pure python implementations of healpix padding and reordering operations,
+  - pure python implementations of most healpix bare operations,
     that are efficient on GPU when used with torch.compile
 
 Breaking changes:
