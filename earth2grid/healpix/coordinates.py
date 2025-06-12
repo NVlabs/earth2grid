@@ -78,9 +78,6 @@ def angular_to_global(lon: torch.Tensor, lat: torch.Tensor) -> tuple[torch.Tenso
     theta = torch.deg2rad(90 - lat)  # Convert to colatitude
     z = torch.cos(theta)
 
-    # Calculate φ_t = φ mod (π/2)
-    phi_t = phi % (math.pi / 2)
-
     # Calculate σ(z)
     # σ(z) = 2 - sqrt(3 * (1 - z))   for z > 0
     sigma_z = 2 - torch.sqrt(3 * (1 - torch.abs(z)))
@@ -98,6 +95,8 @@ def angular_to_global(lon: torch.Tensor, lat: torch.Tensor) -> tuple[torch.Tenso
     )
 
     # Calculate xs
+    # Calculate φ_t = φ mod (π/2)
+    phi_t = phi % (math.pi / 2)
     xs = torch.where(
         in_polar_cap,
         # xs = φ - (|σ(z)| - 1) * (φ_t - π/4)                 (28)
