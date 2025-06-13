@@ -20,54 +20,144 @@
 #ifndef __HEALPIX_H__
 #define __HEALPIX_H__
 
+// Support vector lengths up to 128-bit
+template<int BYTES>
+struct RawVec { using type = void; };
+
+template<> struct RawVec<2>  { using type = uint16_t; };
+template<> struct RawVec<4>  { using type = uint32_t; };
+template<> struct RawVec<8>  { using type = uint2; };
+template<> struct RawVec<16> { using type = uint4; };
+
+template<typename T, int W>
+using VecT_t = typename RawVec<sizeof(T) * W>::type;
+
+// CUDA vector wrapper struct providing basic element-wise arithmetic operations
+template<typename T,int W>
+struct VecW {
+    using VecT = VecT_t<T,W>;
+    VecT data;
+
+    VecW() = default;
+
+    __device__ VecW(const T& val) {
+        #pragma unroll
+        for (int i = 0; i < W; i++) {
+            lane(i) = val;
+        }
+    }
+
+    __device__ inline T lane(int i) const {
+        return reinterpret_cast<const T*>(&data)[i];
+    }
+    __device__ inline T& lane(int i) {
+        return reinterpret_cast<T*>(&data)[i];
+    }
+
+    __device__ VecW operator+(const VecW& b) const {
+        VecW out;
+#pragma unroll
+        for(int i=0;i<W;++i) {
+            out.lane(i)=lane(i)+b.lane(i);
+        }
+        return out;
+    }
+    __device__ VecW& operator+=(const VecW& b) {
+#pragma unroll
+        for(int i=0;i<W;++i) {
+            lane(i) += b.lane(i);
+        }
+        return *this;
+    }
+    __device__ VecW operator*(T s) const {
+        VecW out;
+#pragma unroll
+        for(int i=0;i<W;++i) {
+            out.lane(i) = lane(i)*s;
+        }
+        return out;
+    }
+    __device__ VecW operator/(T s) const {
+        VecW out;
+#pragma unroll
+        for(int i=0;i<W;++i) {
+            out.lane(i) = lane(i)/s;
+        }
+        return out;
+    }
+};
+
+// Checks whether datatype and vector length pair is allowed
+template<typename S, int W>
+constexpr bool vec_supported()
+{
+    return !std::is_same<VecT_t<S,W>, void>::value;
+}
+
+// Checks pointer alignment by bytes, which is a power of 2
+inline bool aligned(const void* p, std::size_t bytes)
+{
+    return (reinterpret_cast<std::uintptr_t>(p) & (bytes-1)) == 0;
+}
+
 template<typename T>
-struct VecTraits {
-    using VecT = T;
-    static constexpr int LANE_WIDTH = 1;
-};
+__host__ int get_best_vector_width(
+    bool channels_last,
+    int dimK,
+    int dimM,
+    const void* input_ptr,
+    const void* output_ptr)
+{
+    // Check vector widths in descending order with compile-time constants
+    if (vec_supported<T, 8>() &&
+        ((channels_last ? dimK : dimM) & 7) == 0 &&
+        aligned(input_ptr, 8*sizeof(T)) &&
+        aligned(output_ptr, 8*sizeof(T))) {
+        return 8;
+    }
 
-template<>
-struct VecTraits<double> {
-    using VecT = double2;
-    static constexpr int LANE_WIDTH = 2;
-};
+    if (vec_supported<T, 4>() &&
+        ((channels_last ? dimK : dimM) & 3) == 0 &&
+        aligned(input_ptr, 4*sizeof(T)) &&
+        aligned(output_ptr, 4*sizeof(T))) {
+        return 4;
+    }
 
-template<>
-struct VecTraits<float> {
-    using VecT = float4;
-    static constexpr int LANE_WIDTH = 4;
-};
+    if (vec_supported<T, 2>() &&
+        ((channels_last ? dimK : dimM) & 1) == 0 &&
+        aligned(input_ptr, 2*sizeof(T)) &&
+        aligned(output_ptr, 2*sizeof(T))) {
+        return 2;
+    }
 
-template<>
-struct VecTraits<at::Half> {
-    using VecT = uint4;
-    static constexpr int LANE_WIDTH = 8;
-};
+    return 1;  // Fallback to scalar
+}
 
-template<>
-struct VecTraits<at::BFloat16> {
-    using VecT = uint4;
-    static constexpr int LANE_WIDTH = 8;
-};
-
-template<typename REAL_T, bool CHANNELS_LAST>
-__device__ const REAL_T& getElem(const torch::PackedTensorAccessor32<REAL_T, 5, torch::RestrictPtrTraits> sphr,
+// Get const pointer for reading to element in a 5D (B, F, C, H, W) tensor
+template<typename REAL_T, bool CHANNELS_LAST, int W = 1>
+__device__ const VecW<REAL_T, W>* getElem(const torch::PackedTensorAccessor32<REAL_T, 5, torch::RestrictPtrTraits> sphr,
                const int i, const int j, const int k, const int l, const int m) {
+    const REAL_T* ptr;
     if constexpr(CHANNELS_LAST) {
-        return sphr[i][j][l][m][k];
+        ptr = &sphr[i][j][l][m][k]; // k (channels) is innermost dim
     } else {
-        return sphr[i][j][k][l][m];
+        ptr = &sphr[i][j][k][l][m]; // m (spatial) is innermost dim
     }
+    return reinterpret_cast<const VecW<REAL_T, W>*>(ptr);
 }
 
-template<typename REAL_T, bool CHANNELS_LAST>
-__device__ REAL_T& getElemMutable(torch::PackedTensorAccessor32<REAL_T, 5, torch::RestrictPtrTraits> sphr,
+// Mutable version of getElem for writing to element in a 5D (B, F, C, H, W) tensor
+template<typename REAL_T, bool CHANNELS_LAST, int W = 1>
+__device__ VecW<REAL_T, W>* getElemMutable(torch::PackedTensorAccessor32<REAL_T, 5, torch::RestrictPtrTraits> sphr,
                 const int i, const int j, const int k, const int l, const int m) {
+    REAL_T* ptr;
     if constexpr(CHANNELS_LAST) {
-        return sphr[i][j][l][m][k];
+        ptr = &sphr[i][j][l][m][k];  // k (channels) is innermost dim
     } else {
-        return sphr[i][j][k][l][m];
+        ptr = &sphr[i][j][k][l][m];  // m (spatial) is innermost dim
     }
+    return reinterpret_cast<VecW<REAL_T, W>*>(ptr);
 }
+
 
 #endif
