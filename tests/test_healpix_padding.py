@@ -100,3 +100,44 @@ def test_healpix_pad(backend, device):
     out.mean().backward()
     assert out.shape == (n, ntile, nside + padding * 2, nside + padding * 2)
     assert x.grad.shape == (n, ntile, nside, nside)
+
+
+# Validate CUDA routine against pure python reference
+@pytest.mark.parametrize("nchannels", [1, 2, 4, 8, 12, 32, 33])
+@pytest.mark.parametrize("padding", [1, 2])
+@pytest.mark.parametrize("nside", [4, 8, 16])
+@pytest.mark.parametrize("offset", [0, 1])
+@pytest.mark.parametrize("dtype", [torch.float64, torch.float32, torch.bfloat16, torch.float16])
+def test_healpix_pad_cuda_channels_last(nchannels, padding, nside, offset, dtype):
+    if not torch.cuda.is_available():
+        pytest.skip("CUDA not available.")
+
+    # Setup input tensors
+    ntile = 12
+    n = 3
+    x = torch.randn([n * ntile * nchannels * nside * nside + offset], device="cuda", dtype=dtype)
+    x = x[offset:].reshape([n, ntile, nchannels, nside, nside])
+
+    inputs = {
+        'cuda_standard': x.clone().requires_grad_(True),
+        'cuda_channels_last': x.permute(0, 1, 3, 4, 2).contiguous().permute(0, 1, 4, 2, 3).requires_grad_(True),
+        'python_ref': x.clone().requires_grad_(True),
+    }
+
+    # Verify forward pass outputs match
+    outputs = {}
+    with pad_backend(PaddingBackends.cuda):
+        outputs['cuda_standard'] = pad(inputs['cuda_standard'], padding=padding)
+        outputs['cuda_channels_last'] = pad(inputs['cuda_channels_last'], padding=padding)
+    with pad_backend(PaddingBackends.indexing):
+        outputs['python_ref'] = pad(inputs['python_ref'], padding=padding)
+
+    assert torch.allclose(outputs['cuda_standard'], outputs['python_ref'])
+    assert torch.allclose(outputs['cuda_channels_last'], outputs['python_ref'])
+
+    # Verify backward pass gradients match
+    for out in outputs.values():
+        out.sum().backward()
+
+    assert torch.allclose(inputs['cuda_standard'].grad, inputs['python_ref'].grad)
+    assert torch.allclose(inputs['cuda_channels_last'].grad, inputs['python_ref'].grad)

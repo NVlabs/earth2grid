@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
  *
- * Written by Mauro Bisson <maurob@nvidia.com> and THorsten Kurth <tkurth@nvidia.com>
+ * Written by Mauro Bisson <maurob@nvidia.com> and Thorsten Kurth <tkurth@nvidia.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,9 +27,6 @@
 
 #define THREADS  64
 
-#define MIN(x,y) (((x)<(y))?(x):(y))
-#define MAX(x,y) (((x)>(y))?(x):(y))
-
 #define DIV_UP(a,b) (((a)+((b)-1))/(b))
 
 // All coordinates are w.r.t. a face[dimK][dimL][dimM]:
@@ -50,644 +47,571 @@
 //
 // Along the k-axis, dimJ=12 faces form a "sphere" and
 // we have in total dimI sphere in the buffers
-
-template<typename VAL_T>
+template<typename VAL_T, bool CHANNELS_LAST, int W = 1>
 __global__ void HEALPixPadBck_bulk_k(const int padSize,
 				     const int dimI,
 				     const int dimJ,
 				     const int dimK,
 				     const int dimL,
 				     const int dimM,
-				     const VAL_T *__restrict__ vin,
-				     VAL_T *__restrict__ vout) {
+				     const torch::PackedTensorAccessor32<VAL_T, 5, torch::RestrictPtrTraits> vin,
+             torch::PackedTensorAccessor32<VAL_T, 5, torch::RestrictPtrTraits> vout) {
+  using VecT = VecW<VAL_T, W>;
 
   const long long tid = ((long long)blockIdx.x)*blockDim.x + threadIdx.x;
-
-  if (tid >= ((long long)dimI)*dimJ*dimK*dimL*dimM) {
+  if (tid >= ((long long)dimI)*dimJ*dimK*dimL*dimM / W) {
     return;
   }
 
-  const long long sliceId = tid / (dimM*dimL);
+  const int dimKVec = CHANNELS_LAST ? dimK / W : dimK;
+  const int dimMVec = CHANNELS_LAST ? dimM : dimM / W;
 
-  const int i = (tid % (dimM*dimL)) / dimM;
-  const int j = (tid % (dimM*dimL)) % dimM;
+  // compute individual indices
+  int i,j,k,l,m;
+  if constexpr (CHANNELS_LAST) {
+    k = (tid % dimKVec) * W;
+    m = (tid / dimKVec) % dimM;
+    l = (tid / (dimKVec * dimM)) % dimL;
+    j = (tid / (dimKVec * dimM * dimL)) % dimJ;
+    i =  tid / (dimKVec * dimM * dimL * dimJ);
+  } else {
+    m = (tid % dimMVec) * W;
+    l = (tid / dimMVec) % dimL;
+    k = (tid / (dimMVec * dimL)) % dimK;
+    j = (tid / (dimMVec * dimL * dimK)) % dimJ;
+    i =  tid / (dimMVec * dimL * dimK * dimJ);
+  }
 
-  const int dimLI = dimL + 2*padSize;
-  const int dimMI = dimM + 2*padSize;
+  VecT* dst = getElemMutable<VAL_T, CHANNELS_LAST, W>(vout, i, j, k, l, m);
 
-  vout[sliceId*dimM*dimL + i*dimM + j] = vin[sliceId*dimLI*dimMI + (padSize+i)*dimMI + padSize+j];
-
-  return;
+  if (!CHANNELS_LAST && ((padSize & (W - 1)) != 0)) {
+    // Load unvectorized as padding breaks input alignment
+    VecT tmp;
+#pragma unroll
+    for (int w = 0; w < W; ++w) {
+        tmp.lane(w) = getElem<VAL_T, CHANNELS_LAST>(vin, i, j, k, padSize+l, padSize+m+w)->lane(0);
+    }
+    *dst = tmp;
+  } else {
+    // src and dst are both aligned
+    *dst = *getElem<VAL_T, CHANNELS_LAST, W>(vin, i, j, k, padSize+l, padSize+m);
+  }
 }
 
-// faces functions
-
-template<typename VAL_T>
-__device__ VAL_T getTopFaceElem_d(const int k,
-				  const int m,
-				  const int dimL,
-				  const int dimM,
-				  const VAL_T *__restrict__ facePtr) {
-
-  return facePtr[k*dimL*dimM + m];
-}
-
-template<typename VAL_T>
-__device__ VAL_T getBottomFaceElem_d(const int k,
-				     const int m,
-				     const int dimL,
-				     const int dimM,
-				     const VAL_T *__restrict__ facePtr) {
-
-  return facePtr[k*dimL*dimM + (dimL-1)*dimM + m];
-}
-
-template<typename VAL_T>
-__device__ VAL_T getLeftFaceElem_d(const int k,
-				   const int l,
-				   const int dimL,
-				   const int dimM,
-				   const VAL_T *__restrict__ facePtr) {
-
-  return facePtr[k*dimL*dimM + l*dimM];
-}
-
-template<typename VAL_T>
-__device__ VAL_T getRightFaceElem_d(const int k,
-				    const int l,
-				    const int dimL,
-				    const int dimM,
-				    const VAL_T *__restrict__ facePtr) {
-
-  return facePtr[k*dimL*dimM + l*dimM + dimM-1];
-}
-
-template<typename VAL_T>
-__device__ VAL_T getT_d(const int padSize,
+template<typename VAL_T, bool CHANNELS_LAST, int W = 1>
+__device__ VecW<VAL_T, W> getT_d(const int padSize,
 			const int k,
 			const int p,
 			const int m,
 			const int dimL,
 			const int dimM,
 			const int faceId,
-			const int faceLen,
-			const VAL_T *__restrict__ sphrPtr) {
+			const int sphrId,
+			const torch::PackedTensorAccessor32<VAL_T, 5, torch::RestrictPtrTraits> sphr) {
 
-  VAL_T ret = VAL_T(0);
+  auto ret = VecW<VAL_T, W>(VAL_T(0));
 
   switch(faceId) {
     // north faces
-  case  0: ret = getLeftFaceElem_d(k, m, dimL, dimM, sphrPtr + 1*faceLen + padSize*dimM + p); break;
-  case  1: ret = getLeftFaceElem_d(k, m, dimL, dimM, sphrPtr + 2*faceLen + padSize*dimM + p); break;
-  case  2: ret = getLeftFaceElem_d(k, m, dimL, dimM, sphrPtr + 3*faceLen + padSize*dimM + p); break;
-  case  3: ret = getLeftFaceElem_d(k, m, dimL, dimM, sphrPtr + 0*faceLen + padSize*dimM + p); break;
+  case  0: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 1, k, padSize+m, p); break;
+  case  1: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 2, k, padSize+m, p); break;
+  case  2: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 3, k, padSize+m, p); break;
+  case  3: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 0, k, padSize+m, p); break;
     // center faces
-  case  4: ret = getBottomFaceElem_d(k, m, dimL, dimM, sphrPtr + 0*faceLen + padSize - p*dimM); break;
-  case  5: ret = getBottomFaceElem_d(k, m, dimL, dimM, sphrPtr + 1*faceLen + padSize - p*dimM); break;
-  case  6: ret = getBottomFaceElem_d(k, m, dimL, dimM, sphrPtr + 2*faceLen + padSize - p*dimM); break;
-  case  7: ret = getBottomFaceElem_d(k, m, dimL, dimM, sphrPtr + 3*faceLen + padSize - p*dimM); break;
+  case  4: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 0, k, dimL-1-p, padSize+m); break;
+  case  5: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 1, k, dimL-1-p, padSize+m); break;
+  case  6: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 2, k, dimL-1-p, padSize+m); break;
+  case  7: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 3, k, dimL-1-p, padSize+m); break;
     // south faces
-  case  8: ret = getBottomFaceElem_d(k, m, dimL, dimM, sphrPtr + 5*faceLen + padSize - p*dimM); break;
-  case  9: ret = getBottomFaceElem_d(k, m, dimL, dimM, sphrPtr + 6*faceLen + padSize - p*dimM); break;
-  case 10: ret = getBottomFaceElem_d(k, m, dimL, dimM, sphrPtr + 7*faceLen + padSize - p*dimM); break;
-  case 11: ret = getBottomFaceElem_d(k, m, dimL, dimM, sphrPtr + 4*faceLen + padSize - p*dimM); break;
+  case  8: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 5, k, dimL-1-p, padSize+m); break;
+  case  9: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 6, k, dimL-1-p, padSize+m); break;
+  case 10: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 7, k, dimL-1-p, padSize+m); break;
+  case 11: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 4, k, dimL-1-p, padSize+m); break;
   }
   return ret;
 }
 
-template<typename VAL_T>
-__device__ VAL_T getB_d(const int padSize,
+template<typename VAL_T, bool CHANNELS_LAST, int W = 1>
+__device__ VecW<VAL_T, W> getB_d(const int padSize,
 			const int k,
 			const int p,
 			const int m,
 			const int dimL,
 			const int dimM,
 			const int faceId,
-			const int faceLen,
-			const VAL_T *__restrict__ sphrPtr) {
+			const int sphrId,
+			const torch::PackedTensorAccessor32<VAL_T, 5, torch::RestrictPtrTraits> sphr) {
 
-  VAL_T ret = VAL_T(0);
+  auto ret = VecW<VAL_T, W>(VAL_T(0));
 
   switch(faceId) {
     // north faces
-  case  0: ret = getTopFaceElem_d(k, m, dimL, dimM, sphrPtr + 4*faceLen + padSize + p*dimM); break;
-  case  1: ret = getTopFaceElem_d(k, m, dimL, dimM, sphrPtr + 5*faceLen + padSize + p*dimM); break;
-  case  2: ret = getTopFaceElem_d(k, m, dimL, dimM, sphrPtr + 6*faceLen + padSize + p*dimM); break;
-  case  3: ret = getTopFaceElem_d(k, m, dimL, dimM, sphrPtr + 7*faceLen + padSize + p*dimM); break;
+  case  0: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  4, k, p, padSize+m); break;
+  case  1: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  5, k, p, padSize+m); break;
+  case  2: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  6, k, p, padSize+m); break;
+  case  3: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  7, k, p, padSize+m); break;
     // center faces
-  case  4: ret = getTopFaceElem_d(k, m, dimL, dimM, sphrPtr + 11*faceLen + padSize + p*dimM); break;
-  case  5: ret = getTopFaceElem_d(k, m, dimL, dimM, sphrPtr +  8*faceLen + padSize + p*dimM); break;
-  case  6: ret = getTopFaceElem_d(k, m, dimL, dimM, sphrPtr +  9*faceLen + padSize + p*dimM); break;
-  case  7: ret = getTopFaceElem_d(k, m, dimL, dimM, sphrPtr + 10*faceLen + padSize + p*dimM); break;
+  case  4: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 11, k, p, padSize+m); break;
+  case  5: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  8, k, p, padSize+m); break;
+  case  6: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  9, k, p, padSize+m); break;
+  case  7: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 10, k, p, padSize+m); break;
     // south faces
-  case  8: ret = getRightFaceElem_d(k, m, dimL, dimM, sphrPtr + 11*faceLen + padSize*dimM - p); break;
-  case  9: ret = getRightFaceElem_d(k, m, dimL, dimM, sphrPtr +  8*faceLen + padSize*dimM - p); break;
-  case 10: ret = getRightFaceElem_d(k, m, dimL, dimM, sphrPtr +  9*faceLen + padSize*dimM - p); break;
-  case 11: ret = getRightFaceElem_d(k, m, dimL, dimM, sphrPtr + 10*faceLen + padSize*dimM - p); break;
+  case  8: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 11, k, padSize+m, dimM-1-p); break;
+  case  9: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  8, k, padSize+m, dimM-1-p); break;
+  case 10: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  9, k, padSize+m, dimM-1-p); break;
+  case 11: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 10, k, padSize+m, dimM-1-p); break;
   }
   return ret;
 }
 
-template<typename VAL_T>
-__device__ VAL_T getL_d(const int padSize,
+template<typename VAL_T, bool CHANNELS_LAST, int W = 1>
+__device__ VecW<VAL_T, W> getL_d(const int padSize,
 			const int k,
 			const int p,
 			const int m,
 			const int dimL,
 			const int dimM,
 			const int faceId,
-			const int faceLen,
-			const VAL_T *__restrict__ sphrPtr) {
+			const int sphrId,
+      const torch::PackedTensorAccessor32<VAL_T, 5, torch::RestrictPtrTraits> sphr) {
 
-  VAL_T ret = VAL_T(0);
+  auto ret = VecW<VAL_T, W>(VAL_T(0));
 
   switch(faceId) {
     // north faces
-  case  0: ret = getTopFaceElem_d(k, m, dimL, dimM, sphrPtr + 3*faceLen + padSize + p*dimM); break;
-  case  1: ret = getTopFaceElem_d(k, m, dimL, dimM, sphrPtr + 0*faceLen + padSize + p*dimM); break;
-  case  2: ret = getTopFaceElem_d(k, m, dimL, dimM, sphrPtr + 1*faceLen + padSize + p*dimM); break;
-  case  3: ret = getTopFaceElem_d(k, m, dimL, dimM, sphrPtr + 2*faceLen + padSize + p*dimM); break;
+  case  0: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  3, k, p, padSize+m); break;
+  case  1: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  0, k, p, padSize+m); break;
+  case  2: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  1, k, p, padSize+m); break;
+  case  3: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  2, k, p, padSize+m); break;
     // center faces
-  case  4: ret = getRightFaceElem_d(k, m, dimL, dimM, sphrPtr + 3*faceLen + padSize*dimM - p); break;
-  case  5: ret = getRightFaceElem_d(k, m, dimL, dimM, sphrPtr + 0*faceLen + padSize*dimM - p); break;
-  case  6: ret = getRightFaceElem_d(k, m, dimL, dimM, sphrPtr + 1*faceLen + padSize*dimM - p); break;
-  case  7: ret = getRightFaceElem_d(k, m, dimL, dimM, sphrPtr + 2*faceLen + padSize*dimM - p); break;
+  case  4: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  3, k, padSize+m, dimM-1-p); break;
+  case  5: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  0, k, padSize+m, dimM-1-p); break;
+  case  6: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  1, k, padSize+m, dimM-1-p); break;
+  case  7: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  2, k, padSize+m, dimM-1-p); break;
     // south faces
-  case  8: ret = getRightFaceElem_d(k, m, dimL, dimM, sphrPtr + 4*faceLen + padSize*dimM - p); break;
-  case  9: ret = getRightFaceElem_d(k, m, dimL, dimM, sphrPtr + 5*faceLen + padSize*dimM - p); break;
-  case 10: ret = getRightFaceElem_d(k, m, dimL, dimM, sphrPtr + 6*faceLen + padSize*dimM - p); break;
-  case 11: ret = getRightFaceElem_d(k, m, dimL, dimM, sphrPtr + 7*faceLen + padSize*dimM - p); break;
+  case  8: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  4, k, padSize+m, dimM-1-p); break;
+  case  9: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  5, k, padSize+m, dimM-1-p); break;
+  case 10: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  6, k, padSize+m, dimM-1-p); break;
+  case 11: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  7, k, padSize+m, dimM-1-p); break;
   }
   return ret;
 }
 
-template<typename VAL_T>
-__device__ VAL_T getR_d(const int padSize,
+template<typename VAL_T, bool CHANNELS_LAST, int W = 1>
+__device__ VecW<VAL_T, W> getR_d(const int padSize,
 			const int k,
 			const int p,
 			const int m,
 			const int dimL,
 			const int dimM,
 			const int faceId,
-			const int faceLen,
-			const VAL_T *__restrict__ sphrPtr) {
+			const int sphrId,
+      const torch::PackedTensorAccessor32<VAL_T, 5, torch::RestrictPtrTraits> sphr) {
 
-  VAL_T ret = VAL_T(0);
+  auto ret = VecW<VAL_T, W>(VAL_T(0));
 
   switch(faceId) {
     // north faces
-  case  0: ret = getLeftFaceElem_d(k, m, dimL, dimM, sphrPtr + 5*faceLen + padSize*dimM + p); break;
-  case  1: ret = getLeftFaceElem_d(k, m, dimL, dimM, sphrPtr + 6*faceLen + padSize*dimM + p); break;
-  case  2: ret = getLeftFaceElem_d(k, m, dimL, dimM, sphrPtr + 7*faceLen + padSize*dimM + p); break;
-  case  3: ret = getLeftFaceElem_d(k, m, dimL, dimM, sphrPtr + 4*faceLen + padSize*dimM + p); break;
+  case  0: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  5, k, padSize+m, p); break;
+  case  1: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  6, k, padSize+m, p); break;
+  case  2: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  7, k, padSize+m, p); break;
+  case  3: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  4, k, padSize+m, p); break;
     // center faces
-  case  4: ret = getLeftFaceElem_d(k, m, dimL, dimM, sphrPtr +  8*faceLen + padSize*dimM + p); break;
-  case  5: ret = getLeftFaceElem_d(k, m, dimL, dimM, sphrPtr +  9*faceLen + padSize*dimM + p); break;
-  case  6: ret = getLeftFaceElem_d(k, m, dimL, dimM, sphrPtr + 10*faceLen + padSize*dimM + p); break;
-  case  7: ret = getLeftFaceElem_d(k, m, dimL, dimM, sphrPtr + 11*faceLen + padSize*dimM + p); break;
+  case  4: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  8, k, padSize+m, p); break;
+  case  5: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  9, k, padSize+m, p); break;
+  case  6: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 10, k, padSize+m, p); break;
+  case  7: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 11, k, padSize+m, p); break;
     // south faces
-  case  8: ret = getBottomFaceElem_d(k, m, dimL, dimM, sphrPtr +  9*faceLen + padSize - p*dimM); break;
-  case  9: ret = getBottomFaceElem_d(k, m, dimL, dimM, sphrPtr + 10*faceLen + padSize - p*dimM); break;
-  case 10: ret = getBottomFaceElem_d(k, m, dimL, dimM, sphrPtr + 11*faceLen + padSize - p*dimM); break;
-  case 11: ret = getBottomFaceElem_d(k, m, dimL, dimM, sphrPtr +  8*faceLen + padSize - p*dimM); break;
+  case  8: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  9, k, dimL-1-p, padSize+m); break;
+  case  9: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 10, k, dimL-1-p, padSize+m); break;
+  case 10: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 11, k, dimL-1-p, padSize+m); break;
+  case 11: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  8, k, dimL-1-p, padSize+m); break;
   }
   return ret;
 }
 
-template<typename VAL_T>
+template<typename VAL_T, bool CHANNELS_LAST, int W = 1>
 __global__ void HEALPixPadBck_haloTB_k(const int padSize,
 				       const int dimI,
 				       const int dimJ, // = 12
 				       const int dimK,
 				       const int dimL,
 				       const int dimM,
-				       const VAL_T *__restrict__ vin,
-				       VAL_T *__restrict__ vout) {
+				       const torch::PackedTensorAccessor32<VAL_T, 5, torch::RestrictPtrTraits> vin,
+				       torch::PackedTensorAccessor32<VAL_T, 5, torch::RestrictPtrTraits> vout) {
 
   const long long tid = ((long long)blockIdx.x)*blockDim.x + threadIdx.x;
 
-  if (tid >= dimI*dimJ*dimK*dimM*padSize) {
+  const int dimKVec = CHANNELS_LAST ? dimK / W : dimK; // only vectorized for channels_last
+  if (tid >= dimI*dimJ*dimKVec*dimM*padSize) {
     return;
   }
 
-  const long long sphrId = tid / (dimJ*dimK*dimM*padSize);
-  const long long faceId = (tid - sphrId*(dimJ*dimK*dimM*padSize)) / (dimK*dimM*padSize);
+  const long long sphrId = tid / (dimJ*dimKVec*dimM*padSize);
+  const long long faceId = (tid - sphrId*(dimJ*dimKVec*dimM*padSize)) / (dimKVec*dimM*padSize);
 
   const int dimLI = dimL + 2*padSize;
   const int dimMI = dimM + 2*padSize;
 
-  const long long faceLenI = ((long long)dimK)*dimLI*dimMI;
-  const long long faceLenO = ((long long)dimK)*dimL *dimM;
-
-  const VAL_T *__restrict__ sphrPtrI = vin  +  sphrId*dimJ          *faceLenI;
-  VAL_T *__restrict__ facePtrO = vout + (sphrId*dimJ + faceId)*faceLenO;
-
-  const int k = (tid / (padSize*dimM)) % dimK;
-  const int p = (tid /          dimM)  % padSize;
-  const int m =  tid                   % dimM;
+  int k, p, m;
+  if constexpr (CHANNELS_LAST) {
+    k =  tid % dimKVec * W;
+    p = (tid / dimKVec)             % padSize;
+    m = (tid / (dimKVec * padSize)) % dimM;
+  } else {
+    m =  tid % dimM;
+    p = (tid / dimM)             % padSize;
+    k = (tid / (dimM * padSize)) % dimK;
+  }
 
   // copy top    face
   // copy bottom face
-  facePtrO[k*dimL*dimM +    (padSize-1)*dimM + m - p*dimM] += getT_d(padSize, k, p, m, dimLI, dimMI, faceId, faceLenI, sphrPtrI);
-  facePtrO[k*dimL*dimM + (dimL-padSize)*dimM + m + p*dimM] += getB_d(padSize, k, p, m, dimLI, dimMI, faceId, faceLenI, sphrPtrI);
+  *getElemMutable<VAL_T, CHANNELS_LAST, W>(vout, sphrId, faceId, k,   padSize-1-p, m) \
+    += getT_d<VAL_T, CHANNELS_LAST, W>(padSize, k, p, m, dimLI, dimMI, faceId, sphrId, vin);
+  *getElemMutable<VAL_T, CHANNELS_LAST, W>(vout, sphrId, faceId, k, dimL-padSize+p, m) \
+    += getB_d<VAL_T, CHANNELS_LAST, W>(padSize, k, p, m, dimLI, dimMI, faceId, sphrId, vin);
 
   return;
 }
 
-template<typename VAL_T>
+template<typename VAL_T, bool CHANNELS_LAST, int W = 1>
 __global__ void HEALPixPadBck_haloLR_k(const int padSize,
 				       const int dimI,
 				       const int dimJ, // = 12
 				       const int dimK,
 				       const int dimL,
 				       const int dimM,
-				       const VAL_T *__restrict__ vin,
-				       VAL_T *__restrict__ vout) {
+				       const torch::PackedTensorAccessor32<VAL_T, 5, torch::RestrictPtrTraits> vin,
+               torch::PackedTensorAccessor32<VAL_T, 5, torch::RestrictPtrTraits> vout) {
 
   const long long tid = ((long long)blockIdx.x)*blockDim.x + threadIdx.x;
 
-  if (tid >= ((long long)dimI)*dimJ*dimK*dimM*padSize) {
+  const int dimKVec = CHANNELS_LAST ? dimK / W : dimK; // only vectorized for channels_last
+  if (tid >= ((long long)dimI)*dimJ*dimKVec*dimM*padSize) {
     return;
   }
 
-  const long long sphrId = tid / (dimJ*dimK*dimM*padSize);
-  const long long faceId = (tid - sphrId*(dimJ*dimK*dimM*padSize)) / (dimK*dimM*padSize);
+  const long long sphrId = tid / (dimJ*dimKVec*dimM*padSize);
+  const long long faceId = (tid - sphrId*(dimJ*dimKVec*dimM*padSize)) / (dimKVec*dimM*padSize);
 
   const int dimLI = dimL + 2*padSize;
   const int dimMI = dimM + 2*padSize;
 
-  const long long faceLenI = ((long long)dimK)*dimLI*dimMI;
-  const long long faceLenO = ((long long)dimK)*dimL *dimM;
-
-  const VAL_T *__restrict__ sphrPtrI = vin  +  sphrId*dimJ          *faceLenI;
-  VAL_T *__restrict__ facePtrO = vout + (sphrId*dimJ + faceId)*faceLenO;
-
-  const int k = (tid / (padSize*dimM)) % dimK;
-  const int p = (tid /          dimM)  % padSize;
-  const int m =  tid                   % dimM;
+  int k, p, m;
+  if constexpr (CHANNELS_LAST) {
+    k =  tid % dimKVec * W;
+    p = (tid / dimKVec)             % padSize;
+    m = (tid / (dimKVec * padSize)) % dimM;
+  } else {
+    m =  tid % dimM;
+    p = (tid / dimM)             % padSize;
+    k = (tid / (dimM * padSize)) % dimK;
+  }
 
   // copy left   face
   // copy right  face
-  facePtrO[k*dimL*dimM + m*dimM +    padSize-1 - p] += getL_d(padSize, k, p, m, dimLI, dimMI, faceId, faceLenI, sphrPtrI);
-  facePtrO[k*dimL*dimM + m*dimM + dimM-padSize + p] += getR_d(padSize, k, p, m, dimLI, dimMI, faceId, faceLenI, sphrPtrI);
+  *getElemMutable<VAL_T, CHANNELS_LAST, W>(vout, sphrId, faceId, k, m, padSize-1-p) \
+    += getL_d<VAL_T, CHANNELS_LAST, W>(padSize, k, p, m, dimLI, dimMI, faceId, sphrId, vin);
+  *getElemMutable<VAL_T, CHANNELS_LAST, W>(vout, sphrId, faceId, k, m, dimM-padSize+p) \
+    += getR_d<VAL_T, CHANNELS_LAST, W>(padSize, k, p, m, dimLI, dimMI, faceId, sphrId, vin);
 
   return;
 }
 
-// corners functions
-
-template<typename VAL_T>
-__device__ VAL_T getTopLeftCornerElem_d(const int k,
-					const int dimL,
-					const int dimM,
-					const VAL_T *__restrict__ facePtr) {
-
-  return facePtr[k*dimL*dimM];
-}
-
-template<typename VAL_T>
-__device__ VAL_T getTopRightCornerElem_d(const int k,
-					 const int dimL,
-					 const int dimM,
-					 const VAL_T *__restrict__ facePtr) {
-
-  return facePtr[k*dimL*dimM + dimM-1];
-}
-
-template<typename VAL_T>
-__device__ VAL_T getBottomLeftCornerElem_d(const int k,
-					   const int dimL,
-					   const int dimM,
-					   const VAL_T *__restrict__ facePtr) {
-
-  return facePtr[k*dimL*dimM + (dimL-1)*dimM];
-}
-
-template<typename VAL_T>
-__device__ VAL_T getBottomRightCornerElem_d(const int k,
-					    const int dimL,
-					    const int dimM,
-					    const VAL_T *__restrict__ facePtr) {
-
-  return facePtr[k*dimL*dimM + dimL*dimM-1];
-}
-
-template<typename VAL_T>
-__device__ VAL_T getTL_d(const int padSize,
+template<typename VAL_T, bool CHANNELS_LAST, int W = 1>
+__device__ VecW<VAL_T, W> getTL_d(const int padSize,
 			 const int p,
 			 const int q,
 			 const int k,
 			 const int dimL,
 			 const int dimM,
 			 const int faceId,
-			 const int faceLen,
-			 const VAL_T *__restrict__ sphrPtr) {
+			 const int sphrId,
+			 const torch::PackedTensorAccessor32<VAL_T, 5, torch::RestrictPtrTraits> sphr) {
 
-  VAL_T ret = VAL_T(0);
+  auto ret = VecW<VAL_T, W>(VAL_T(0));
 
   const int pinv = padSize-1 - p;
   const int qinv = padSize-1 - q;
 
-  // offset from neighbor's corner
-  // for non equatorial faces
-  const int padOff = pinv*dimM + qinv;
-
   switch(faceId) {
     // north faces
-  case  0: ret = getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 2*faceLen + padOff); break;
-  case  1: ret = getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 3*faceLen + padOff); break;
-  case  2: ret = getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 0*faceLen + padOff); break;
-  case  3: ret = getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 1*faceLen + padOff); break;
+  case  0: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 2, k, pinv, qinv); break;
+  case  1: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 3, k, pinv, qinv); break;
+  case  2: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 0, k, pinv, qinv); break;
+  case  3: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 1, k, pinv, qinv); break;
     // center faces
   case  4:
   case  5:
   case  6:
   case  7: break;
     // south faces
-  case  8: ret = getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr + 0*faceLen - padOff); break;
-  case  9: ret = getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr + 1*faceLen - padOff); break;
-  case 10: ret = getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr + 2*faceLen - padOff); break;
-  case 11: ret = getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr + 3*faceLen - padOff); break;
+  case  8: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 0, k, dimL-pinv, -qinv-1); break;
+  case  9: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 1, k, dimL-pinv, -qinv-1); break;
+  case 10: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 2, k, dimL-pinv, -qinv-1); break;
+  case 11: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 3, k, dimL-pinv, -qinv-1); break;
   }
   return ret;
 }
 
-template<typename VAL_T>
-__device__ VAL_T getTR_d(const int padSize,
+template<typename VAL_T, bool CHANNELS_LAST, int W = 1>
+__device__ VecW<VAL_T, W> getTR_d(const int padSize,
 			 const int p,
 			 const int q,
 			 const int k,
 			 const int dimL,
 			 const int dimM,
 			 const int faceId,
-			 const int faceLen,
-			 const VAL_T *__restrict__ sphrPtr) {
+			 const int sphrId,
+       const torch::PackedTensorAccessor32<VAL_T, 5, torch::RestrictPtrTraits> sphr) {
 
-  VAL_T ret = VAL_T(0);
+  auto ret = VecW<VAL_T, W>(VAL_T(0));
 
   const int pinv = padSize-1 - p;
 
-  // offset from neighbor's corner
-  // for non equatorial faces
-  const int padOff = -pinv*dimM + q;
-
   switch(faceId) {
     // north faces
-  case  0: ret = getBottomLeftCornerElem_d(k, dimL, dimM, sphrPtr + 1*faceLen + padOff); break;
-  case  1: ret = getBottomLeftCornerElem_d(k, dimL, dimM, sphrPtr + 2*faceLen + padOff); break;
-  case  2: ret = getBottomLeftCornerElem_d(k, dimL, dimM, sphrPtr + 3*faceLen + padOff); break;
-  case  3: ret = getBottomLeftCornerElem_d(k, dimL, dimM, sphrPtr + 0*faceLen + padOff); break;
+  case  0: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  1, k, dimL-1-pinv, q); break;
+  case  1: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  2, k, dimL-1-pinv, q); break;
+  case  2: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  3, k, dimL-1-pinv, q); break;
+  case  3: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  0, k, dimL-1-pinv, q); break;
     // center faces
-  case  4: ret = getBottomLeftCornerElem_d(k, dimL, dimM, sphrPtr + 5*faceLen + padOff); break;
-  case  5: ret = getBottomLeftCornerElem_d(k, dimL, dimM, sphrPtr + 6*faceLen + padOff); break;
-  case  6: ret = getBottomLeftCornerElem_d(k, dimL, dimM, sphrPtr + 7*faceLen + padOff); break;
-  case  7: ret = getBottomLeftCornerElem_d(k, dimL, dimM, sphrPtr + 4*faceLen + padOff); break;
+  case  4: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  5, k, dimL-1-pinv, q); break;
+  case  5: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  6, k, dimL-1-pinv, q); break;
+  case  6: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  7, k, dimL-1-pinv, q); break;
+  case  7: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  4, k, dimL-1-pinv, q); break;
     // south faces
-  case  8: ret = getBottomLeftCornerElem_d(k, dimL, dimM, sphrPtr +  9*faceLen + padOff); break;
-  case  9: ret = getBottomLeftCornerElem_d(k, dimL, dimM, sphrPtr + 10*faceLen + padOff); break;
-  case 10: ret = getBottomLeftCornerElem_d(k, dimL, dimM, sphrPtr + 11*faceLen + padOff); break;
-  case 11: ret = getBottomLeftCornerElem_d(k, dimL, dimM, sphrPtr +  8*faceLen + padOff); break;
+  case  8: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  9, k, dimL-1-pinv, q); break;
+  case  9: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 10, k, dimL-1-pinv, q); break;
+  case 10: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 11, k, dimL-1-pinv, q); break;
+  case 11: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  8, k, dimL-1-pinv, q); break;
   }
-
-  // offsets from neighbor' corners
-  // for north and south faces
-  const int topLeftPadOff  = (q+1 + p)*dimM + q;
-
-  // north faces get values in the top left tringle
-  // of their corner square from half the corner of
-  // other faces
 
   if (p+q < padSize-1) {
     switch(faceId) {
       // north faces
-    case  0: ret += getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 5*faceLen + topLeftPadOff); break;
-    case  1: ret += getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 6*faceLen + topLeftPadOff); break;
-    case  2: ret += getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 7*faceLen + topLeftPadOff); break;
-    case  3: ret += getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 4*faceLen + topLeftPadOff); break;
+    case  0: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  5, k, q+1+p, q); break;
+    case  1: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  6, k, q+1+p, q); break;
+    case  2: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  7, k, q+1+p, q); break;
+    case  3: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  4, k, q+1+p, q); break;
     }
   }
 
   if (p == 0) {
     switch(faceId) {
       // north faces
-    case  0: ret += getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 5*faceLen + q*dimM + q) / VAL_T(2); break;
-    case  1: ret += getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 6*faceLen + q*dimM + q) / VAL_T(2); break;
-    case  2: ret += getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 7*faceLen + q*dimM + q) / VAL_T(2); break;
-    case  3: ret += getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 4*faceLen + q*dimM + q) / VAL_T(2); break;
+    case  0: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  5, k, q, q) / VAL_T(2); break;
+    case  1: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  6, k, q, q) / VAL_T(2); break;
+    case  2: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  7, k, q, q) / VAL_T(2); break;
+    case  3: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  4, k, q, q) / VAL_T(2); break;
     }
   }
 
   const int qinv = padSize-1 - q;
-  const int bottomRightOff = -pinv*dimM - (pinv+1 + qinv);
-
-  // south faces get values in the bottom right tringle
-  // of their corner square from half the corner of
-  // other faces
-
   if (p+q > padSize-1) {
     switch(faceId) {
       // south faces
-    case  8: ret += getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr +  5*faceLen + bottomRightOff); break;
-    case  9: ret += getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr +  6*faceLen + bottomRightOff); break;
-    case 10: ret += getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr +  7*faceLen + bottomRightOff); break;
-    case 11: ret += getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr +  4*faceLen + bottomRightOff); break;
+    case  8: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  5, k, dimL-pinv, -(pinv+1+qinv)-1); break;
+    case  9: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  6, k, dimL-pinv, -(pinv+1+qinv)-1); break;
+    case 10: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  7, k, dimL-pinv, -(pinv+1+qinv)-1); break;
+    case 11: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  4, k, dimL-pinv, -(pinv+1+qinv)-1); break;
     }
   }
 
   if (q == padSize-1) {
     switch(faceId) {
       // south faces
-    case  8: ret += getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr +  5*faceLen - pinv*dimM - pinv) / VAL_T(2); break;
-    case  9: ret += getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr +  6*faceLen - pinv*dimM - pinv) / VAL_T(2); break;
-    case 10: ret += getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr +  7*faceLen - pinv*dimM - pinv) / VAL_T(2); break;
-    case 11: ret += getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr +  4*faceLen - pinv*dimM - pinv) / VAL_T(2); break;
+    case  8: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  5, k, dimL-pinv, -pinv-1) / VAL_T(2); break;
+    case  9: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  6, k, dimL-pinv, -pinv-1) / VAL_T(2); break;
+    case 10: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  7, k, dimL-pinv, -pinv-1) / VAL_T(2); break;
+    case 11: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  4, k, dimL-pinv, -pinv-1) / VAL_T(2); break;
     }
   }
 
   return ret;
 }
 
-template<typename VAL_T>
-__device__ VAL_T getBL_d(const int padSize,
+template<typename VAL_T, bool CHANNELS_LAST, int W = 1>
+__device__ VecW<VAL_T, W> getBL_d(const int padSize,
 			 const int p,
 			 const int q,
 			 const int k,
 			 const int dimL,
 			 const int dimM,
 			 const int faceId,
-			 const int faceLen,
-			 const VAL_T *__restrict__ sphrPtr) {
+			 const int sphrId,
+       const torch::PackedTensorAccessor32<VAL_T, 5, torch::RestrictPtrTraits> sphr) {
 
-  VAL_T ret = VAL_T(0);
+  auto ret = VecW<VAL_T, W>(VAL_T(0));
 
   const int qinv = padSize-1 - q;
 
-  // offset from neighbor's corner
-  // for non equatorial faces
-  const int padOff = p*dimM - qinv;
-
   switch(faceId) {
     // north faces
-  case  0: ret = getTopRightCornerElem_d(k, dimL, dimM, sphrPtr + 3*faceLen + padOff); break;
-  case  1: ret = getTopRightCornerElem_d(k, dimL, dimM, sphrPtr + 0*faceLen + padOff); break;
-  case  2: ret = getTopRightCornerElem_d(k, dimL, dimM, sphrPtr + 1*faceLen + padOff); break;
-  case  3: ret = getTopRightCornerElem_d(k, dimL, dimM, sphrPtr + 2*faceLen + padOff); break;
+  case  0: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  3, k, p, dimM-1-qinv); break;
+  case  1: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  0, k, p, dimM-1-qinv); break;
+  case  2: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  1, k, p, dimM-1-qinv); break;
+  case  3: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  2, k, p, dimM-1-qinv); break;
     // center faces
-  case  4: ret = getTopRightCornerElem_d(k, dimL, dimM, sphrPtr + 7*faceLen + padOff); break;
-  case  5: ret = getTopRightCornerElem_d(k, dimL, dimM, sphrPtr + 4*faceLen + padOff); break;
-  case  6: ret = getTopRightCornerElem_d(k, dimL, dimM, sphrPtr + 5*faceLen + padOff); break;
-  case  7: ret = getTopRightCornerElem_d(k, dimL, dimM, sphrPtr + 6*faceLen + padOff); break;
+  case  4: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  7, k, p, dimM-1-qinv); break;
+  case  5: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  4, k, p, dimM-1-qinv); break;
+  case  6: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  5, k, p, dimM-1-qinv); break;
+  case  7: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  6, k, p, dimM-1-qinv); break;
     // south faces
-  case  8: ret = getTopRightCornerElem_d(k, dimL, dimM, sphrPtr + 11*faceLen + padOff); break;
-  case  9: ret = getTopRightCornerElem_d(k, dimL, dimM, sphrPtr +  8*faceLen + padOff); break;
-  case 10: ret = getTopRightCornerElem_d(k, dimL, dimM, sphrPtr +  9*faceLen + padOff); break;
-  case 11: ret = getTopRightCornerElem_d(k, dimL, dimM, sphrPtr + 10*faceLen + padOff); break;
+  case  8: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 11, k, p, dimM-1-qinv); break;
+  case  9: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  8, k, p, dimM-1-qinv); break;
+  case 10: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  9, k, p, dimM-1-qinv); break;
+  case 11: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 10, k, p, dimM-1-qinv); break;
   }
-
-  // offsets from neighbor' corners
-  // for north and south faces
-  const int bottomLeftPadOff  = p*dimM + p+1+q; //(q+1 + p)*dimM + q;
 
   if (p+q < padSize-1) {
     switch(faceId) {
       // north faces
-    case  0: ret += getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 4*faceLen + bottomLeftPadOff); break;
-    case  1: ret += getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 5*faceLen + bottomLeftPadOff); break;
-    case  2: ret += getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 6*faceLen + bottomLeftPadOff); break;
-    case  3: ret += getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 7*faceLen + bottomLeftPadOff); break;
+    case  0: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  4, k, p, p+q+1); break;
+    case  1: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  5, k, p, p+q+1); break;
+    case  2: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  6, k, p, p+q+1); break;
+    case  3: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  7, k, p, p+q+1); break;
     }
   }
 
   if (q == 0) {
     switch(faceId) {
       // north faces
-    case  0: ret += getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 4*faceLen + p*dimM + p) / VAL_T(2); break;
-    case  1: ret += getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 5*faceLen + p*dimM + p) / VAL_T(2); break;
-    case  2: ret += getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 6*faceLen + p*dimM + p) / VAL_T(2); break;
-    case  3: ret += getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 7*faceLen + p*dimM + p) / VAL_T(2); break;
+    case  0: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  4, k, p, p) / VAL_T(2); break;
+    case  1: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  5, k, p, p) / VAL_T(2); break;
+    case  2: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  6, k, p, p) / VAL_T(2); break;
+    case  3: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  7, k, p, p) / VAL_T(2); break;
     }
   }
 
-  //const int pinv = padSize-1 - p;
-  const int bottomRightOff = (2*padSize - p - q -1)*dimM + qinv; //-(pinv + q-1)*dimM + q;
-
-  // south faces get values in the bottom right tringle
-  // of their corner square from half the corner of
-  // other faces
   if (p+q > padSize-1) {
     switch(faceId) {
       // south faces
-    case  8: ret += getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr +  4*faceLen - bottomRightOff); break;
-    case  9: ret += getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr +  5*faceLen - bottomRightOff); break;
-    case 10: ret += getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr +  6*faceLen - bottomRightOff); break;
-    case 11: ret += getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr +  7*faceLen - bottomRightOff); break;
+    case  8: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  4, k, dimL-2*padSize+p+q+1, -qinv-1); break;
+    case  9: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  5, k, dimL-2*padSize+p+q+1, -qinv-1); break;
+    case 10: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  6, k, dimL-2*padSize+p+q+1, -qinv-1); break;
+    case 11: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  7, k, dimL-2*padSize+p+q+1, -qinv-1); break;
     }
   }
 
   if (p == padSize-1) {
     switch(faceId) {
       // south faces
-    case  8: ret += getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr +  4*faceLen - qinv*dimM - qinv) / VAL_T(2); break;
-    case  9: ret += getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr +  5*faceLen - qinv*dimM - qinv) / VAL_T(2); break;
-    case 10: ret += getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr +  6*faceLen - qinv*dimM - qinv) / VAL_T(2); break;
-    case 11: ret += getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr +  7*faceLen - qinv*dimM - qinv) / VAL_T(2); break;
+    case  8: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  4, k, dimL-qinv, -qinv-1) / VAL_T(2); break;
+    case  9: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  5, k, dimL-qinv, -qinv-1) / VAL_T(2); break;
+    case 10: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  6, k, dimL-qinv, -qinv-1) / VAL_T(2); break;
+    case 11: ret += *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  7, k, dimL-qinv, -qinv-1) / VAL_T(2); break;
     }
   }
 
   return ret;
 }
 
-template<typename VAL_T>
-__device__ VAL_T getBR_d(const int padSize,
+template<typename VAL_T, bool CHANNELS_LAST, int W = 1>
+__device__ VecW<VAL_T, W> getBR_d(const int padSize,
 			 const int p,
 			 const int q,
 			 const int k,
 			 const int dimL,
 			 const int dimM,
 			 const int faceId,
-			 const int faceLen,
-			 const VAL_T *__restrict__ sphrPtr) {
+			 const int sphrId,
+       const torch::PackedTensorAccessor32<VAL_T, 5, torch::RestrictPtrTraits> sphr) {
 
-  VAL_T ret = VAL_T(0);
-
-  // offset from neighbor's corner
-  // for non equatorial faces
-  const int padOff = p*dimM + q;
+  auto ret = VecW<VAL_T, W>(VAL_T(0));
 
   switch(faceId) {
     // north faces
-  case  0: ret = getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr +  8*faceLen + padOff); break;
-  case  1: ret = getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr +  9*faceLen + padOff); break;
-  case  2: ret = getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 10*faceLen + padOff); break;
-  case  3: ret = getTopLeftCornerElem_d(k, dimL, dimM, sphrPtr + 11*faceLen + padOff); break;
+  case  0: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  8, k, p, q); break;
+  case  1: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  9, k, p, q); break;
+  case  2: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 10, k, p, q); break;
+  case  3: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 11, k, p, q); break;
     // center faces
   case  4:
   case  5:
   case  6:
   case  7: break;
     // south faces
-  case  8: ret = getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr + 10*faceLen - padOff); break;
-  case  9: ret = getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr + 11*faceLen - padOff); break;
-  case 10: ret = getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr +  8*faceLen - padOff); break;
-  case 11: ret = getBottomRightCornerElem_d(k, dimL, dimM, sphrPtr +  9*faceLen - padOff); break;
+  case  8: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 10, k, dimL-p, -1-q); break;
+  case  9: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId, 11, k, dimL-p, -1-q); break;
+  case 10: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  8, k, dimL-p, -1-q); break;
+  case 11: ret = *getElem<VAL_T, CHANNELS_LAST, W>(sphr, sphrId,  9, k, dimL-p, -1-q); break;
   }
   return ret;
 }
 
-template<typename VAL_T>
+template<typename VAL_T, bool CHANNELS_LAST, int W = 1>
 __global__ void HEALPixPadBck_haloCR_k(const int padSize,
 				       const int dimI,
 				       const int dimJ, // = 12
 				       const int dimK,
 				       const int dimL,
 				       const int dimM,
-				       const VAL_T *__restrict__ vin,
-				       VAL_T *__restrict__ vout) {
+				       const torch::PackedTensorAccessor32<VAL_T, 5, torch::RestrictPtrTraits> vin,
+               torch::PackedTensorAccessor32<VAL_T, 5, torch::RestrictPtrTraits> vout) {
 
   const long long tid = ((long long)blockIdx.x)*blockDim.x + threadIdx.x;
 
-  if (tid >= ((long long)dimI)*dimJ*dimK*padSize*padSize) {
+  const int dimKVec = CHANNELS_LAST ? dimK / W : dimK; // only vectorized for channels_last
+  if (tid >= ((long long)dimI)*dimJ*dimKVec*padSize*padSize) {
     return;
   }
 
-  const long long sphrId = tid / (dimJ*dimK*padSize*padSize);
-  const long long faceId = (tid - sphrId*(dimJ*dimK*padSize*padSize)) / (dimK*padSize*padSize);
+  const long long sphrId = tid / (dimJ*dimKVec*padSize*padSize);
+  const long long faceId = (tid - sphrId*(dimJ*dimKVec*padSize*padSize)) / (dimKVec*padSize*padSize);
 
   const int dimLI = dimL + 2*padSize;
   const int dimMI = dimM + 2*padSize;
 
-  const long long faceLenI = ((long long)dimK)*dimLI*dimMI;
-  const long long faceLenO = ((long long)dimK)*dimL *dimM;
-
-  const VAL_T *__restrict__ sphrPtrI = vin  +  sphrId*dimJ          *faceLenI;
-  VAL_T *__restrict__ facePtrO = vout + (sphrId*dimJ + faceId)*faceLenO;
-
-  const int k = (tid /  (padSize*padSize)) % dimK;
-  const int p = (tid /           padSize)  % padSize;
-  const int q =  tid                       % padSize;
+  int k, p, q;
+  if constexpr (CHANNELS_LAST) {
+    k =  tid % dimKVec * W;
+    p = (tid / dimKVec)             % padSize;
+    q = (tid / (dimKVec * padSize)) % padSize;
+  } else {
+    q =  tid % padSize;
+    p = (tid / padSize)             % padSize;
+    k = (tid / (padSize * padSize)) % dimK;
+  }
 
   // copy top-left     corner
+  *getElemMutable<VAL_T, CHANNELS_LAST, W>(vout, sphrId, faceId, k, p, q) += getTL_d<VAL_T, CHANNELS_LAST, W>(padSize, p, q, k, dimLI, dimMI, faceId, sphrId, vin);
   // copy top-right    corner
+  *getElemMutable<VAL_T, CHANNELS_LAST, W>(vout, sphrId, faceId, k, p, dimM-padSize+q) += getTR_d<VAL_T, CHANNELS_LAST, W>(padSize, p, q, k, dimLI, dimMI, faceId, sphrId, vin);
   // copy bottom-left  corner
+  *getElemMutable<VAL_T, CHANNELS_LAST, W>(vout, sphrId, faceId, k, dimL-padSize+p, q) += getBL_d<VAL_T, CHANNELS_LAST, W>(padSize, p, q, k, dimLI, dimMI, faceId, sphrId, vin);
   // copy bottom-right corner
-  facePtrO[k*dimL*dimM                                      + p*dimM + q] += getTL_d(padSize, p, q, k, dimLI, dimMI, faceId, faceLenI, sphrPtrI);
-  facePtrO[k*dimL*dimM                       + dimM-padSize + p*dimM + q] += getTR_d(padSize, p, q, k, dimLI, dimMI, faceId, faceLenI, sphrPtrI);
-  facePtrO[k*dimL*dimM + (dimL-padSize)*dimM                + p*dimM + q] += getBL_d(padSize, p, q, k, dimLI, dimMI, faceId, faceLenI, sphrPtrI);
-  facePtrO[k*dimL*dimM + (dimL-padSize)*dimM + dimM-padSize + p*dimM + q] += getBR_d(padSize, p, q, k, dimLI, dimMI, faceId, faceLenI, sphrPtrI);
+  *getElemMutable<VAL_T, CHANNELS_LAST, W>(vout, sphrId, faceId, k, dimL-padSize+p, dimM-padSize+q) += getBR_d<VAL_T, CHANNELS_LAST, W>(padSize, p, q, k, dimLI, dimMI, faceId, sphrId, vin);
 
   return;
 }
 
-template<typename REAL_T>
-void HEALPixPadBck(int padSize,
-		   int dimI, // batch size
-		   int dimJ, // 12
-		   int dimK, // no. of channels
-		   int dimL, // face no. of rows of dataOut_d (dataIn_d has dimL+2 rows)
-		   int dimM, // face no. of cols of dataOut_d (dataIn_d has dimM+2 cols)
-		   REAL_T *dataIn_d,
-		   REAL_T *dataOut_d,
-		   cudaStream_t stream) {
+template<typename VAL_T, bool CHANNELS_LAST, int W = 1>
+void launch_halo_kernels(dim3 nbl_f, dim3 nth_f,
+                        dim3 nbl_c, dim3 nth_c,
+                        cudaStream_t stream,
+                        int padSize, int dimI, int dimJ,
+                        int dimK, int dimL, int dimM,
+                        const torch::PackedTensorAccessor32<VAL_T, 5, torch::RestrictPtrTraits> vin,
+                        torch::PackedTensorAccessor32<VAL_T, 5, torch::RestrictPtrTraits> vout) {
+  if constexpr (vec_supported<VAL_T, W>()) {
+    HEALPixPadBck_haloTB_k<VAL_T, CHANNELS_LAST, W><<<nbl_f, nth_f, 0, stream>>>(padSize, dimI, dimJ, dimK, dimL, dimM, vin, vout);
+    CHECK_ERROR("HEALPixPadBck_haloTB_k");
+    HEALPixPadBck_haloLR_k<VAL_T, CHANNELS_LAST, W><<<nbl_f, nth_f, 0, stream>>>(padSize, dimI, dimJ, dimK, dimL, dimM, vin, vout);
+    CHECK_ERROR("HEALPixPadBck_haloLR_k");
+    HEALPixPadBck_haloCR_k<VAL_T, CHANNELS_LAST, W><<<nbl_c, nth_c, 0, stream>>>(padSize, dimI, dimJ, dimK, dimL, dimM, vin, vout);
+    CHECK_ERROR("HEALPixPadBck_haloCR_k");
+  }
+}
+
+template<typename REAL_T, bool CHANNELS_LAST>
+void HEALPixPadBck(int padSize, torch::Tensor ginput, torch::Tensor goutput, cudaStream_t stream) {
+
+  const int dimI = goutput.size(0);
+  const int dimJ = goutput.size(1);
+  const int dimK = (CHANNELS_LAST ? goutput.size(4) : goutput.size(2));
+  const int dimL = (CHANNELS_LAST ? goutput.size(2) : goutput.size(3));
+  const int dimM = (CHANNELS_LAST ? goutput.size(3) : goutput.size(4));
 
   if (dimI*dimJ*dimK*dimL*dimM <= 0) {
     fprintf(stderr, "%s:%d: error, one or more dimension is less than or equal zero!\n", __func__, __LINE__);
@@ -710,127 +634,110 @@ void HEALPixPadBck(int padSize,
   }
 
   // copy bulk
+  const int bestW = get_best_vector_width<REAL_T>(
+    CHANNELS_LAST,
+    dimK,
+    dimM,
+    ginput.data_ptr(),
+    goutput.data_ptr()
+  );
+
+  auto in = ginput.packed_accessor32<REAL_T, 5, torch::RestrictPtrTraits>();
+  auto out = goutput.packed_accessor32<REAL_T, 5, torch::RestrictPtrTraits>();
+
   const int nth_b = THREADS;
-  const int nbl_b = DIV_UP(dimI*dimJ*dimK*dimL*dimM, nth_b);
+  const int nbl_b = DIV_UP((dimI*dimJ*dimK*dimL*dimM)/bestW, nth_b);
 
-  HEALPixPadBck_bulk_k<<<nbl_b, nth_b, 0, stream>>>(padSize, dimI, dimJ, dimK, dimL, dimM, dataIn_d, dataOut_d);
+  // Use constexpr safeguards to prevent compilation errors from unsupported vector types (i.e. double + width 8)
+  switch (bestW) {
+    case 8:
+      if constexpr (vec_supported<REAL_T, 8>()) {
+        HEALPixPadBck_bulk_k<REAL_T, CHANNELS_LAST, 8><<<nbl_b, nth_b, 0, stream>>>(padSize, dimI, dimJ, dimK, dimL, dimM, in, out);
+      }
+      break;
+    case 4:
+      if constexpr (vec_supported<REAL_T, 4>()) {
+        HEALPixPadBck_bulk_k<REAL_T, CHANNELS_LAST, 4><<<nbl_b, nth_b, 0, stream>>>(padSize, dimI, dimJ, dimK, dimL, dimM, in, out);
+      }
+      break;
+    case 2:
+      if constexpr (vec_supported<REAL_T, 2>()) {
+        HEALPixPadBck_bulk_k<REAL_T, CHANNELS_LAST, 2><<<nbl_b, nth_b, 0, stream>>>(padSize, dimI, dimJ, dimK, dimL, dimM, in, out);
+      }
+      break;
+    default:
+      HEALPixPadBck_bulk_k<REAL_T, CHANNELS_LAST><<<nbl_b, nth_b, 0, stream>>>(padSize, dimI, dimJ, dimK, dimL, dimM, in, out);
+    break;
+  }
 
-  CHECK_ERROR("HEALPixPad_bck_bulk_k");
+  CHECK_ERROR("HEALPixPadBck_bulk_k");
+
 
   // copy haloes
+  const int bestW_halo = CHANNELS_LAST ? bestW : 1;
   const int nth_f = THREADS;
-  const int nbl_f = DIV_UP(dimI*dimJ*dimK*dimM*padSize, nth_f);
-
-  HEALPixPadBck_haloTB_k<<<nbl_f, nth_f, 0, stream>>>(padSize, dimI, dimJ, dimK, dimL, dimM, dataIn_d, dataOut_d);
-  CHECK_ERROR("HEALPixPadBck_haloTB_k");
-  HEALPixPadBck_haloLR_k<<<nbl_f, nth_f, 0, stream>>>(padSize, dimI, dimJ, dimK, dimL, dimM, dataIn_d, dataOut_d);
-  CHECK_ERROR("HEALPixPadBck_haloLR_k");
+  const int nbl_f = DIV_UP((dimI*dimJ*dimK*dimM*padSize/bestW_halo), nth_f);
 
   const int nth_c = THREADS;
-  const int nbl_c = DIV_UP(dimI*dimJ*dimK*padSize*padSize, nth_c);
+  const int nbl_c = DIV_UP((dimI*dimJ*dimK*padSize*padSize/bestW_halo), nth_c);
 
-  HEALPixPadBck_haloCR_k<<<nbl_c, nth_c, 0, stream>>>(padSize, dimI, dimJ, dimK, dimL, dimM, dataIn_d, dataOut_d);
-
-  CHECK_ERROR("HEALPixPadBck_haloCR_k");
-
-  //CHECK_CUDA(cudaStreamSynchronize(stream));
-
-  return;
-}
-
-void HEALPixPad_bwd_fp32(int padSize,
-			 int dimI,
-			 int dimJ,
-			 int dimK,
-			 int dimL,
-			 int dimM,
-			 float *dataIn_d,
-			 float *dataOut_d,
-			 cudaStream_t stream) {
-
-  HEALPixPadBck<float>(padSize, dimI, dimJ, dimK, dimL, dimM, dataIn_d, dataOut_d, stream);
+  switch (bestW_halo) {
+    case 8:
+      launch_halo_kernels<REAL_T, CHANNELS_LAST, 8>(nbl_f, nth_f, nbl_c, nth_c, stream, padSize, dimI, dimJ, dimK, dimL, dimM, in, out);
+      break;
+    case 4:
+      launch_halo_kernels<REAL_T, CHANNELS_LAST, 4>(nbl_f, nth_f, nbl_c, nth_c, stream, padSize, dimI, dimJ, dimK, dimL, dimM, in, out);
+      break;
+    case 2:
+      launch_halo_kernels<REAL_T, CHANNELS_LAST, 2>(nbl_f, nth_f, nbl_c, nth_c, stream, padSize, dimI, dimJ, dimK, dimL, dimM, in, out);
+      break;
+    default:
+      launch_halo_kernels<REAL_T, CHANNELS_LAST>(nbl_f, nth_f, nbl_c, nth_c, stream, padSize, dimI, dimJ, dimK, dimL, dimM, in, out);
+      break;
+  }
 
   return;
 }
 
-void HEALPixPad_bwd_fp64(int padSize,
-			 int dimI,
-			 int dimJ,
-			 int dimK,
-			 int dimL,
-			 int dimM,
-			 double *dataIn_d,
-			 double *dataOut_d,
-			 cudaStream_t stream) {
+std::vector<torch::Tensor> healpixpad_cuda_backward(torch::Tensor ginput, int pad, bool channels_last) {
 
-  HEALPixPadBck<double>(padSize, dimI, dimJ, dimK, dimL, dimM, dataIn_d, dataOut_d, stream);
-
-  return;
-}
-
-std::vector<torch::Tensor> healpixpad_cuda_backward(
-						    torch::Tensor ginput,
-						    int pad) {
   const auto batch_size = ginput.size(0);
   const auto num_faces = ginput.size(1);
-  const auto num_channels = ginput.size(2);
+  const auto num_channels = (channels_last ? ginput.size(4) : ginput.size(2));
   // the face size is the size of the output gradient
   const auto face_size = ginput.size(3) - 2*pad;
-  int64_t shape[5] = {batch_size, num_faces, num_channels, face_size, face_size};
 
   // allocate output tensor
-  c10::TensorOptions options = c10::TensorOptions().device(ginput.device()).dtype(ginput.dtype());
-  torch::IntArrayRef size = c10::makeArrayRef<int64_t>(shape, 5);
-  auto goutput = torch::empty(size, options);
+  torch::TensorOptions options = torch::TensorOptions().device(ginput.device()).dtype(ginput.dtype());
+  torch::Tensor goutput;
+  if (!channels_last) {
+    goutput = torch::empty({batch_size, num_faces, num_channels, face_size, face_size}, options);
+  } else {
+    goutput = torch::empty({batch_size, num_faces, face_size, face_size, num_channels}, options);
+  }
 
   // get cuda stream:
-  cudaStream_t my_stream = c10::cuda::getCurrentCUDAStream(ginput.device().index()).stream();
+  auto stream = at::cuda::getCurrentCUDAStream().stream();
 
   switch (ginput.scalar_type()) {
   case torch::ScalarType::Double:
-    HEALPixPadBck<double>(pad,
-			  batch_size,
-			  num_faces,
-			  num_channels,
-			  face_size,
-			  face_size,
-			  ginput.data_ptr<double>(),
-			  goutput.data_ptr<double>(),
-			  my_stream);
+    if (channels_last) HEALPixPadBck<double, true>(pad, ginput, goutput, stream);
+    else HEALPixPadBck<double, false>(pad, ginput, goutput, stream);
     break;
   case torch::ScalarType::Float:
-    HEALPixPadBck<float>(pad,
-			 batch_size,
-			 num_faces,
-			 num_channels,
-			 face_size,
-			 face_size,
-			 ginput.data_ptr<float>(),
-			 goutput.data_ptr<float>(),
-			 my_stream);
+    if (channels_last) HEALPixPadBck<float, true>(pad, ginput, goutput, stream);
+    else HEALPixPadBck<float, false>(pad, ginput, goutput, stream);
     break;
   case torch::ScalarType::Half:
-    HEALPixPadBck<at::Half>(pad,
-			    batch_size,
-			    num_faces,
-			    num_channels,
-			    face_size,
-			    face_size,
-			    ginput.data_ptr<at::Half>(),
-			    goutput.data_ptr<at::Half>(),
-			    my_stream);
+    if (channels_last) HEALPixPadBck<at::Half, true>(pad, ginput, goutput, stream);
+    else HEALPixPadBck<at::Half, false>(pad, ginput, goutput, stream);
     break;
   case torch::ScalarType::BFloat16:
-    HEALPixPadBck<at::BFloat16>(pad,
-			    batch_size,
-			    num_faces,
-			    num_channels,
-			    face_size,
-			    face_size,
-			    ginput.data_ptr<at::BFloat16>(),
-			    goutput.data_ptr<at::BFloat16>(),
-			    my_stream);
+    if (channels_last) HEALPixPadBck<at::BFloat16, true>(pad, ginput, goutput, stream);
+    else HEALPixPadBck<at::BFloat16, false>(pad, ginput, goutput, stream);
     break;
+  default:
+    throw std::invalid_argument("Unsupported datatype for healpixpad_cuda_backward.");
   }
 
   return {goutput};

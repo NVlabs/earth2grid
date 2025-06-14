@@ -58,7 +58,8 @@ def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
         padding: the amount of padding
 
     Returns:
-        The padded tensor with shape [N, F, H+2*padding, W+2*padding]
+        The tensor padded along the spatial dimensions. For 4D input [N, F, H, W], returns shape [N, F, H+2*padding, W+2*padding].
+        For 5D input, returns [N, F, C, H+2*padding, W+2*padding],
 
     Examples:
 
@@ -85,6 +86,12 @@ def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
         return pad_python(x, padding)
     elif backend == PaddingBackends.cuda:
         if x.ndim == 5:
-            return cuda._HEALPixPadFunction.apply(x, padding)
+            channels_last = x.stride(2) == 1
+            if channels_last:
+                x = x.permute(0, 1, 3, 4, 2)  # (B, F, C, H, W) -> (B, F, H, W, C) contiguous
+            out = cuda._HEALPixPadFunction.apply(x, padding, channels_last)
+            if channels_last:
+                out = out.permute(0, 1, 4, 2, 3)  # (B, F, H, W, C) -> (B, F, C, H, W)
+            return out
         else:
-            return cuda._HEALPixPadFunction.apply(x.unsqueeze(2), padding).squeeze(2)
+            return cuda._HEALPixPadFunction.apply(x.unsqueeze(2), padding, False).squeeze(2)
