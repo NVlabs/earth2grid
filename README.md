@@ -19,9 +19,16 @@ Grids currently supported:
 
 ## Install
 
+Pre-requisites:
+- [CUDA Installation that includes cuda compilers](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/)
+- [pytorch](https://pytorch.org/get-started/locally/)
+
+> [!NOTE]
+> We recommend using the [pytorch docker image on NGC](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/torch).
+
+Once the pre-requisites are installed you can install earth2grid with
 ```
-git clone https://github.com/NVlabs/earth2grid.git
-pip install --no-build-isolation ./earth2grid
+pip install --no-build-isolation https://github.com/NVlabs/earth2grid/archive/main.tar.gz
 ```
 
 ## Example
