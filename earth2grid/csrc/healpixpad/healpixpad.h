@@ -94,10 +94,16 @@ constexpr bool vec_supported()
     return !std::is_same<VecT_t<S,W>, void>::value;
 }
 
-// Checks pointer alignment by bytes, which is a power of 2
-inline bool aligned(const void* p, std::size_t bytes)
+// Checks pointer alignment by bytes
+template<size_t BYTES>
+inline bool aligned(const void* p)
 {
-    return (reinterpret_cast<std::uintptr_t>(p) & (bytes-1)) == 0;
+    static_assert(BYTES != 0, "Alignment must be non-zero.");
+    if constexpr ((BYTES & (BYTES - 1)) == 0) {  // Check if BYTES is power of 2
+        return (reinterpret_cast<std::uintptr_t>(p) & (BYTES - 1)) == 0;
+    } else {
+        return reinterpret_cast<std::uintptr_t>(p) % BYTES == 0;
+    }
 }
 
 template<typename T>
@@ -111,22 +117,22 @@ __host__ int get_best_vector_width(
     // Check vector widths in descending order with compile-time constants
     if (vec_supported<T, 8>() &&
         ((channels_last ? dimK : dimM) & 7) == 0 &&
-        aligned(input_ptr, 8*sizeof(T)) &&
-        aligned(output_ptr, 8*sizeof(T))) {
+        aligned<8*sizeof(T)>(input_ptr) &&
+        aligned<8*sizeof(T)>(output_ptr)) {
         return 8;
     }
 
     if (vec_supported<T, 4>() &&
         ((channels_last ? dimK : dimM) & 3) == 0 &&
-        aligned(input_ptr, 4*sizeof(T)) &&
-        aligned(output_ptr, 4*sizeof(T))) {
+        aligned<4*sizeof(T)>(input_ptr) &&
+        aligned<4*sizeof(T)>(output_ptr)) {
         return 4;
     }
 
     if (vec_supported<T, 2>() &&
         ((channels_last ? dimK : dimM) & 1) == 0 &&
-        aligned(input_ptr, 2*sizeof(T)) &&
-        aligned(output_ptr, 2*sizeof(T))) {
+        aligned<2*sizeof(T)>(input_ptr) &&
+        aligned<2*sizeof(T)>(output_ptr)) {
         return 2;
     }
 
