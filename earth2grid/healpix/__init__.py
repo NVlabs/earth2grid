@@ -47,6 +47,8 @@ from earth2grid.healpix.core import (
     ring2xy,
     to_double_pixelization,
     to_rotated_pixelization,
+    xy2local,
+    xy2nest,
     xy2xy,
     zonal_average,
 )
@@ -80,5 +82,7 @@ __all__ = [
     "to_rotated_pixelization",
     "XY",
     "xy2xy",
+    "xy2local",
+    "xy2nest",
     "zonal_average",
 ]
