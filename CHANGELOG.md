@@ -2,6 +2,8 @@
 
 ## Latest
 
+## 2025.6.1
+
 New APIs
 - earth2grid.healpix
   - zonal_average
