@@ -2,6 +2,8 @@
 
 ## Latest
 
+- change default padding backend when GPUs present back to CUDA.
+
 ## 2025.6.1
 
 New APIs
