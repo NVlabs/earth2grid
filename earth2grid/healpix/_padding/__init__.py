@@ -34,6 +34,8 @@ class PaddingBackends(Enum):
 # default backend is cuda
 if torch.cuda.is_available() and torch.cuda.device_count() > 0:
     _backend = PaddingBackends.cuda
+else:
+    _backend = PaddingBackends.indexing
 
 
 @contextlib.contextmanager
