@@ -1,8 +1,9 @@
 # Changelog
 
-## Latest
+## 2025.7.1
 
-- change default padding backend when GPUs present back to CUDA.
+- change default padding backend when GPUs present back to CUDA. This was causing a performance regression when not using torch.compile.
+- add wheels
 
 ## 2025.6.1
 
