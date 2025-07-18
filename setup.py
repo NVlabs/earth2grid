@@ -17,8 +17,28 @@ import subprocess
 import warnings
 from typing import List
 
+import torch
 from setuptools import setup
 from torch.utils import cpp_extension
+
+VERSION = "2025.6.1"
+
+
+def get_compatible_torch_version():
+    # the built wheel will only be compatible with the currently installed torch
+    # minor version
+    major, minor = torch.__version__.split(".")[:2]
+    major = int(major)
+    minor = int(minor)
+    torch_version_str = f"torch>={major}.{minor},<{major}.{minor + 1}"
+    return torch_version_str
+
+
+def get_version_str():
+    major, minor = torch.__version__.split(".")[:2]
+    major = int(major)
+    minor = int(minor)
+    return VERSION + f"+torch{major}{minor}"
 
 
 def get_compiler():
@@ -93,8 +113,12 @@ if CUDAExtension is not None:
         )
 
 
+dependencies = ["einops>=0.7.0", "numpy>=1.23.3", get_compatible_torch_version(), "scipy"]
+
 setup(
     name="earth2grid",
+    version=get_version_str(),
     ext_modules=ext_modules,
+    install_requires=dependencies,
     cmdclass={"build_ext": cpp_extension.BuildExtension},
 )

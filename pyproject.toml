@@ -3,30 +3,24 @@ requires = ["setuptools>=40.8.0", "wheel", "torch", "numpy"]
 build-backend = "setuptools.build_meta"
 
 [project]
+dynamic = [ "version" , "dependencies" ]
 name = "earth2grid"
-version = "2025.6.1"
 description = "Utilities for working with geographic data defined on various grids."
 readme = "README.md"
 license = { file="LICENSE.txt" }
 authors = [
     { name = "NVIDIA", email = "nbrenowitz@nvidia.com" }
 ]
+requires-python = ">= 3.10"
+
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: BSD License",
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
-]
-
-dependencies = [
-    "einops>=0.7.0",
-    "numpy>=1.23.3",
-    "torch>=2.0.1",
-    "scipy"
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 
 [project.urls]
@@ -158,3 +152,13 @@ doc = [
     "jupytext>=1.17.1",
     "myst-nb>=1.2.0",
 ]
+
+[tool.cibuildwheel]
+build = "*-manylinux_x86_64"
+environment = {PIP_CACHE_DIR="/host/tmp/pip_cache", TORCH_CUDA_ARCH_LIST="7.5 8.0 8.6 9.0+PTX"}
+build-frontend = { name = "pip", args = ["--no-build-isolation"] }
+repair-wheel-command = ""
+
+# Install system library
+[tool.cibuildwheel.linux]
+manylinux-x86_64-image = "pytorch/manylinux2_28-builder:cuda12.4-main"

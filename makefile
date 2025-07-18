@@ -39,3 +39,6 @@ docs:
 
 push_docs: docs
 	docs/push_docs.sh
+
+build_wheels:
+	CIBW_BEFORE_BUILD="pip install numpy torch==2.7.0" python -m cibuildwheel --output-dir dist/ --platform linux --archs x86_64
