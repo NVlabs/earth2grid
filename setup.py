@@ -42,7 +42,7 @@ def get_compatible_torch_version(version=""):
         lower_bound = f">={major}.{minor}"
 
     upper_bound = f"<{major}.{minor + 1}"
-    torch_version_str = ",".join([lower_bound, upper_bound])
+    torch_version_str = "torch" + ",".join([lower_bound, upper_bound])
     return torch_version_str
 
 
