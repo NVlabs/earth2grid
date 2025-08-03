@@ -12,25 +12,37 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import importlib.metadata
 import os
 import subprocess
 import warnings
 from typing import List
 
 import torch
+from packaging.version import Version
 from setuptools import setup
 from torch.utils import cpp_extension
 
 VERSION = "2025.7.1"
 
 
-def get_compatible_torch_version():
+def get_compatible_torch_version(version=""):
     # the built wheel will only be compatible with the currently installed torch
-    # minor version
-    major, minor = torch.__version__.split(".")[:2]
-    major = int(major)
-    minor = int(minor)
-    torch_version_str = f"torch>={major}.{minor},<{major}.{minor + 1}"
+
+    # if the installed version is a pre-release like "2.7.0.alpha0
+    # then use that
+    if not version:
+        version = importlib.metadata.version("torch")
+
+    version = Version(version)
+    major, minor, micro = version.release
+    if version.is_prerelease and micro == 0:
+        lower_bound = f">={version}"
+    else:
+        lower_bound = f">={major}.{minor}"
+
+    upper_bound = f"<{major}.{minor + 1}"
+    torch_version_str = ",".join([lower_bound, upper_bound])
     return torch_version_str
 
 
@@ -115,10 +127,11 @@ if CUDAExtension is not None:
 
 dependencies = ["einops>=0.7.0", "numpy>=1.23.3", get_compatible_torch_version(), "scipy"]
 
-setup(
-    name="earth2grid",
-    version=get_version_str(),
-    ext_modules=ext_modules,
-    install_requires=dependencies,
-    cmdclass={"build_ext": cpp_extension.BuildExtension},
-)
+if __name__ == "__main__":
+    setup(
+        name="earth2grid",
+        version=get_version_str(),
+        ext_modules=ext_modules,
+        install_requires=dependencies,
+        cmdclass={"build_ext": cpp_extension.BuildExtension},
+    )
