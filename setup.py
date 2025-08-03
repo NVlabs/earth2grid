@@ -31,13 +31,14 @@ def get_compatible_torch_version(version=""):
 
     # if the installed version is a pre-release like "2.7.0.alpha0
     # then use that
-    if not version:
+    if version == "":
         version = importlib.metadata.version("torch")
 
     version = Version(version)
     major, minor, micro = version.release
     if version.is_prerelease and micro == 0:
-        lower_bound = f">={version}"
+        pre = "".join(map(str, version.pre))
+        lower_bound = f">={major}.{minor}.{micro}{pre}"
     else:
         lower_bound = f">={major}.{minor}"
 
