@@ -449,3 +449,10 @@ def test_latlon_regression(regtest):
     with regtest:
         print("Longitude, latitude:\n")
         np.savetxt(regtest, ll, fmt="%.3f", delimiter="\t")
+
+
+def test_hpx14_regression():
+    grid = healpix.Grid(14, pixel_order=healpix.PixelOrder.NEST)
+    # also fails grid=H.Grid(14)
+    pix = grid.ang2pix(torch.tensor([-157.3648]).float(), torch.tensor([-19.881105]).float())
+    assert torch.all(pix >= 0)
