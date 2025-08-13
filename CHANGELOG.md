@@ -1,5 +1,10 @@
 # Changelog
 
+## Latest
+
+Bug fixes
+- fix ang2pix bug w/ returning negative pixels for hpx level >14. (#45)
+
 ## 2025.7.1
 
 - change default padding backend when GPUs present back to CUDA. This was causing a performance regression when not using torch.compile.

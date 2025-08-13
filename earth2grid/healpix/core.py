@@ -321,6 +321,7 @@ class Grid(base.Grid):
         x, y, f = coordinates.global_to_face(xs, ys)
         x = (x * n).long()
         y = (y * n).long()
+        f = f.long()
         nest = _xyf_to_nest(n, x, y, f)
         return self._nest2me(nest)
 
