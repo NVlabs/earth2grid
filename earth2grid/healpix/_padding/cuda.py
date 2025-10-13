@@ -45,6 +45,8 @@ def healpixpad_fprop(
         )
     # make contiguous
     x = x.contiguous()
+    if pad == 0:
+        return x.clone()
     out = healpixpad_cuda.forward(x, pad, channels_last)[0]
     return out
 
