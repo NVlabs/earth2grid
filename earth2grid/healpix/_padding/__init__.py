@@ -38,6 +38,10 @@ else:
     _backend = PaddingBackends.indexing
 
 
+def current_pad_backend() -> PaddingBackends:
+    return _backend
+
+
 @contextlib.contextmanager
 def pad_backend(backend: PaddingBackends):
     """Select the backend for padding"""
@@ -93,9 +97,10 @@ def pad(x: torch.Tensor, padding: int) -> torch.Tensor:
             channels_last = x.stride(2) == 1
             if channels_last:
                 x = x.permute(0, 1, 3, 4, 2)  # (B, F, C, H, W) -> (B, F, H, W, C) contiguous
-            out = cuda._HEALPixPadFunction.apply(x, padding, channels_last)
+            out = torch.ops.earth2grid.healpixpad_fprop(x, padding, channels_last)
+
             if channels_last:
                 out = out.permute(0, 1, 4, 2, 3)  # (B, F, H, W, C) -> (B, F, C, H, W)
             return out
         else:
-            return cuda._HEALPixPadFunction.apply(x.unsqueeze(2), padding, False).squeeze(2)
+            return torch.ops.earth2grid.healpixpad_fprop(x.unsqueeze(2), padding, False).squeeze(2)
