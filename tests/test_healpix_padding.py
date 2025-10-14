@@ -141,3 +141,29 @@ def test_healpix_pad_cuda_channels_last(nchannels, padding, nside, offset, dtype
 
     assert torch.allclose(inputs['cuda_standard'].grad, inputs['python_ref'].grad)
     assert torch.allclose(inputs['cuda_channels_last'].grad, inputs['python_ref'].grad)
+
+
+@pytest.mark.parametrize("backend", list(PaddingBackends))
+@pytest.mark.parametrize("device", ["cpu", "cuda"])
+def test_healpix_pad_torch_compile(backend, device):
+    if not torch.cuda.is_available() and device == "cuda":
+        pytest.skip("CUDA not available.")
+    if backend == PaddingBackends.cuda and device == "cpu":
+        pytest.skip("CUDA padding backend not supported on CPU")
+
+    ntile = 12
+    nside = 32
+    padding = 1
+    n = 3
+    x = torch.ones([n, ntile, nside, nside], device=device, requires_grad=True)
+
+    retval = True
+    torch._dynamo.reset()
+    torch._dynamo.config.error_on_recompile = True
+    compiled_pad = torch.compile(pad, fullgraph=True)
+    try:
+        with pad_backend(backend):
+            _ = compiled_pad(x, padding=padding)
+    except Exception:
+        retval = False
+    assert retval
