@@ -25,15 +25,7 @@ def validate_shape(
     channels_last: bool,
 ):
     if channels_last:
-        (
-            b,
-            f,
-            h,
-            w,
-            c,
-        ) = (
-            x.shape
-        )  # will errror if ndim is not 5...no need to raise error your self IMO since it should be pretty clear
+        b, f, h, w, c = x.shape
         dim_str = "(B, F, H, W, C)"
     else:
         b, f, c, h, w = x.shape
