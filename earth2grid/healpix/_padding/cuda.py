@@ -19,26 +19,33 @@ try:
 except ImportError:
     healpixpad_cuda = None
 
+
 def validate_shape(
     x: torch.Tensor,  # (B,F,C,H,W) or (B,F,H,W,C)
     channels_last: bool,
 ):
     if channels_last:
-        b, f, h, w, c = x.shape # will errror if ndim is not 5...no need to raise error your self IMO since it should be pretty clear
+        (
+            b,
+            f,
+            h,
+            w,
+            c,
+        ) = (
+            x.shape
+        )  # will errror if ndim is not 5...no need to raise error your self IMO since it should be pretty clear
         dim_str = "(B, F, H, W, C)"
     else:
         b, f, c, h, w = x.shape
         dim_str = "(B, F, C, H, W)"
-        
 
     if h != w:
-        raise ValueError(
-            f"Input tensor must be have 5 dimensions {dim_str}, with H == W, got {h},  {w}"
-        )
+        raise ValueError(f"Input tensor must be have 5 dimensions {dim_str}, with H == W, got {h},  {w}")
 
     if f != 12:
         raise ValueError(f"Input tensor must be have 5 dimensions {dim_str}, with F == 12, got {f}")
-    
+
+
 @torch.library.custom_op("earth2grid::healpixpad_fprop", mutates_args=())
 def healpixpad_fprop(
     x: torch.Tensor,  # (B,F,C,H,W) or (B,F,H,W,C)
