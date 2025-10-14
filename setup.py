@@ -36,9 +36,12 @@ def get_compatible_torch_version(version=""):
 
     version = Version(version)
     major, minor, micro = version.release
-    if version.is_prerelease and micro == 0:
+    if version.is_prerelease and micro == 0 and version.pre:
         pre = "".join(map(str, version.pre))
         lower_bound = f">={major}.{minor}.{micro}{pre}"
+    # For supporting torch nightly index
+    elif version.is_prerelease and micro == 0 and version.dev:
+        lower_bound = f">={major}.{minor}.{micro}dev{version.dev}"
     else:
         lower_bound = f">={major}.{minor}"
 
