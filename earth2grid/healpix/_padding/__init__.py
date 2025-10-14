@@ -17,7 +17,6 @@ from enum import Enum, auto
 
 import torch
 
-from earth2grid.healpix._padding import cuda
 from earth2grid.healpix._padding.pure_python import pad as pad_python
 from earth2grid.healpix._padding.pure_python import pad_with_dim
 from earth2grid.third_party.zephyr.healpix import healpix_pad as python_legacy

@@ -163,7 +163,7 @@ def test_healpix_pad_torch_compile(backend, device):
     compiled_pad = torch.compile(pad, fullgraph=True)
     try:
         with pad_backend(backend):
-            out = compiled_pad(x, padding=padding)
+            _ = compiled_pad(x, padding=padding)
     except Exception:
         retval = False
-    assert retval == True
+    assert retval

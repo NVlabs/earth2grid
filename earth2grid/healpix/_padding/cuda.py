@@ -19,7 +19,26 @@ try:
 except ImportError:
     healpixpad_cuda = None
 
+def validate_shape(
+    x: torch.Tensor,  # (B,F,C,H,W) or (B,F,H,W,C)
+    channels_last: bool,
+):
+    if channels_last:
+        b, f, h, w, c = x.shape # will errror if ndim is not 5...no need to raise error your self IMO since it should be pretty clear
+        dim_str = "(B, F, H, W, C)"
+    else:
+        b, f, c, h, w = x.shape
+        dim_str = "(B, F, C, H, W)"
+        
 
+    if h != w:
+        raise ValueError(
+            f"Input tensor must be have 5 dimensions {dim_str}, with H == W, got {h},  {w}"
+        )
+
+    if f != 12:
+        raise ValueError(f"Input tensor must be have 5 dimensions {dim_str}, with F == 12, got {f}")
+    
 @torch.library.custom_op("earth2grid::healpixpad_fprop", mutates_args=())
 def healpixpad_fprop(
     x: torch.Tensor,  # (B,F,C,H,W) or (B,F,H,W,C)
@@ -27,22 +46,7 @@ def healpixpad_fprop(
     channels_last: bool,
 ) -> torch.Tensor:
 
-    # ctx.pad = pad
-    # ctx.channels_last = channels_last
-    if x.ndim != 5:
-        raise ValueError(
-            f"Input tensor must be have 5 dimensions (B, F, C, H, W), got {len(x.shape)} dimensions instead"
-        )
-    if x.shape[1] != 12:
-        raise ValueError(f"Input tensor must be have 5 dimensions (B, F, C, H, W), with F == 12, got {x.shape[1]}")
-    if not channels_last and x.shape[3] != x.shape[4]:
-        raise ValueError(
-            f"Input tensor must be have 5 dimensions (B, F, C, H, W), with H == W, got {x.shape[3]},  {x.shape[4]}"
-        )
-    elif channels_last and x.shape[2] != x.shape[3]:
-        raise ValueError(
-            f"Input tensor must be have 5 dimensions (B, F, H, W, C), with H == W, got {x.shape[2]},  {x.shape[3]}"
-        )
+    validate_shape(x, channels_last)
     # make contiguous
     x = x.contiguous()
     if pad == 0:
@@ -68,20 +72,7 @@ def fake_healpixpad_fprop(x, pad, channels_last):
     -------
     torch.tensor: The padded tensor
     """
-    if x.ndim != 5:
-        raise ValueError(
-            f"Input tensor must be have 5 dimensions (B, F, C, H, W), got {len(x.shape)} dimensions instead"
-        )
-    if x.shape[1] != 12:
-        raise ValueError(f"Input tensor must be have 5 dimensions (B, F, C, H, W), with F == 12, got {x.shape[1]}")
-    if not channels_last and x.shape[3] != x.shape[4]:
-        raise ValueError(
-            f"Input tensor must be have 5 dimensions (B, F, C, H, W), with H == W, got {x.shape[3]},  {x.shape[4]}"
-        )
-    elif channels_last and x.shape[2] != x.shape[3]:
-        raise ValueError(
-            f"Input tensor must be have 5 dimensions (B, F, H, W, C), with H == W, got {x.shape[2]},  {x.shape[3]}"
-        )
+    validate_shape(x, channels_last)
     ndim = 5
 
     # x - (n, f, c, x, y) in origin=N hpx pad order
@@ -91,20 +82,20 @@ def fake_healpixpad_fprop(x, pad, channels_last):
             ndim = 4
         n, f, nside, _, c = x.shape
         H_out = nside + 2 * pad
-        res = x.new_empty((n, f, H_out, H_out, c))
+        out = x.new_empty((n, f, H_out, H_out, c))
         if ndim == 4:
-            res = res.squeeze(-1)
+            out = out.squeeze(-1)
     else:
         if x.ndim == 4:
             x = x.unsqueeze(2)
             ndim = 4
         n, f, c, nside, _ = x.shape
         H_out = nside + 2 * pad
-        res = x.new_empty((n, f, c, H_out, H_out))
+        out = x.new_empty((n, f, c, H_out, H_out))
         if ndim == 4:
-            res = res.squeeze(2)
+            out = out.squeeze(2)
 
-    return res
+    return out
 
 
 @torch.library.custom_op("earth2grid::healpixpad_bprop", mutates_args=())
