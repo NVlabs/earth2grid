@@ -388,6 +388,7 @@ def test_ang2pix_python_implementation(compile: bool):
     pix_from_healpix_bare = healpix_bare.ang2pix(grid.nside, lon, lat, lonlat=True)
     assert torch.all(pix == pix_from_healpix_bare)
 
+    torch.manual_seed(0)
     lat = torch.rand(100) * 180 - 90
     lon = torch.rand(100) * 360
     assert torch.all(ang2pix(lon, lat) == healpix_bare.ang2pix(grid.nside, lon, lat, lonlat=True))
