@@ -170,6 +170,11 @@ def global_to_face(xs: torch.Tensor, ys: torch.Tensor) -> tuple[torch.Tensor, to
     # faces are ordered N to S
     y_block = (-y).floor().int()
 
+    # Clamp y_block to valid range [0, 4] to avoid negative face indices
+    # This handles edge cases where y is very close to 0
+    y_block = torch.clamp(y_block, 0, 4)
+    x_block = torch.clamp(x_block, 0, 4)
+
     # north
     face = torch.where(x_block > y_block, y_block, 0)
     # equator
