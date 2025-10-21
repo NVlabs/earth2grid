@@ -206,7 +206,6 @@ def test_latlon_cuda_set_device_regression():
 
 @pytest.mark.parametrize("device,do_torch", [("cpu", True), ("cuda", True), ("cpu", False)])
 def test_zonal_average(device, do_torch):
-
     if device == "cuda" and torch.cuda.device_count() == 0:
         pytest.skip("no cuda devices available")
 
@@ -346,7 +345,7 @@ def test_local2local_S_to_E():
     assert pix.item() == nside - 1
 
 
-@pytest.mark.parametrize('compile', [False, True])
+@pytest.mark.parametrize("compile", [False, True])
 def test_healpix_projection(compile: bool):
     """Test the forward and inverse projection of the Projection class."""
     # Test points at key locations, but avoid the exact poles
@@ -379,7 +378,7 @@ def test_healpix_projection(compile: bool):
     assert torch.allclose(ys_pole, torch.tensor([np.pi / 2]), rtol=1e-5, atol=1e-5)
 
 
-@pytest.mark.parametrize('compile', [False, True])
+@pytest.mark.parametrize("compile", [False, True])
 def test_ang2pix_python_implementation(compile: bool):
     grid = healpix.Grid(8)
     lat = torch.tensor([0.0])
@@ -389,12 +388,13 @@ def test_ang2pix_python_implementation(compile: bool):
     pix_from_healpix_bare = healpix_bare.ang2pix(grid.nside, lon, lat, lonlat=True)
     assert torch.all(pix == pix_from_healpix_bare)
 
+    torch.manual_seed(0)
     lat = torch.rand(100) * 180 - 90
     lon = torch.rand(100) * 360
     assert torch.all(ang2pix(lon, lat) == healpix_bare.ang2pix(grid.nside, lon, lat, lonlat=True))
 
 
-@pytest.mark.parametrize('compile', [False, True])
+@pytest.mark.parametrize("compile", [False, True])
 def test_pix2ang(compile: bool):
     grid = healpix.Grid(8)
     pix = torch.arange(grid.shape[-1])
@@ -451,8 +451,9 @@ def test_latlon_regression(regtest):
         np.savetxt(regtest, ll, fmt="%.3f", delimiter="\t")
 
 
-def test_hpx14_regression():
-    grid = healpix.Grid(14, pixel_order=healpix.PixelOrder.NEST)
+@pytest.mark.parametrize("level,lat,lon", [(14, -157.3648, -19.881105), (7, 70.0, 0.0)])
+def test_hpx14_regression(level, lat, lon):
+    grid = healpix.Grid(level, pixel_order=healpix.PixelOrder.NEST)
     # also fails grid=H.Grid(14)
-    pix = grid.ang2pix(torch.tensor([-157.3648]).float(), torch.tensor([-19.881105]).float())
+    pix = grid.ang2pix(torch.tensor([lon]).float(), torch.tensor([lat]).float())
     assert torch.all(pix >= 0)

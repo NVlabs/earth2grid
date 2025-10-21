@@ -3,7 +3,7 @@
 ## Latest
 
 Bug fixes
-- fix ang2pix bug w/ returning negative pixels for hpx level >14. (#45)
+- fix ang2pix bug w/ returning negative pixels (#45 #48)
 
 ## 2025.7.1
 
