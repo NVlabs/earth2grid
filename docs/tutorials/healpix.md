@@ -307,7 +307,7 @@ for i in range(12):
 plt.tight_layout()
 ```
 
-Padding is a basic primitive for many machine learning methods. For example, convolutions un the sphere can be implemented as a padding followed by a convolution. Because of this we have written a CUDA padding routine that works for the HEALPix grid. It requires (origin=N, orientation=clockwise) i.e. [N, E, S, W].  For convenience we have an alias for this `healpix.HEALPIX_PAD_XY`. Let's now call the padding routine and plot the padded region.
+Padding is a basic primitive for many machine learning methods. For example, convolutions on the sphere can be implemented as a padding followed by a convolution. Because of this we have written a CUDA padding routine that works for the HEALPix grid. It requires (origin=N, orientation=clockwise) i.e. [N, E, S, W].  For convenience we have an alias for this `healpix.HEALPIX_PAD_XY`. Let's now call the padding routine and plot the padded region.
 
 ```{code-cell}
 nside = 8
