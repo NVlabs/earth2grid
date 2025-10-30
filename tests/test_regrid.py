@@ -62,9 +62,16 @@ def test_healpix_to_lat_lon(with_channels, tmp_path):
 
 
 @pytest.mark.parametrize("with_channels", [True, False])
-def test_lat_lon_to_healpix(with_channels):
+@pytest.mark.parametrize("start_lon", [0, -180, -260, 123])
+def test_lat_lon_to_healpix(with_channels, start_lon):
     dest = earth2grid.healpix.Grid(level=6, pixel_order=earth2grid.healpix.XY())
-    src = earth2grid.latlon.equiangular_lat_lon_grid(33, 64)
+
+    end_lon = start_lon + 360
+
+    lat = np.linspace(-90, 90, 33)
+    lon = np.linspace(start_lon, end_lon, 360, endpoint=False)
+    src = earth2grid.latlon.LatLonGrid(lat, lon, cylinder=True)
+
     regrid = earth2grid.get_regridder(src, dest)
 
     def f(lat, lon):
