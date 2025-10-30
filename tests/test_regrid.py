@@ -24,7 +24,7 @@ from earth2grid import BilinearInterpolator
 
 
 @pytest.mark.parametrize("with_channels", [True, False])
-def test_latlon_regridder(with_channels, tmp_path):
+def test_healpix_to_lat_lon(with_channels, tmp_path):
     nlat = 30
     nlon = 60
 
@@ -62,7 +62,7 @@ def test_latlon_regridder(with_channels, tmp_path):
 
 
 @pytest.mark.parametrize("with_channels", [True, False])
-def test_healpix_to_lat_lon(with_channels):
+def test_lat_lon_to_healpix(with_channels):
     dest = earth2grid.healpix.Grid(level=6, pixel_order=earth2grid.healpix.XY())
     src = earth2grid.latlon.equiangular_lat_lon_grid(33, 64)
     regrid = earth2grid.get_regridder(src, dest)
