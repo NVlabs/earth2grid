@@ -24,7 +24,7 @@ from earth2grid import BilinearInterpolator
 
 
 @pytest.mark.parametrize("with_channels", [True, False])
-def test_latlon_regridder(with_channels, tmp_path):
+def test_healpix_to_lat_lon(with_channels, tmp_path):
     nlat = 30
     nlon = 60
 
@@ -62,9 +62,18 @@ def test_latlon_regridder(with_channels, tmp_path):
 
 
 @pytest.mark.parametrize("with_channels", [True, False])
-def test_healpix_to_lat_lon(with_channels):
+@pytest.mark.parametrize("start_lon", [0, -180, -260, 123])
+@pytest.mark.parametrize("cylinder", [True, False])
+def test_lat_lon_to_healpix(with_channels, start_lon, cylinder):
     dest = earth2grid.healpix.Grid(level=6, pixel_order=earth2grid.healpix.XY())
-    src = earth2grid.latlon.equiangular_lat_lon_grid(33, 64)
+
+    degs = 360 if cylinder else 300
+    end_lon = start_lon + degs
+
+    lat = np.linspace(-90, 90, 33)
+    lon = np.linspace(start_lon, end_lon, degs, endpoint=False)
+    src = earth2grid.latlon.LatLonGrid(lat, lon, cylinder=cylinder)
+
     regrid = earth2grid.get_regridder(src, dest)
 
     def f(lat, lon):
@@ -77,7 +86,16 @@ def test_healpix_to_lat_lon(with_channels):
         z = z[None]
     z_regridded = regrid(z)
     expected = f(dest.lat, dest.lon)
-    assert torch.allclose(z_regridded, expected, rtol=0.01)
+    if with_channels:
+        expected = expected[None]
+
+    # mask for non-cylinder case where some dest points are out of bounds
+    mask = ~torch.isnan(z_regridded)
+    if cylinder:
+        # no NaNs for cylinder case
+        assert torch.all(mask)
+
+    assert torch.allclose(z_regridded[mask], expected[mask], rtol=0.01)
 
 
 @pytest.mark.parametrize("with_channels", [True, False])
