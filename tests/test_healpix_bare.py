@@ -112,7 +112,7 @@ def test_ang2pix(lonlat):
 
 def test_ring_info():
     nside = 16
-    nrings = 4*nside - 1
+    nrings = 4 * nside - 1
     info = earth2grid.healpix_bare.get_ring_info(nside=nside)
-    assert info["startpix"].shape[0] == nrings   # torch.Size([number_of_rings])
-    assert info["ringpix"].sum().item() == 12*nside*nside
+    assert info["startpix"].shape[0] == nrings  # torch.Size([number_of_rings])
+    assert info["ringpix"].sum().item() == 12 * nside * nside
