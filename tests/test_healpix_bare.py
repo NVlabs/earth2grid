@@ -108,3 +108,11 @@ def test_ang2pix(lonlat):
 
     assert lon.item() == pytest.approx(lon_out.item(), rel=1e-4)
     assert lat.item() == pytest.approx(lat_out.item(), rel=1e-4)
+
+
+def test_ring_info():
+    nside = 16
+    nrings = 4*nside - 1
+    info = earth2grid.healpix_bare.get_ring_info(nside=nside)
+    assert info["startpix"].shape[0] == nrings   # torch.Size([number_of_rings])
+    assert info["ringpix"].sum().item() == 12*nside*nside
