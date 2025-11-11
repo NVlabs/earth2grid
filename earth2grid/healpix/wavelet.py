@@ -13,10 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any, Tuple
+
 import einops
 import numpy as np
-import torch
 import ptwt
+import torch
 
 from earth2grid.healpix import pad as healpix_pad
 
@@ -31,22 +33,22 @@ class WaveletDecomposer:
         self.wavelet = wavelet
         self.level = level
         self._cached_shape = None
-        self._cached_zero_details = None
+        self._cached_zero_details: Tuple[Any, ...] = tuple()
 
-    def _create_zero_details(self, x: torch.Tensor):
+    def _create_zero_details(self, x: torch.Tensor) -> Tuple[Any, ...]:
         """Create zero detail coefficients for the given input tensor."""
         # Perform decomposition once to get the structure
         _, *details = ptwt.wavedec2(x, wavelet=self.wavelet, level=self.level, mode="symmetric")
 
         # Create zeroed-out detail coefficients
-        zero_details = [
+        zero_details = tuple(
             ptwt.WaveletDetailTuple2d(
                 horizontal=torch.zeros_like(d.horizontal),
                 vertical=torch.zeros_like(d.vertical),
                 diagonal=torch.zeros_like(d.diagonal),
             )
             for d in details
-        ]
+        )
 
         return zero_details
 
@@ -66,7 +68,7 @@ class WaveletDecomposer:
         current_shape = x.shape
         if (
             self._cached_shape != current_shape
-            or self._cached_zero_details is None
+            or len(self._cached_zero_details) == 0
             or self._cached_zero_details[0].horizontal.device != x.device
         ):
             self._cached_shape = current_shape
@@ -86,7 +88,7 @@ class WaveletDecomposer:
     def clear_cache(self):
         """Clear the cached zero details (useful for memory cleanup)."""
         self._cached_shape = None
-        self._cached_zero_details = None
+        self._cached_zero_details = tuple()
 
 
 class HEALPixWaveletDecomposer(WaveletDecomposer):
@@ -99,7 +101,7 @@ class HEALPixWaveletDecomposer(WaveletDecomposer):
         self.wavelet = wavelet
         self.level = level
         self._cached_shape = None
-        self._cached_zero_details = None
+        self._cached_zero_details: Tuple[Any, ...] = tuple()
 
     def coarsen(self, x: torch.Tensor, compute_hf=False):
         """
@@ -122,7 +124,7 @@ class HEALPixWaveletDecomposer(WaveletDecomposer):
         current_shape = x_pad.shape
         if (
             self._cached_shape != current_shape
-            or self._cached_zero_details is None
+            or len(self._cached_zero_details) == 0
             or self._cached_zero_details[0].horizontal.device != x_pad.device
         ):
             self._cached_shape = current_shape
