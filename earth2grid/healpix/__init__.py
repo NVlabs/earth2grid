@@ -33,6 +33,8 @@ from earth2grid.healpix.coordinates import (
 )
 from earth2grid.healpix.core import (
     HEALPIX_PAD_XY,
+    NEST,
+    RING,
     XY,
     Compass,
     Grid,
@@ -64,6 +66,8 @@ __all__ = [
     "global_to_face",
     "Grid",
     "HEALPIX_PAD_XY",
+    "NEST",
+    "RING",
     "local2xy",
     "nest2xy",
     "npix2level",

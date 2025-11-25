@@ -203,7 +203,10 @@ class XY:
 
 PixelOrderT = Union[PixelOrder, XY]
 
+# aliases for convenience
 HEALPIX_PAD_XY = XY(origin=Compass.N, clockwise=True)
+NEST = PixelOrder.NEST
+RING = PixelOrder.RING
 
 
 def reorder(x: torch.Tensor, src_pixel_order: PixelOrderT, dest_pixel_order: PixelOrderT):
