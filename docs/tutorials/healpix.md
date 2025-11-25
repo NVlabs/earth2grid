@@ -189,7 +189,7 @@ print(x.grad[:5])
 from earth2grid import latlon
 llgrid = latlon.LatLonGrid(lat=lat, lon=lon)
 hpxgrid = healpix.Grid(level=6)
-regridder = llgrid.get_bilinear_regridder_to(hpxgrid.lon, hpxgrid.lat)
+regridder = llgrid.get_bilinear_regridder_to(hpxgrid.lat, hpxgrid.lon)
 
 field = lat[:, None] + 0 * lon # trick to get (nlat, nlon) array
 out = regridder(torch.from_numpy(field))
