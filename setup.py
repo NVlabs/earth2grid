@@ -23,7 +23,7 @@ from packaging.version import Version
 from setuptools import setup
 from torch.utils import cpp_extension
 
-VERSION = "2025.7.1"
+VERSION = "2025.11.1"
 
 
 def get_compatible_torch_version(version=""):

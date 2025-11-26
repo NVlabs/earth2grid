@@ -1,10 +1,13 @@
 # Changelog
 
-## Latest
+## 2025.11.1
+
+New features:
+- add aliases healpix.RING and healpix.NEST for healpix.PixelOrder
+- and more
 
 Bug fixes
 - fix ang2pix bug w/ returning negative pixels (#45 #48)
-- add aliases healpix.RING and healpix.NEST for healpix.PixelOrder
 
 ## 2025.7.1
 
