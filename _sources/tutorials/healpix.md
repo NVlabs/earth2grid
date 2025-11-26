@@ -62,7 +62,7 @@ def label_pixels(z):
     y, x =healpix.ring2double(nside, i_ring)
     if label_pixels:
         for i in range(npix):
-            plt.text((x[i] + nside).item() / 2, nside-(y[i] + 1).item() / 2, z[i].item(), ha='center', va='center', fontsize=12, color='white', clip_on=True)
+            plt.text((x[i] + nside).item() / 2, nside-(y[i]).item() / 2, z[i].item(), ha='center', va='center', fontsize=12, color='white', clip_on=True)
 
 ```
 
@@ -189,7 +189,7 @@ print(x.grad[:5])
 from earth2grid import latlon
 llgrid = latlon.LatLonGrid(lat=lat, lon=lon)
 hpxgrid = healpix.Grid(level=6)
-regridder = llgrid.get_bilinear_regridder_to(hpxgrid.lon, hpxgrid.lat)
+regridder = llgrid.get_bilinear_regridder_to(hpxgrid.lat, hpxgrid.lon)
 
 field = lat[:, None] + 0 * lon # trick to get (nlat, nlon) array
 out = regridder(torch.from_numpy(field))
@@ -221,6 +221,11 @@ def show_pixel_order(nside, pixel_order):
         plt.title(f"{pixel_order.origin.name}, {clockwise=}")
 
 show_pixel_order(2, healpix.PixelOrder.RING)
+```
+
+```{code-cell}
+:tags: [hide-input]
+show_pixel_order(1, healpix.PixelOrder.RING)
 ```
 
 
@@ -302,7 +307,7 @@ for i in range(12):
 plt.tight_layout()
 ```
 
-Padding is a basic primitive for many machine learning methods. For example, convolutions un the sphere can be implemented as a padding followed by a convolution. Because of this we have written a CUDA padding routine that works for the HEALPix grid. It requires (origin=N, orientation=clockwise) i.e. [N, E, S, W].  For convenience we have an alias for this `healpix.HEALPIX_PAD_XY`. Let's now call the padding routine and plot the padded region.
+Padding is a basic primitive for many machine learning methods. For example, convolutions on the sphere can be implemented as a padding followed by a convolution. Because of this we have written a CUDA padding routine that works for the HEALPix grid. It requires (origin=N, orientation=clockwise) i.e. [N, E, S, W].  For convenience we have an alias for this `healpix.HEALPIX_PAD_XY`. Let's now call the padding routine and plot the padded region.
 
 ```{code-cell}
 nside = 8

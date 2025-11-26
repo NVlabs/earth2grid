@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
-    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
     <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
     <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
     <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
@@ -166,6 +166,8 @@
 <li class="toctree-l2"><a class="reference internal" href="../auto_examples/hpx2grid.html">HealPIX Image visualization</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../auto_examples/latlon_to_healpix.html">HealPIX regridding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../auto_examples/pyvista_grids.html">Plot grids with PyVista</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../auto_examples/benchmark_healpix_pad_timing.html">Benchmark different HEALPix padding implementations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../auto_examples/local_padding.html">Working with HEALPix Grids and Local Patches</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API</a></li>
@@ -395,17 +397,13 @@ document.write(`
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[84.14973294 84.14973294 84.14973294 84.14973294 78.28414761]
 </pre></div>
 </div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/Users/nbrenowitz/workspace/nvidia/earth2grid/earth2grid/healpix/core.py:112: UserWarning: healpixpad_cuda module not available, reverting to CPU for all padding routines
-  warnings.warn(&quot;healpixpad_cuda module not available, reverting to CPU for all padding routines&quot;)
-</pre></div>
-</div>
 </div>
 </div>
 <div class="cell tag_hide-input docutils container">
-<details class="hide above-input">
+<details class="admonition hide above-input">
 <summary aria-label="Toggle hidden content">
-<span class="collapsed">Show code cell source</span>
-<span class="expanded">Hide code cell source</span>
+<p class="collapsed admonition-title">Show code cell source</p>
+<p class="expanded admonition-title">Hide code cell source</p>
 </summary>
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">SHOW_AXES</span> <span class="o">=</span> <span class="kc">False</span>
@@ -418,7 +416,7 @@ document.write(`
     <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span><span class="n">healpix</span><span class="o">.</span><span class="n">ring2double</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="n">i_ring</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">label_pixels</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">npix</span><span class="p">):</span>
-            <span class="n">plt</span><span class="o">.</span><span class="n">text</span><span class="p">((</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">nside</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">nside</span><span class="o">-</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">z</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">,</span> <span class="n">clip_on</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">text</span><span class="p">((</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">nside</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">nside</span><span class="o">-</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">z</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">,</span> <span class="n">clip_on</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -442,7 +440,7 @@ document.write(`
 </div>
 </div>
 <div class="cell_output docutils container">
-<img alt="../_images/e1846a796e58f8517d531706393af7fdb27ae5c2a03f06c2b3d5bedee5f76aef.png" src="../_images/e1846a796e58f8517d531706393af7fdb27ae5c2a03f06c2b3d5bedee5f76aef.png" />
+<img alt="../_images/4b364fb9932972958a4edc3ae104d1b788ba67536cbafadddcb6af3a3380682f.png" src="../_images/4b364fb9932972958a4edc3ae104d1b788ba67536cbafadddcb6af3a3380682f.png" />
 </div>
 </div>
 </section>
@@ -460,10 +458,10 @@ document.write(`
 </div>
 </div>
 <div class="cell tag_hide-input docutils container">
-<details class="hide above-input">
+<details class="admonition hide above-input">
 <summary aria-label="Toggle hidden content">
-<span class="collapsed">Show code cell source</span>
-<span class="expanded">Hide code cell source</span>
+<p class="collapsed admonition-title">Show code cell source</p>
+<p class="expanded admonition-title">Hide code cell source</p>
 </summary>
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Plot the zonal average</span>
@@ -479,7 +477,7 @@ document.write(`
 </div>
 </details>
 <div class="cell_output docutils container">
-<img alt="../_images/f7f25e9e9b8c00225b44ebac3729168dea314e7730cd5bf83f9a31a90770ce59.png" src="../_images/f7f25e9e9b8c00225b44ebac3729168dea314e7730cd5bf83f9a31a90770ce59.png" />
+<img alt="../_images/cebd88235af9ae3b1604f018c13fce50c67599d45b87c86209248424f904a37b.png" src="../_images/cebd88235af9ae3b1604f018c13fce50c67599d45b87c86209248424f904a37b.png" />
 </div>
 </div>
 </section>
@@ -514,10 +512,10 @@ document.write(`
 </div>
 </div>
 <div class="cell tag_hide-input docutils container">
-<details class="hide above-input">
+<details class="admonition hide above-input">
 <summary aria-label="Toggle hidden content">
-<span class="collapsed">Show code cell source</span>
-<span class="expanded">Hide code cell source</span>
+<p class="collapsed admonition-title">Show code cell source</p>
+<p class="expanded admonition-title">Hide code cell source</p>
 </summary>
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Plot original and regridded fields</span>
@@ -541,7 +539,7 @@ document.write(`
 </div>
 </details>
 <div class="cell_output docutils container">
-<img alt="../_images/401ac8b82d8f642fb6a366a6d74c898869a0aac3e03a080f84d6b00e32bf1e1d.png" src="../_images/401ac8b82d8f642fb6a366a6d74c898869a0aac3e03a080f84d6b00e32bf1e1d.png" />
+<img alt="../_images/c72f6cdf851d78db44e8792733ef4861b93e1353b6d95fd4b548ef2b656688cb.png" src="../_images/c72f6cdf851d78db44e8792733ef4861b93e1353b6d95fd4b548ef2b656688cb.png" />
 </div>
 </div>
 <p>A more verbose way, but flexible, way to do this is using the <code class="docutils literal notranslate"><span class="pre">.get_bilinear_regridder_to</span></code> method.</p>
@@ -581,7 +579,7 @@ document.write(`
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>tensor([ -4.0773,   0.4344, -20.1758, -24.9575, -12.2977])
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>tensor([ 21.8016, -15.9544, -21.5755,  14.5128,   9.7041])
 </pre></div>
 </div>
 </div>
@@ -595,7 +593,7 @@ document.write(`
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">earth2grid</span><span class="w"> </span><span class="kn">import</span> <span class="n">latlon</span>
 <span class="n">llgrid</span> <span class="o">=</span> <span class="n">latlon</span><span class="o">.</span><span class="n">LatLonGrid</span><span class="p">(</span><span class="n">lat</span><span class="o">=</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="o">=</span><span class="n">lon</span><span class="p">)</span>
 <span class="n">hpxgrid</span> <span class="o">=</span> <span class="n">healpix</span><span class="o">.</span><span class="n">Grid</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
-<span class="n">regridder</span> <span class="o">=</span> <span class="n">llgrid</span><span class="o">.</span><span class="n">get_bilinear_regridder_to</span><span class="p">(</span><span class="n">hpxgrid</span><span class="o">.</span><span class="n">lon</span><span class="p">,</span> <span class="n">hpxgrid</span><span class="o">.</span><span class="n">lat</span><span class="p">)</span>
+<span class="n">regridder</span> <span class="o">=</span> <span class="n">llgrid</span><span class="o">.</span><span class="n">get_bilinear_regridder_to</span><span class="p">(</span><span class="n">hpxgrid</span><span class="o">.</span><span class="n">lat</span><span class="p">,</span> <span class="n">hpxgrid</span><span class="o">.</span><span class="n">lon</span><span class="p">)</span>
 
 <span class="n">field</span> <span class="o">=</span> <span class="n">lat</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">+</span> <span class="mi">0</span> <span class="o">*</span> <span class="n">lon</span> <span class="c1"># trick to get (nlat, nlon) array</span>
 <span class="n">out</span> <span class="o">=</span> <span class="n">regridder</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">field</span><span class="p">))</span>
@@ -622,10 +620,10 @@ document.write(`
 <p>The ability to reorder between these schemes is crucial for compatibility with different HEALPix implementations and for certain operations.</p>
 <p>This is the default RING order:</p>
 <div class="cell tag_hide-input docutils container">
-<details class="hide above-input">
+<details class="admonition hide above-input">
 <summary aria-label="Toggle hidden content">
-<span class="collapsed">Show code cell source</span>
-<span class="expanded">Hide code cell source</span>
+<p class="collapsed admonition-title">Show code cell source</p>
+<p class="expanded admonition-title">Hide code cell source</p>
 </summary>
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">show_pixel_order</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="n">pixel_order</span><span class="p">):</span>
@@ -644,15 +642,31 @@ document.write(`
 </div>
 </details>
 <div class="cell_output docutils container">
-<img alt="../_images/7b6e1180fbd580f9c9bfa701f0c27182ec7335b25aec126329db326bce0c6038.png" src="../_images/7b6e1180fbd580f9c9bfa701f0c27182ec7335b25aec126329db326bce0c6038.png" />
+<img alt="../_images/e009e346cbe6888c4629f95880790c3c6020b9aca6138a564d464f559f2565bd.png" src="../_images/e009e346cbe6888c4629f95880790c3c6020b9aca6138a564d464f559f2565bd.png" />
+</div>
+</div>
+<div class="cell tag_hide-input docutils container">
+<details class="admonition hide above-input">
+<summary aria-label="Toggle hidden content">
+<p class="collapsed admonition-title">Show code cell source</p>
+<p class="expanded admonition-title">Hide code cell source</p>
+</summary>
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">show_pixel_order</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">PixelOrder</span><span class="o">.</span><span class="n">RING</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</details>
+<div class="cell_output docutils container">
+<img alt="../_images/68315ab1da2a3f1870b24015270e2f2abb6db91c9eebd5de5cada3fe25a015fa.png" src="../_images/68315ab1da2a3f1870b24015270e2f2abb6db91c9eebd5de5cada3fe25a015fa.png" />
 </div>
 </div>
 <p>And the NEST</p>
 <div class="cell tag_hide-input docutils container">
-<details class="hide above-input">
+<details class="admonition hide above-input">
 <summary aria-label="Toggle hidden content">
-<span class="collapsed">Show code cell source</span>
-<span class="expanded">Hide code cell source</span>
+<p class="collapsed admonition-title">Show code cell source</p>
+<p class="expanded admonition-title">Hide code cell source</p>
 </summary>
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">show_pixel_order</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">healpix</span><span class="o">.</span><span class="n">PixelOrder</span><span class="o">.</span><span class="n">NEST</span><span class="p">)</span>
@@ -661,15 +675,15 @@ document.write(`
 </div>
 </details>
 <div class="cell_output docutils container">
-<img alt="../_images/bbe79e44324a34621a9b21435e234ebe6584f60fe330c7b8c761ca69e5428319.png" src="../_images/bbe79e44324a34621a9b21435e234ebe6584f60fe330c7b8c761ca69e5428319.png" />
+<img alt="../_images/a4c3ff1f6560e7bc854b287187d12c4366690698d87d8e40c80f65583e904aa1.png" src="../_images/a4c3ff1f6560e7bc854b287187d12c4366690698d87d8e40c80f65583e904aa1.png" />
 </div>
 </div>
 <p>While NEST and RING are classic, we often want to treat each base pixel of the healpix grid as a 2d array. We have a XY pixel ordering object that allows us to do this.</p>
 <div class="cell tag_hide-input docutils container">
-<details class="hide above-input">
+<details class="admonition hide above-input">
 <summary aria-label="Toggle hidden content">
-<span class="collapsed">Show code cell source</span>
-<span class="expanded">Hide code cell source</span>
+<p class="collapsed admonition-title">Show code cell source</p>
+<p class="expanded admonition-title">Hide code cell source</p>
 </summary>
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">show_pixel_order</span><span class="p">(</span><span class="n">nside</span><span class="p">,</span> <span class="n">pixel_order</span><span class="p">):</span>
@@ -714,7 +728,7 @@ document.write(`
 <div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>(2.0, 6.0)
 </pre></div>
 </div>
-<img alt="../_images/5c3f593b4d08f6cbf0adf7f86558bb2d42fca16f5e7da88005950567f88901d6.png" src="../_images/5c3f593b4d08f6cbf0adf7f86558bb2d42fca16f5e7da88005950567f88901d6.png" />
+<img alt="../_images/4da2c71542f409e35985c011397eaf889290312603036e0f39c2deba5c2539ef.png" src="../_images/4da2c71542f409e35985c011397eaf889290312603036e0f39c2deba5c2539ef.png" />
 </div>
 </div>
 <p>Why can convert between any two pixel orders like this:</p>
@@ -726,10 +740,10 @@ document.write(`
 <h3>Padding and Convolutions<a class="headerlink" href="#padding-and-convolutions" title="Link to this heading">#</a></h3>
 <p>The XY pixel order is useful for image analysis since it is a Cartesian-like grid. For example this is what the data looks like on each face of the sphere:</p>
 <div class="cell tag_hide-input docutils container">
-<details class="hide above-input">
+<details class="admonition hide above-input">
 <summary aria-label="Toggle hidden content">
-<span class="collapsed">Show code cell source</span>
-<span class="expanded">Hide code cell source</span>
+<p class="collapsed admonition-title">Show code cell source</p>
+<p class="expanded admonition-title">Hide code cell source</p>
 </summary>
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">level</span> <span class="o">=</span> <span class="mi">6</span>
@@ -752,10 +766,10 @@ document.write(`
 </div>
 </details>
 <div class="cell_output docutils container">
-<img alt="../_images/3e2ec280180048fa4fedfc02eb2d8f330d0cb195e48814a7bb66df1deee0292c.png" src="../_images/3e2ec280180048fa4fedfc02eb2d8f330d0cb195e48814a7bb66df1deee0292c.png" />
+<img alt="../_images/728720192ae903dc78756851ff5165b7374fce9ec0d5b4ed9346d23fb663647c.png" src="../_images/728720192ae903dc78756851ff5165b7374fce9ec0d5b4ed9346d23fb663647c.png" />
 </div>
 </div>
-<p>Padding is a basic primitive for many machine learning methods. For example, convolutions un the sphere can be implemented as a padding followed by a convolution. Because of this we have written a CUDA padding routine that works for the HEALPix grid. It requires (origin=N, orientation=clockwise) i.e. [N, E, S, W].  For convenience we have an alias for this <code class="docutils literal notranslate"><span class="pre">healpix.HEALPIX_PAD_XY</span></code>. Let’s now call the padding routine and plot the padded region.</p>
+<p>Padding is a basic primitive for many machine learning methods. For example, convolutions on the sphere can be implemented as a padding followed by a convolution. Because of this we have written a CUDA padding routine that works for the HEALPix grid. It requires (origin=N, orientation=clockwise) i.e. [N, E, S, W].  For convenience we have an alias for this <code class="docutils literal notranslate"><span class="pre">healpix.HEALPIX_PAD_XY</span></code>. Let’s now call the padding routine and plot the padded region.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">nside</span> <span class="o">=</span> <span class="mi">8</span>
@@ -773,12 +787,18 @@ document.write(`
 </pre></div>
 </div>
 </div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/nbrenowitz/workspace/earth2grid/earth2grid/healpix/_padding/pure_python.py:131: UserWarning: Using a non-tuple sequence for multidimensional indexing is deprecated and will be changed in pytorch 2.9; use x[tuple(seq)] instead of x[seq]. In pytorch 2.9 this will be interpreted as tensor index, x[torch.tensor(seq)], which will result either in an error or a different result (Triggered internally at /pytorch/torch/csrc/autograd/python_variable_indexing.cpp:345.)
+  return x[slicers]
+</pre></div>
+</div>
+</div>
 </div>
 <div class="cell tag_hide-input docutils container">
-<details class="hide above-input">
+<details class="admonition hide above-input">
 <summary aria-label="Toggle hidden content">
-<span class="collapsed">Show code cell source</span>
-<span class="expanded">Hide code cell source</span>
+<p class="collapsed admonition-title">Show code cell source</p>
+<p class="expanded admonition-title">Hide code cell source</p>
 </summary>
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># show the padded region</span>
@@ -793,7 +813,7 @@ document.write(`
 </div>
 </details>
 <div class="cell_output docutils container">
-<img alt="../_images/bdb34abbf0e9757012aad280f57e2fac7985313c493a21184673943b7c4ecd0a.png" src="../_images/bdb34abbf0e9757012aad280f57e2fac7985313c493a21184673943b7c4ecd0a.png" />
+<img alt="../_images/cd1e934e28517436fa1c4d4a0c9fca0ae738f30346d50eab9fd81b4b9552e606.png" src="../_images/cd1e934e28517436fa1c4d4a0c9fca0ae738f30346d50eab9fd81b4b9552e606.png" />
 </div>
 </div>
 <p>To run convolutions on the sphere</p>
@@ -828,10 +848,10 @@ document.write(`
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>torch.Size([1, 1, 12, 8, 8]) torch.Size([1, 1, 12, 8, 8])
 </pre></div>
 </div>
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;matplotlib.collections.QuadMesh at 0x12e5eb4d0&gt;
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;matplotlib.collections.QuadMesh at 0x7c2ea4a83920&gt;
 </pre></div>
 </div>
-<img alt="../_images/d35884d3df052dd8479976d6aaf098e33c38ecaab325deb0fa1fc81ac4dd7bcb.png" src="../_images/d35884d3df052dd8479976d6aaf098e33c38ecaab325deb0fa1fc81ac4dd7bcb.png" />
+<img alt="../_images/2751350d2a5ccc35def0023ca8ee639b3f3bb131461cb298d6b7fc3461e1a2fc.png" src="../_images/2751350d2a5ccc35def0023ca8ee639b3f3bb131461cb298d6b7fc3461e1a2fc.png" />
 </div>
 </div>
 </section>

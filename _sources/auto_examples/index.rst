@@ -83,6 +83,40 @@ The examples in misc/ are not included in the Sphinx Gallery.
     </div>
 
 
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="Benchmark different HEALPix padding implementations">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_benchmark_healpix_pad_timing_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_benchmark_healpix_pad_timing.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Benchmark different HEALPix padding implementations</div>
+    </div>
+
+
+.. raw:: html
+
+    <div class="sphx-glr-thumbcontainer" tooltip="This example demonstrates how to work with HEALPix grids and extract local patches around specific points on the sphere. We&#x27;ll show:">
+
+.. only:: html
+
+  .. image:: /auto_examples/images/thumb/sphx_glr_local_padding_thumb.png
+    :alt:
+
+  :ref:`sphx_glr_auto_examples_local_padding.py`
+
+.. raw:: html
+
+      <div class="sphx-glr-thumbnail-title">Working with HEALPix Grids and Local Patches</div>
+    </div>
+
+
 .. thumbnail-parent-div-close
 
 .. raw:: html
@@ -97,6 +131,8 @@ The examples in misc/ are not included in the Sphinx Gallery.
    /auto_examples/hpx2grid
    /auto_examples/latlon_to_healpix
    /auto_examples/pyvista_grids
+   /auto_examples/benchmark_healpix_pad_timing
+   /auto_examples/local_padding
 
 
 .. only:: html

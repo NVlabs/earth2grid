@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=eba8b062" />
-    <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
     <link rel="stylesheet" type="text/css" href="_static/sg_gallery.css?v=d2d258e8" />
     <link rel="stylesheet" type="text/css" href="_static/sg_gallery-binder.css?v=f4aeca0c" />
     <link rel="stylesheet" type="text/css" href="_static/sg_gallery-dataframe.css?v=2082cf3c" />
@@ -166,6 +166,8 @@
 <li class="toctree-l2"><a class="reference internal" href="auto_examples/hpx2grid.html">HealPIX Image visualization</a></li>
 <li class="toctree-l2"><a class="reference internal" href="auto_examples/latlon_to_healpix.html">HealPIX regridding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="auto_examples/pyvista_grids.html">Plot grids with PyVista</a></li>
+<li class="toctree-l2"><a class="reference internal" href="auto_examples/benchmark_healpix_pad_timing.html">Benchmark different HEALPix padding implementations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="auto_examples/local_padding.html">Working with HEALPix Grids and Local Patches</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
@@ -319,10 +321,12 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#latest">Latest</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">2025.4.1</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">2024.8.1</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">2024.5.2</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">2025.11.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">2025.7.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">2025.6.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">2025.4.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">2024.8.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">2024.5.2</a></li>
 </ul>
             </nav>
         </div>
@@ -336,8 +340,27 @@ document.write(`
                   
   <section id="changelog">
 <h1>Changelog<a class="headerlink" href="#changelog" title="Link to this heading">#</a></h1>
-<section id="latest">
-<h2>Latest<a class="headerlink" href="#latest" title="Link to this heading">#</a></h2>
+<section id="id1">
+<h2>2025.11.1<a class="headerlink" href="#id1" title="Link to this heading">#</a></h2>
+<p>New features:</p>
+<ul class="simple">
+<li><p>add aliases healpix.RING and healpix.NEST for healpix.PixelOrder</p></li>
+<li><p>and more</p></li>
+</ul>
+<p>Bug fixes</p>
+<ul class="simple">
+<li><p>fix ang2pix bug w/ returning negative pixels (#45 #48)</p></li>
+</ul>
+</section>
+<section id="id2">
+<h2>2025.7.1<a class="headerlink" href="#id2" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p>change default padding backend when GPUs present back to CUDA. This was causing a performance regression when not using torch.compile.</p></li>
+<li><p>add wheels</p></li>
+</ul>
+</section>
+<section id="id3">
+<h2>2025.6.1<a class="headerlink" href="#id3" title="Link to this heading">#</a></h2>
 <p>New APIs</p>
 <ul class="simple">
 <li><p>earth2grid.healpix</p>
@@ -347,18 +370,36 @@ document.write(`
 <li><p>to_rotated_pixelization</p></li>
 <li><p>to_double_pixelization</p></li>
 <li><p>pcolormesh</p></li>
+<li><p>pad_with_dim</p></li>
+<li><p>pad_context - switches between padding backends</p></li>
+<li><p>Grid.nside</p></li>
+<li><p>Grid.{ang2pix,pix2ang}</p></li>
+<li><p>Continuous coordinate transformations:</p>
+<ul>
+<li><p>angular_to_global</p></li>
+<li><p>global_to_angular</p></li>
+<li><p>global_to_face</p></li>
+<li><p>face_to_global</p></li>
+</ul>
+</li>
 </ul>
 </li>
 <li><p>earth2grid.projections. Grids in arbitrary projections</p></li>
 <li><p>earth2grid.yingyang</p></li>
+</ul>
+<p>Enhancements:</p>
+<ul class="simple">
+<li><p>pure python implementations of most healpix bare operations,
+that are efficient on GPU when used with torch.compile</p></li>
+<li><p>more performant CUDA healpix padding and channels last padding support</p></li>
 </ul>
 <p>Breaking changes:</p>
 <ul class="simple">
 <li><p>change coordinate transform and shape of lcc grid</p></li>
 </ul>
 </section>
-<section id="id1">
-<h2>2025.4.1<a class="headerlink" href="#id1" title="Link to this heading">#</a></h2>
+<section id="id4">
+<h2>2025.4.1<a class="headerlink" href="#id4" title="Link to this heading">#</a></h2>
 <p>Breaking changes:</p>
 <ul class="simple">
 <li><p>renamed package name from “earth2-grid” to “earth2grid”</p></li>
@@ -370,16 +411,16 @@ document.write(`
 <li><p>added Lambert Conformal conic grid (for use with HRRR)</p></li>
 </ul>
 </section>
-<section id="id2">
-<h2>2024.8.1<a class="headerlink" href="#id2" title="Link to this heading">#</a></h2>
+<section id="id5">
+<h2>2024.8.1<a class="headerlink" href="#id5" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>made visualization dependencies optional</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">healpix.pad</span></code> now supports 5d [n, c, f, x, y] shaped arrays.</p></li>
 <li><p>Add CUDA implementation of healpix padding (Thorsten Kurth, Mauro Bisson, David Pruitt)</p></li>
 </ul>
 </section>
-<section id="id3">
-<h2>2024.5.2<a class="headerlink" href="#id3" title="Link to this heading">#</a></h2>
+<section id="id6">
+<h2>2024.5.2<a class="headerlink" href="#id6" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>First publicly available release</p></li>
 </ul>
@@ -431,10 +472,12 @@ document.write(`
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#latest">Latest</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">2025.4.1</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">2024.8.1</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">2024.5.2</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">2025.11.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">2025.7.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">2025.6.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">2025.4.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id5">2024.8.1</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">2024.5.2</a></li>
 </ul>
   </nav></div>
 

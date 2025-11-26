@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="_static/styles/sphinx-book-theme.css?v=eba8b062" />
-    <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css?v=be8a1c11" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
     <link rel="stylesheet" type="text/css" href="_static/sg_gallery.css?v=d2d258e8" />
     <link rel="stylesheet" type="text/css" href="_static/sg_gallery-binder.css?v=f4aeca0c" />
     <link rel="stylesheet" type="text/css" href="_static/sg_gallery-dataframe.css?v=2082cf3c" />
@@ -49,7 +49,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Changelog" href="changelog.html" />
-    <link rel="prev" title="Plot grids with PyVista" href="auto_examples/pyvista_grids.html" />
+    <link rel="prev" title="Working with HEALPix Grids and Local Patches" href="auto_examples/local_padding.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   </head>
@@ -166,6 +166,8 @@
 <li class="toctree-l2"><a class="reference internal" href="auto_examples/hpx2grid.html">HealPIX Image visualization</a></li>
 <li class="toctree-l2"><a class="reference internal" href="auto_examples/latlon_to_healpix.html">HealPIX regridding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="auto_examples/pyvista_grids.html">Plot grids with PyVista</a></li>
+<li class="toctree-l2"><a class="reference internal" href="auto_examples/benchmark_healpix_pad_timing.html">Benchmark different HEALPix padding implementations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="auto_examples/local_padding.html">Working with HEALPix Grids and Local Patches</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">API</a></li>
@@ -319,29 +321,49 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#grids">Grids</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-earth2grid.healpix">Grids</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#healpix">HEALPix</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.Compass"><code class="docutils literal notranslate"><span class="pre">Compass</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.Grid"><code class="docutils literal notranslate"><span class="pre">Grid</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.Grid.ang2pix"><code class="docutils literal notranslate"><span class="pre">Grid.ang2pix()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.Grid.get_bilinear_regridder_to"><code class="docutils literal notranslate"><span class="pre">Grid.get_bilinear_regridder_to()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.Grid.pix2ang"><code class="docutils literal notranslate"><span class="pre">Grid.pix2ang()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.Grid.reorder"><code class="docutils literal notranslate"><span class="pre">Grid.reorder()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.Grid.to_image"><code class="docutils literal notranslate"><span class="pre">Grid.to_image()</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.latlon.LatLonGrid"><code class="docutils literal notranslate"><span class="pre">LatLonGrid</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.latlon.LatLonGrid.get_bilinear_regridder_to"><code class="docutils literal notranslate"><span class="pre">LatLonGrid.get_bilinear_regridder_to()</span></code></a></li>
-</ul>
-</li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.latlon.equiangular_lat_lon_grid"><code class="docutils literal notranslate"><span class="pre">equiangular_lat_lon_grid()</span></code></a></li>
-</ul>
-</li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#regridding">Regridding</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.get_regridder"><code class="docutils literal notranslate"><span class="pre">get_regridder()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.KNNS2Interpolator"><code class="docutils literal notranslate"><span class="pre">KNNS2Interpolator()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.BilinearInterpolator"><code class="docutils literal notranslate"><span class="pre">BilinearInterpolator()</span></code></a></li>
-</ul>
-</li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#other-utilities">Other utilities</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.reorder"><code class="docutils literal notranslate"><span class="pre">reorder()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.PaddingBackends"><code class="docutils literal notranslate"><span class="pre">PaddingBackends</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.PixelOrder"><code class="docutils literal notranslate"><span class="pre">PixelOrder</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.XY"><code class="docutils literal notranslate"><span class="pre">XY</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.angular_to_global"><code class="docutils literal notranslate"><span class="pre">angular_to_global()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.conv2d"><code class="docutils literal notranslate"><span class="pre">conv2d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.face_to_global"><code class="docutils literal notranslate"><span class="pre">face_to_global()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.global_to_angular"><code class="docutils literal notranslate"><span class="pre">global_to_angular()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.global_to_face"><code class="docutils literal notranslate"><span class="pre">global_to_face()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.local2xy"><code class="docutils literal notranslate"><span class="pre">local2xy()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.nest2xy"><code class="docutils literal notranslate"><span class="pre">nest2xy()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.pad"><code class="docutils literal notranslate"><span class="pre">pad()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.pad_backend"><code class="docutils literal notranslate"><span class="pre">pad_backend()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.pad_with_dim"><code class="docutils literal notranslate"><span class="pre">pad_with_dim()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.pcolormesh"><code class="docutils literal notranslate"><span class="pre">pcolormesh()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.reorder"><code class="docutils literal notranslate"><span class="pre">reorder()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.ring2double"><code class="docutils literal notranslate"><span class="pre">ring2double()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.to_double_pixelization"><code class="docutils literal notranslate"><span class="pre">to_double_pixelization()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.to_rotated_pixelization"><code class="docutils literal notranslate"><span class="pre">to_rotated_pixelization()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.xy2nest"><code class="docutils literal notranslate"><span class="pre">xy2nest()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.xy2xy"><code class="docutils literal notranslate"><span class="pre">xy2xy()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.zonal_average"><code class="docutils literal notranslate"><span class="pre">zonal_average()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#regridding">Regridding</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.get_regridder"><code class="docutils literal notranslate"><span class="pre">get_regridder()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.KNNS2Interpolator"><code class="docutils literal notranslate"><span class="pre">KNNS2Interpolator()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.BilinearInterpolator"><code class="docutils literal notranslate"><span class="pre">BilinearInterpolator()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#other-utilities">Other utilities</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id0"><code class="docutils literal notranslate"><span class="pre">reorder()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id1"><code class="docutils literal notranslate"><span class="pre">pad()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -357,18 +379,33 @@ document.write(`
                   
   <section id="api">
 <h1>API<a class="headerlink" href="#api" title="Link to this heading">#</a></h1>
-<section id="grids">
-<h2>Grids<a class="headerlink" href="#grids" title="Link to this heading">#</a></h2>
+<section id="module-earth2grid.healpix">
+<span id="grids"></span><h2>Grids<a class="headerlink" href="#module-earth2grid.healpix" title="Link to this heading">#</a></h2>
+<section id="healpix">
+<h3>HEALPix<a class="headerlink" href="#healpix" title="Link to this heading">#</a></h3>
+<p>From this notebook: <a class="reference external" href="https://colab.research.google.com/drive/1MzTyeNFiy-7RNY6UtGKsmDavX5dk6epU">https://colab.research.google.com/drive/1MzTyeNFiy-7RNY6UtGKsmDavX5dk6epU</a></p>
+</section>
+<dl class="py class">
+<dt class="sig sig-object py" id="earth2grid.healpix.Compass">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">Compass</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.healpix.Compass" title="Link to this definition">#</a></dt>
+<dd><p>Cardinal directions in counter clockwise order</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="earth2grid.healpix.Grid">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">Grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PixelOrder</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">XY</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">PixelOrder.RING</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.healpix.Grid" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Grid</span></code></p>
-<p>A Healpix Grid</p>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">Grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#earth2grid.healpix.PixelOrder" title="earth2grid.healpix.core.PixelOrder"><span class="pre">PixelOrder</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#earth2grid.healpix.XY" title="earth2grid.healpix.core.XY"><span class="pre">XY</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">PixelOrder.RING</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.healpix.Grid" title="Link to this definition">#</a></dt>
+<dd><p>A Healpix Grid</p>
 <dl class="simple">
 <dt>Attrs:</dt><dd><p>level: 2^level = nside
 pixel_order: the ordering convection of the data</p>
 </dd>
 </dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="earth2grid.healpix.Grid.ang2pix">
+<span class="sig-name descname"><span class="pre">ang2pix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#earth2grid.healpix.Grid.ang2pix" title="Link to this definition">#</a></dt>
+<dd><p>Get the pixel index containing the given longitude and latitude</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="earth2grid.healpix.Grid.get_bilinear_regridder_to">
 <span class="sig-name descname"><span class="pre">get_bilinear_regridder_to</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.healpix.Grid.get_bilinear_regridder_to" title="Link to this definition">#</a></dt>
@@ -376,8 +413,14 @@ pixel_order: the ordering convection of the data</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="earth2grid.healpix.Grid.pix2ang">
+<span class="sig-name descname"><span class="pre">pix2ang</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">torch.float64</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#earth2grid.healpix.Grid.pix2ang" title="Link to this definition">#</a></dt>
+<dd><p>Pixel to (lon, lat)</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="earth2grid.healpix.Grid.reorder">
-<span class="sig-name descname"><span class="pre">reorder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PixelOrder</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">XY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#earth2grid.healpix.Grid.reorder" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">reorder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#earth2grid.healpix.PixelOrder" title="earth2grid.healpix.core.PixelOrder"><span class="pre">PixelOrder</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#earth2grid.healpix.XY" title="earth2grid.healpix.core.XY"><span class="pre">XY</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#earth2grid.healpix.Grid.reorder" title="Link to this definition">#</a></dt>
 <dd><p>Rorder the pixels of <code class="docutils literal notranslate"><span class="pre">x</span></code> to have <code class="docutils literal notranslate"><span class="pre">order</span></code></p>
 </dd></dl>
 
@@ -391,37 +434,280 @@ i points to SE, j point to NE</p>
 </dd></dl>
 
 <dl class="py class">
-<dt class="sig sig-object py" id="earth2grid.latlon.LatLonGrid">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">earth2grid.latlon.</span></span><span class="sig-name descname"><span class="pre">LatLonGrid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cylinder</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.latlon.LatLonGrid" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Grid</span></code></p>
-<dl class="py method">
-<dt class="sig sig-object py" id="earth2grid.latlon.LatLonGrid.get_bilinear_regridder_to">
-<span class="sig-name descname"><span class="pre">get_bilinear_regridder_to</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.latlon.LatLonGrid.get_bilinear_regridder_to" title="Link to this definition">#</a></dt>
-<dd><p>Get regridder to the specified lat and lon points</p>
+<dt class="sig sig-object py" id="earth2grid.healpix.PaddingBackends">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">PaddingBackends</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.healpix.PaddingBackends" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="earth2grid.healpix.PixelOrder">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">PixelOrder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.healpix.PixelOrder" title="Link to this definition">#</a></dt>
+<dd><p>Healpy has two indexing conventions NEST and RING. But for convolutions we want
+2D array indexing in row or column major order. Here are some vectorized
+routines <cite>nest2xy</cite> and <cite>x2nest</cite> for going in between these conventions. The
+previous code shared by Dale used string computations to handle these
+operations, which was probably quite slow. Here we use vectorized bit-shifting.</p>
+<section id="xy-orientation">
+<h3>XY orientation<a class="headerlink" href="#xy-orientation" title="Link to this heading">#</a></h3>
+<p>For array-like indexing can have a different origin and orientation.  For
+example, the default is the origin is S and the data arr[f, y, x] follows the
+right hand rule.  In other words, (x + 1, y) being counterclockwise from (x, y)
+when looking down on the face.</p>
+</section>
+<section id="hpxpad">
+<h3>HPXPad<a class="headerlink" href="#hpxpad" title="Link to this heading">#</a></h3>
+<p>For the missing diamonds, N and S of the equatorial faces, the method is not
+what I expected. Instead of traversing the edge graph as I would expect, it
+fills in the missing diamond first, and then treats this as if it were an actual
+tile.  For, the NW tile, the rows (along x) are simply shifted along x into the
+missing face until they hit the diagonal until they intersect the diagonal.</p>
+</section>
 </dd></dl>
 
+<dl class="py class">
+<dt class="sig sig-object py" id="earth2grid.healpix.XY">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">XY</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">origin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#earth2grid.healpix.Compass" title="earth2grid.healpix.core.Compass"><span class="pre">Compass</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">Compass.S</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clockwise</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.healpix.XY" title="Link to this definition">#</a></dt>
+<dd><dl>
+<dt>Assumes</dt><dd><ul>
+<li><p>i = n * n * f + n * y + x</p></li>
+<li><p>the origin (x,y)=(0,0) is South</p></li>
+<li><p>if clockwise=False follows the hand rule:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Space</span>
+<span class="o">|</span>
+<span class="o">|</span>
+<span class="o">|</span>  <span class="o">/</span> <span class="n">y</span>
+<span class="o">|</span> <span class="o">/</span>
+<span class="o">|/</span><span class="n">______</span> <span class="n">x</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<p>(Thumb points towards Space, index finger towards x, middle finger towards y)</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="earth2grid.latlon.equiangular_lat_lon_grid">
-<span class="sig-prename descclassname"><span class="pre">earth2grid.latlon.</span></span><span class="sig-name descname"><span class="pre">equiangular_lat_lon_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nlat</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nlon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">includes_south_pole</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#earth2grid.latlon.LatLonGrid" title="earth2grid.latlon.LatLonGrid"><span class="pre">LatLonGrid</span></a></span></span><a class="headerlink" href="#earth2grid.latlon.equiangular_lat_lon_grid" title="Link to this definition">#</a></dt>
-<dd><p>Return a regular lat-lon grid</p>
-<p>Lat is ordered from 90 to -90. Includes -90 and only if if includes_south_pole is True.
-Lon is ordered from 0 to 360. includes 0, but not 360.</p>
+<dt class="sig sig-object py" id="earth2grid.healpix.angular_to_global">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">angular_to_global</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#earth2grid.healpix.angular_to_global" title="Link to this definition">#</a></dt>
+<dd><p>Convert angular coordinates (lon, lat) to global HEALPix coordinates (xₛ, yₛ).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>nlat</strong> – number of latitude points</p></li>
-<li><p><strong>nlon</strong> – number of longtidue points</p></li>
-<li><p><strong>includes_south_pole</strong> – if true the final <code class="docutils literal notranslate"><span class="pre">nlat</span></code> includes the south pole</p></li>
+<li><p><strong>lon</strong> – Longitude in degrees East</p></li>
+<li><p><strong>lat</strong> – Latitude in degrees North</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple of (xs, ys) coordinates</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.healpix.conv2d">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">conv2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weight</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stride</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">groups</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#earth2grid.healpix.conv2d" title="Link to this definition">#</a></dt>
+<dd><p>Applies a 2D convolution over an input image composed of several input
+planes.</p>
+<p>This operator supports <span class="xref std std-ref">TensorFloat32</span>.</p>
+<p>See <code class="xref py py-class docutils literal notranslate"><span class="pre">Conv2d</span></code> for details and output shape.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.healpix.face_to_global">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">face_to_global</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">face</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#earth2grid.healpix.face_to_global" title="Link to this definition">#</a></dt>
+<dd><p>Convert (x, y, f) to (xₛ, yₛ)</p>
+<p>Inverse of <code class="docutils literal notranslate"><span class="pre">global_to_face</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – x coordinate [0, 1) within face</p></li>
+<li><p><strong>y</strong> – y coordinate [0, 1) within face</p></li>
+<li><p><strong>face</strong> – face index [0, 11]</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple of (xs, ys) coordinates</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.healpix.global_to_angular">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">global_to_angular</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">xs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ys</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#earth2grid.healpix.global_to_angular" title="Link to this definition">#</a></dt>
+<dd><p>Inverse HEALPix projection equations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple of (longitude, latitude) in degrees</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.healpix.global_to_face">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">global_to_face</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">xs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ys</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#earth2grid.healpix.global_to_face" title="Link to this definition">#</a></dt>
+<dd><p>Convert (xₛ, yₛ) to (x, y, f)</p>
+<p>Continuous version of <code class="docutils literal notranslate"><span class="pre">earth2grid.healpix.double2xy</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>xs</strong> – xs coordinate [0, 2 pi)</p></li>
+<li><p><strong>ys</strong> – ys coordinate [-pi / 2, pi / 2]</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple of (x, y, f)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.healpix.local2xy">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">local2xy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nside</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">face</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#earth2grid.healpix.local2xy" title="Link to this definition">#</a></dt>
+<dd><p>Convert a local x, y coordinate in a given face (S origin) to a global pixel index</p>
+<p>The local coordinates can be &lt; 0 or &gt; nside</p>
+<p>This can be used to implement padding</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nside</strong> – int</p></li>
+<li><p><strong>x</strong> – local coordinate [-nside, 2 * nside), origin=S</p></li>
+<li><p><strong>y</strong> – local coordinate [-nside, 2 * nside), origin=S</p></li>
+<li><p><strong>face</strong> – index of the face [0, 12)</p></li>
+<li><p><strong>right_first</strong> – if True then traverse to the face in the x-direction first</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>0 &lt;= x,y&lt; nside. f&gt;12 are the missing faces.</dt><dd><p>See <code class="docutils literal notranslate"><span class="pre">_xy_with_filled_tile</span></code> and <code class="docutils literal notranslate"><span class="pre">pad</span></code> for the original hpxpad
+methods for filling them in.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>x, y, f</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.healpix.nest2xy">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">nest2xy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nside</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_order:</span> <span class="pre">~earth2grid.healpix.core.XY</span> <span class="pre">=</span> <span class="pre">XY(origin=&lt;Compass.S:</span> <span class="pre">0&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clockwise=False)</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.healpix.nest2xy" title="Link to this definition">#</a></dt>
+<dd><p>convert NEST to XY index</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.healpix.pad">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">pad</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#earth2grid.healpix.pad" title="Link to this definition">#</a></dt>
+<dd><p>Pad each face consistently with its according neighbors in the HEALPix</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> – The input tensor of shape [N, F, H, W] or [N, F, C, H, W]. Must be
+ordered in HEALPIX_PAD_XY pixel ordering.</p></li>
+<li><p><strong>padding</strong> – the amount of padding</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The tensor padded along the spatial dimensions. For 4D input [N, F, H, W], returns shape [N, F, H+2*padding, W+2*padding].
+For 5D input, returns [N, F, C, H+2*padding, W+2*padding],</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Ths example show to pad data described by a <a class="reference internal" href="#earth2grid.healpix.Grid" title="earth2grid.healpix.Grid"><code class="xref py py-class docutils literal notranslate"><span class="pre">Grid</span></code></a> object.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">grid</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">pixel_order</span><span class="o">=</span><span class="n">PixelOrder</span><span class="o">.</span><span class="n">RING</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">lon</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">lon</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">faces</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">reorder</span><span class="p">(</span><span class="n">HEALPIX_PAD_XY</span><span class="p">,</span> <span class="n">lon</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">faces</span> <span class="o">=</span> <span class="n">faces</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="n">grid</span><span class="o">.</span><span class="n">_nside</span><span class="p">(),</span> <span class="n">grid</span><span class="o">.</span><span class="n">_nside</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">faces</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([1, 12, 16, 16])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">padded</span> <span class="o">=</span> <span class="n">pad</span><span class="p">(</span><span class="n">faces</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">padded</span><span class="o">.</span><span class="n">shape</span>
+<span class="go">torch.Size([1, 12, 18, 18])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.healpix.pad_backend">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">pad_backend</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">backend</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#earth2grid.healpix.PaddingBackends" title="earth2grid.healpix._padding.PaddingBackends"><span class="pre">PaddingBackends</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.healpix.pad_backend" title="Link to this definition">#</a></dt>
+<dd><p>Select the backend for padding</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.healpix.pad_with_dim">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">pad_with_dim</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim=1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_order=XY(origin=&lt;Compass.S:</span> <span class="pre">0&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clockwise=False)</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.healpix.pad_with_dim" title="Link to this definition">#</a></dt>
+<dd><p>x[dim] is the spatial dim</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.healpix.pcolormesh">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">pcolormesh</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_axes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.healpix.pcolormesh" title="Link to this definition">#</a></dt>
+<dd><p>Plot a RING ordered HEALPix map as a pcolormesh.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>z</strong> – 1D</p></li>
+<li><p><strong>ax</strong> – An optional matplotlib axis object.</p></li>
 </ul>
 </dd>
 </dl>
 </dd></dl>
 
-</section>
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.healpix.reorder">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">reorder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_pixel_order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#earth2grid.healpix.PixelOrder" title="earth2grid.healpix.core.PixelOrder"><span class="pre">PixelOrder</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#earth2grid.healpix.XY" title="earth2grid.healpix.core.XY"><span class="pre">XY</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_pixel_order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#earth2grid.healpix.PixelOrder" title="earth2grid.healpix.core.PixelOrder"><span class="pre">PixelOrder</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#earth2grid.healpix.XY" title="earth2grid.healpix.core.XY"><span class="pre">XY</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.healpix.reorder" title="Link to this definition">#</a></dt>
+<dd><p>Reorder x from one pixel order to another</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.healpix.ring2double">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">ring2double</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nside</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayT</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.healpix.ring2double" title="Link to this definition">#</a></dt>
+<dd><p>Compute the (i,j) index in the double pixelization scheme of Calabretta (2007)</p>
+<p>This is a visually appealing way to visualize healpix data without any
+interpolation.</p>
+<p>See Fig 5</p>
+<p>Calabretta, M. R., &amp; Roukema, B. F. (2007). Mapping on the HEALPix grid. Monthly Notices of the Royal Astronomical Society, 381(2), 865–872. <a class="reference external" href="https://doi.org/10.1111/j.1365-2966.2007.12297.x">https://doi.org/10.1111/j.1365-2966.2007.12297.x</a></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.healpix.to_double_pixelization">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">to_double_pixelization</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fill_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ArrayT</span></span></span><a class="headerlink" href="#earth2grid.healpix.to_double_pixelization" title="Link to this definition">#</a></dt>
+<dd><p>Convert the array x to 2D-image w/ the double pixelization</p>
+<p><code class="docutils literal notranslate"><span class="pre">x</span></code> must be in RING pixel order</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.healpix.to_rotated_pixelization">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">to_rotated_pixelization</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fill_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">nan</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.healpix.to_rotated_pixelization" title="Link to this definition">#</a></dt>
+<dd><p>Convert an array to a 2D-iamge w/ the rotated pixelization</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.healpix.xy2nest">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">xy2nest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nside</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_order:</span> <span class="pre">~earth2grid.healpix.core.XY</span> <span class="pre">=</span> <span class="pre">XY(origin=&lt;Compass.S:</span> <span class="pre">0&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clockwise=False)</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.healpix.xy2nest" title="Link to this definition">#</a></dt>
+<dd><p>convert XY index to NEST</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.healpix.xy2xy">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">xy2xy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nside</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#earth2grid.healpix.XY" title="earth2grid.healpix.core.XY"><span class="pre">XY</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#earth2grid.healpix.XY" title="earth2grid.healpix.core.XY"><span class="pre">XY</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">i</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.healpix.xy2xy" title="Link to this definition">#</a></dt>
+<dd><p>Convert flat index between pixel ordering conventions`</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>i</strong> – int64</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="earth2grid.healpix.zonal_average">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">zonal_average</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ArrayT</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ArrayT</span></span></span><a class="headerlink" href="#earth2grid.healpix.zonal_average" title="Link to this definition">#</a></dt>
+<dd><p>Compute the zonal average of a map in ring format</p>
+</dd></dl>
+
 <section id="regridding">
-<h2>Regridding<a class="headerlink" href="#regridding" title="Link to this heading">#</a></h2>
+<h3>Regridding<a class="headerlink" href="#regridding" title="Link to this heading">#</a></h3>
 <dl class="py function">
 <dt class="sig sig-object py" id="earth2grid.get_regridder">
 <span class="sig-prename descclassname"><span class="pre">earth2grid.</span></span><span class="sig-name descname"><span class="pre">get_regridder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Grid</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Module</span></span></span><a class="headerlink" href="#earth2grid.get_regridder" title="Link to this definition">#</a></dt>
@@ -455,16 +741,16 @@ k &gt; 1.</p></li>
 
 </section>
 <section id="other-utilities">
-<h2>Other utilities<a class="headerlink" href="#other-utilities" title="Link to this heading">#</a></h2>
+<h3>Other utilities<a class="headerlink" href="#other-utilities" title="Link to this heading">#</a></h3>
 <dl class="py function">
-<dt class="sig sig-object py" id="earth2grid.healpix.reorder">
-<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">reorder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_pixel_order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PixelOrder</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">XY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_pixel_order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">PixelOrder</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">XY</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#earth2grid.healpix.reorder" title="Link to this definition">#</a></dt>
+<dt class="sig sig-object py" id="id0">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">reorder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_pixel_order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#earth2grid.healpix.PixelOrder" title="earth2grid.healpix.core.PixelOrder"><span class="pre">PixelOrder</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#earth2grid.healpix.XY" title="earth2grid.healpix.core.XY"><span class="pre">XY</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_pixel_order</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#earth2grid.healpix.PixelOrder" title="earth2grid.healpix.core.PixelOrder"><span class="pre">PixelOrder</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#earth2grid.healpix.XY" title="earth2grid.healpix.core.XY"><span class="pre">XY</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#id0" title="Link to this definition">#</a></dt>
 <dd><p>Reorder x from one pixel order to another</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="earth2grid.healpix.pad">
-<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">pad</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#earth2grid.healpix.pad" title="Link to this definition">#</a></dt>
+<dt class="sig sig-object py" id="id1">
+<span class="sig-prename descclassname"><span class="pre">earth2grid.healpix.</span></span><span class="sig-name descname"><span class="pre">pad</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#id1" title="Link to this definition">#</a></dt>
 <dd><p>Pad each face consistently with its according neighbors in the HEALPix</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -475,7 +761,8 @@ ordered in HEALPIX_PAD_XY pixel ordering.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The padded tensor with shape [N, F, H+2*padding, W+2*padding]</p>
+<dd class="field-even"><p>The tensor padded along the spatial dimensions. For 4D input [N, F, H, W], returns shape [N, F, H+2*padding, W+2*padding].
+For 5D input, returns [N, F, C, H+2*padding, W+2*padding],</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
@@ -495,6 +782,7 @@ ordered in HEALPIX_PAD_XY pixel ordering.</p></li>
 
 </section>
 </section>
+</section>
 
 
                 </article>
@@ -508,12 +796,12 @@ ordered in HEALPIX_PAD_XY pixel ordering.</p></li>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="auto_examples/pyvista_grids.html"
+       href="auto_examples/local_padding.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Plot grids with PyVista</p>
+        <p class="prev-next-title">Working with HEALPix Grids and Local Patches</p>
       </div>
     </a>
     <a class="right-next"
@@ -541,29 +829,49 @@ ordered in HEALPIX_PAD_XY pixel ordering.</p></li>
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#grids">Grids</a><ul class="nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-earth2grid.healpix">Grids</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#healpix">HEALPix</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.Compass"><code class="docutils literal notranslate"><span class="pre">Compass</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.Grid"><code class="docutils literal notranslate"><span class="pre">Grid</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.Grid.ang2pix"><code class="docutils literal notranslate"><span class="pre">Grid.ang2pix()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.Grid.get_bilinear_regridder_to"><code class="docutils literal notranslate"><span class="pre">Grid.get_bilinear_regridder_to()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.Grid.pix2ang"><code class="docutils literal notranslate"><span class="pre">Grid.pix2ang()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.Grid.reorder"><code class="docutils literal notranslate"><span class="pre">Grid.reorder()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.Grid.to_image"><code class="docutils literal notranslate"><span class="pre">Grid.to_image()</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.latlon.LatLonGrid"><code class="docutils literal notranslate"><span class="pre">LatLonGrid</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.latlon.LatLonGrid.get_bilinear_regridder_to"><code class="docutils literal notranslate"><span class="pre">LatLonGrid.get_bilinear_regridder_to()</span></code></a></li>
-</ul>
-</li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.latlon.equiangular_lat_lon_grid"><code class="docutils literal notranslate"><span class="pre">equiangular_lat_lon_grid()</span></code></a></li>
-</ul>
-</li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#regridding">Regridding</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.get_regridder"><code class="docutils literal notranslate"><span class="pre">get_regridder()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.KNNS2Interpolator"><code class="docutils literal notranslate"><span class="pre">KNNS2Interpolator()</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.BilinearInterpolator"><code class="docutils literal notranslate"><span class="pre">BilinearInterpolator()</span></code></a></li>
-</ul>
-</li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#other-utilities">Other utilities</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.reorder"><code class="docutils literal notranslate"><span class="pre">reorder()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.PaddingBackends"><code class="docutils literal notranslate"><span class="pre">PaddingBackends</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.PixelOrder"><code class="docutils literal notranslate"><span class="pre">PixelOrder</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.XY"><code class="docutils literal notranslate"><span class="pre">XY</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.angular_to_global"><code class="docutils literal notranslate"><span class="pre">angular_to_global()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.conv2d"><code class="docutils literal notranslate"><span class="pre">conv2d()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.face_to_global"><code class="docutils literal notranslate"><span class="pre">face_to_global()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.global_to_angular"><code class="docutils literal notranslate"><span class="pre">global_to_angular()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.global_to_face"><code class="docutils literal notranslate"><span class="pre">global_to_face()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.local2xy"><code class="docutils literal notranslate"><span class="pre">local2xy()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.nest2xy"><code class="docutils literal notranslate"><span class="pre">nest2xy()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.pad"><code class="docutils literal notranslate"><span class="pre">pad()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.pad_backend"><code class="docutils literal notranslate"><span class="pre">pad_backend()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.pad_with_dim"><code class="docutils literal notranslate"><span class="pre">pad_with_dim()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.pcolormesh"><code class="docutils literal notranslate"><span class="pre">pcolormesh()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.reorder"><code class="docutils literal notranslate"><span class="pre">reorder()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.ring2double"><code class="docutils literal notranslate"><span class="pre">ring2double()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.to_double_pixelization"><code class="docutils literal notranslate"><span class="pre">to_double_pixelization()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.to_rotated_pixelization"><code class="docutils literal notranslate"><span class="pre">to_rotated_pixelization()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.xy2nest"><code class="docutils literal notranslate"><span class="pre">xy2nest()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.xy2xy"><code class="docutils literal notranslate"><span class="pre">xy2xy()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.healpix.zonal_average"><code class="docutils literal notranslate"><span class="pre">zonal_average()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#regridding">Regridding</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.get_regridder"><code class="docutils literal notranslate"><span class="pre">get_regridder()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.KNNS2Interpolator"><code class="docutils literal notranslate"><span class="pre">KNNS2Interpolator()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#earth2grid.BilinearInterpolator"><code class="docutils literal notranslate"><span class="pre">BilinearInterpolator()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#other-utilities">Other utilities</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id0"><code class="docutils literal notranslate"><span class="pre">reorder()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#id1"><code class="docutils literal notranslate"><span class="pre">pad()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

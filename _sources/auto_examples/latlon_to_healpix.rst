@@ -105,7 +105,7 @@ coordinates. This operation is near instant.
 
  .. code-block:: none
 
-    /Users/nbrenowitz/workspace/nvidia/earth2grid/examples/sphinx_gallery/latlon_to_healpix.py:66: UserWarning: The input coordinates to pcolormesh are interpreted as cell centers, but are not monotonically increasing or decreasing. This may lead to incorrectly calculated cell edges, in which case, please supply explicit cell edges to pcolormesh.
+    /home/nbrenowitz/workspace/earth2grid/examples/sphinx_gallery/latlon_to_healpix.py:66: UserWarning: The input coordinates to pcolormesh are interpreted as cell centers, but are not monotonically increasing or decreasing. This may lead to incorrectly calculated cell edges, in which case, please supply explicit cell edges to pcolormesh.
       axs[tile].pcolormesh(lon_r[tile], lat_r[tile], reshaped[tile])
 
 
@@ -114,7 +114,7 @@ coordinates. This operation is near instant.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** (0 minutes 0.528 seconds)
+   **Total running time of the script:** (0 minutes 0.444 seconds)
 
 
 .. _sphx_glr_download_auto_examples_latlon_to_healpix.py:

@@ -30,7 +30,7 @@
 
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
-    <link rel="stylesheet" type="text/css" href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
     <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=d2d258e8" />
     <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
     <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
@@ -166,6 +166,8 @@
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">HealPIX Image visualization</a></li>
 <li class="toctree-l2"><a class="reference internal" href="latlon_to_healpix.html">HealPIX regridding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pyvista_grids.html">Plot grids with PyVista</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark_healpix_pad_timing.html">Benchmark different HEALPix padding implementations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="local_padding.html">Working with HEALPix Grids and Local Patches</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../api.html">API</a></li>
@@ -356,11 +358,11 @@ the image.</p>
 <span class="n">image</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">&quot;hpx_grid.png&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
-<img src="../_images/sphx_glr_hpx2grid_001.png" srcset="../_images/sphx_glr_hpx2grid_001.png" alt="hpx2grid" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>/Users/nbrenowitz/workspace/nvidia/earth2grid/examples/sphinx_gallery/hpx2grid.py:44: DeprecationWarning: __array_wrap__ must accept context and return_scalar arguments (positionally) in the future. (Deprecated NumPy 2.0)
+<img src="../_images/sphx_glr_hpx2grid_001.png" srcset="../_images/sphx_glr_hpx2grid_001.png" alt="hpx2grid" class = "sphx-glr-single-img"/><div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>/home/nbrenowitz/workspace/earth2grid/examples/sphinx_gallery/hpx2grid.py:44: DeprecationWarning: __array_wrap__ must accept context and return_scalar arguments (positionally) in the future. (Deprecated NumPy 2.0)
   array[..., -1] = np.where(np.isnan(lat_img), 0, 255)
 </pre></div>
 </div>
-<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 0.165 seconds)</p>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> (0 minutes 0.116 seconds)</p>
 <div class="sphx-glr-footer sphx-glr-footer-example docutils container" id="sphx-glr-download-auto-examples-hpx2grid-py">
 <div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
 <p><a class="reference download internal" download="" href="../_downloads/ceda851f459aa1125447c51ea42b0e9e/hpx2grid.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">hpx2grid.ipynb</span></code></a></p>

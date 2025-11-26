@@ -6,7 +6,7 @@
 
 Computation times
 =================
-**00:03.422** total execution time for 4 files **from auto_examples**:
+**00:22.913** total execution time for 6 files **from auto_examples**:
 
 .. container::
 
@@ -32,15 +32,21 @@ Computation times
    * - Example
      - Time
      - Mem (MB)
+   * - :ref:`sphx_glr_auto_examples_benchmark_healpix_pad_timing.py` (``benchmark_healpix_pad_timing.py``)
+     - 00:18.625
+     - 0.0
    * - :ref:`sphx_glr_auto_examples_pyvista_grids.py` (``pyvista_grids.py``)
-     - 00:01.453
+     - 00:01.772
+     - 0.0
+   * - :ref:`sphx_glr_auto_examples_local_padding.py` (``local_padding.py``)
+     - 00:00.982
      - 0.0
    * - :ref:`sphx_glr_auto_examples_healpix_pixelization.py` (``healpix_pixelization.py``)
-     - 00:01.275
+     - 00:00.974
      - 0.0
    * - :ref:`sphx_glr_auto_examples_latlon_to_healpix.py` (``latlon_to_healpix.py``)
-     - 00:00.528
+     - 00:00.444
      - 0.0
    * - :ref:`sphx_glr_auto_examples_hpx2grid.py` (``hpx2grid.py``)
-     - 00:00.165
+     - 00:00.116
      - 0.0

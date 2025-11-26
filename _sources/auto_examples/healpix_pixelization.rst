@@ -55,13 +55,6 @@ with image viewers without distorting the native pixels of the image.
    :class: sphx-glr-single-img
 
 
-.. rst-class:: sphx-glr-script-out
-
- .. code-block:: none
-
-    /Users/nbrenowitz/workspace/nvidia/earth2grid/earth2grid/healpix/core.py:112: UserWarning: healpixpad_cuda module not available, reverting to CPU for all padding routines
-      warnings.warn("healpixpad_cuda module not available, reverting to CPU for all padding routines")
-
 
 
 
@@ -92,7 +85,7 @@ with image viewers without distorting the native pixels of the image.
  .. code-block:: none
 
 
-    <matplotlib.image.AxesImage object at 0x156acb4a0>
+    <matplotlib.image.AxesImage object at 0x788110598590>
 
 
 
@@ -116,14 +109,14 @@ with image viewers without distorting the native pixels of the image.
  .. code-block:: none
 
 
-    <matplotlib.image.AxesImage object at 0x156ab9bb0>
+    <matplotlib.image.AxesImage object at 0x788110451a30>
 
 
 
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** (0 minutes 1.275 seconds)
+   **Total running time of the script:** (0 minutes 0.974 seconds)
 
 
 .. _sphx_glr_download_auto_examples_healpix_pixelization.py:

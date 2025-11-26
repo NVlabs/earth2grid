@@ -76,7 +76,7 @@ the image.
 
  .. code-block:: none
 
-    /Users/nbrenowitz/workspace/nvidia/earth2grid/examples/sphinx_gallery/hpx2grid.py:44: DeprecationWarning: __array_wrap__ must accept context and return_scalar arguments (positionally) in the future. (Deprecated NumPy 2.0)
+    /home/nbrenowitz/workspace/earth2grid/examples/sphinx_gallery/hpx2grid.py:44: DeprecationWarning: __array_wrap__ must accept context and return_scalar arguments (positionally) in the future. (Deprecated NumPy 2.0)
       array[..., -1] = np.where(np.isnan(lat_img), 0, 255)
 
 
@@ -85,7 +85,7 @@ the image.
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** (0 minutes 0.165 seconds)
+   **Total running time of the script:** (0 minutes 0.116 seconds)
 
 
 .. _sphx_glr_download_auto_examples_hpx2grid.py:

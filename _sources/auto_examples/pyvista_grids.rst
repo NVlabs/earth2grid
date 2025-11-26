@@ -108,7 +108,7 @@ Plot grids with PyVista
 
 .. rst-class:: sphx-glr-timing
 
-   **Total running time of the script:** (0 minutes 1.453 seconds)
+   **Total running time of the script:** (0 minutes 1.772 seconds)
 
 
 .. _sphx_glr_download_auto_examples_pyvista_grids.py:

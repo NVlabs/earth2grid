@@ -74,3 +74,23 @@ $ git push --tags
 ```
 
 GitHub Actions will then deploy to PyPI if tests pass.
+
+## Building the docs
+
+
+```
+uv sync --no-install-project --group doc --extra dev
+source .venv/bin/activate
+python3 setup.py build_ext --inplace
+export PYTHONPATH=$PWD
+make docs
+```
+
+## Releasing
+
+1. Modify VERSION variable in setup.py
+1. Update changelog
+1. git commit -m "release VERSION"
+1. git tag vVERSION
+1. git push
+1. git push --tags

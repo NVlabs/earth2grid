@@ -1,6 +1,20 @@
 # Changelog
 
-## Latest
+## 2025.11.1
+
+New features:
+- add aliases healpix.RING and healpix.NEST for healpix.PixelOrder
+- and more
+
+Bug fixes
+- fix ang2pix bug w/ returning negative pixels (#45 #48)
+
+## 2025.7.1
+
+- change default padding backend when GPUs present back to CUDA. This was causing a performance regression when not using torch.compile.
+- add wheels
+
+## 2025.6.1
 
 New APIs
 - earth2grid.healpix
@@ -9,8 +23,22 @@ New APIs
   - to_rotated_pixelization
   - to_double_pixelization
   - pcolormesh
+  - pad_with_dim
+  - pad_context - switches between padding backends
+  - Grid.nside
+  - Grid.{ang2pix,pix2ang}
+  - Continuous coordinate transformations:
+    - angular_to_global
+    - global_to_angular
+    - global_to_face
+    - face_to_global
 - earth2grid.projections. Grids in arbitrary projections
 - earth2grid.yingyang
+
+Enhancements:
+  - pure python implementations of most healpix bare operations,
+    that are efficient on GPU when used with torch.compile
+  - more performant CUDA healpix padding and channels last padding support
 
 Breaking changes:
 
