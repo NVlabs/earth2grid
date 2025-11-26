@@ -86,6 +86,12 @@ export PYTHONPATH=$PWD
 make docs
 ```
 
+To push
+```
+make push_docs
+git push origin pages
+```
+
 ## Releasing
 
 1. Modify VERSION variable in setup.py
