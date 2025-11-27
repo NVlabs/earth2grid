@@ -31,6 +31,7 @@ classifiers = [
 [project.optional-dependencies]
 all = [
     "netCDF4>=1.6.5",
+    "ptwt>=1.0.1",
 ]
 viz = [
     "pyvista>=0.43.2",
