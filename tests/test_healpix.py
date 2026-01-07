@@ -22,6 +22,7 @@ import torch
 from earth2grid import get_regridder, healpix, healpix_bare
 from earth2grid.healpix.core import _rotate, local2local, local2xy, ring2double
 from earth2grid.healpix.visualization import _to_mesh
+from earth2grid.healpix.wavelet import HEALPixWaveletDecomposer, WaveletDecomposer
 
 
 def test_ring2xy():
@@ -457,3 +458,39 @@ def test_hpx14_regression(level, lat, lon):
     # also fails grid=H.Grid(14)
     pix = grid.ang2pix(torch.tensor([lon]).float(), torch.tensor([lat]).float())
     assert torch.all(pix >= 0)
+
+
+def test_2d_wavelet_decomposition():
+    level = 4
+    wavelet_decomposer = WaveletDecomposer(level=level)
+    B, C, H, W = 20, 20, 256, 256  # large enough B, C for significance
+    x = torch.randn(B, C, H, W)
+    x_lf, x_hf = wavelet_decomposer.decompose_lf_hf(x)
+
+    # test recovery of original signal
+    assert torch.allclose(x_lf + x_hf, x, rtol=1e-5, atol=1e-5)
+
+    # test variance scaling
+    assert torch.allclose(x_lf.var() * (level * level) ** 2 / x.var(), torch.tensor(1.0), atol=2e-1)
+
+    # test orthogonality
+    assert torch.allclose((x_lf * x_hf).mean(), torch.tensor(0.0), atol=1e-2)
+
+
+def test_healpix_wavelet_decomposition():
+    level = 4
+    nside = 256
+    npix = 12 * nside * nside
+    batch = 20
+    hpx_wavelet_decomposer = HEALPixWaveletDecomposer(level=level)
+    x = torch.randn(batch, npix)
+    x_lf, x_hf = hpx_wavelet_decomposer.coarsen(x, compute_hf=True)
+
+    # test recovery of original signal
+    assert torch.allclose(x_lf + x_hf, x, rtol=1e-5, atol=1e-5)
+
+    # test variance scaling
+    assert torch.allclose(x_lf.var() * (level * level) ** 2 / x.var(), torch.tensor(1.0), atol=2e-1)
+
+    # test orthogonality
+    assert torch.allclose((x_lf * x_hf).mean(), torch.tensor(0.0), atol=1e-2)
