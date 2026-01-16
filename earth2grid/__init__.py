@@ -14,11 +14,12 @@
 # limitations under the License.
 import torch
 
-from earth2grid import base, healpix, latlon, lcc
+from earth2grid import base, cubesphere, healpix, latlon, lcc
 from earth2grid._regrid import BilinearInterpolator, Identity, KNNS2Interpolator, Regridder
 
 __all__ = [
     "base",
+    "cubesphere",
     "healpix",
     "latlon",
     "lcc",
