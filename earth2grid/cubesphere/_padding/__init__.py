@@ -33,150 +33,108 @@ Corner filling follows Appendix A2 of https://arxiv.org/abs/2311.06253
 
 import torch
 
-__all__ = ["pad", "get_cubesphere_neighbors"]
+__all__ = ["pad", "local2xy"]
 
 
-def get_cubesphere_neighbors() -> dict[int, dict[str, tuple[int, str]]]:
+def _rotate_tensor(n: int, rotations: torch.Tensor, x: torch.Tensor, y: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    """Vectorized rotation for tensor rotations in {0,1,2,3}."""
+    x0, y0 = x, y
+    x1, y1 = n - 1 - y, x
+    x2, y2 = n - 1 - x, n - 1 - y
+    x3, y3 = y, n - 1 - x
+    r = rotations % 4
+    x_out = torch.where(r == 0, x0, torch.where(r == 1, x1, torch.where(r == 2, x2, x3)))
+    y_out = torch.where(r == 0, y0, torch.where(r == 1, y1, torch.where(r == 2, y2, y3)))
+    return x_out, y_out
+
+
+
+
+def local2xy(
+    face_size: int,
+    x: torch.Tensor,
+    y: torch.Tensor,
+    face: torch.Tensor,
+    *,
+    padding: int,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Map local (x, y, face) coordinates to source coordinates for padding.
+
+    This follows the same logic structure as healpix.local2xy:
+    - determine direction from (x // n, y // n)
+    - lookup neighbor face
+    - rotate coordinates by a precomputed number of 90° CCW turns
+    - wrap into [0, n)
     """
-    Get connectivity of the cubesphere grid.
+    n = face_size
+    device = x.device
+    neighbor_face = torch.tensor(
+        [
+            [5, 1, 4, 3],
+            [5, 2, 4, 0],
+            [5, 3, 4, 1],
+            [5, 0, 4, 2],
+            [0, 1, 2, 3],
+            [2, 1, 0, 3],
+        ],
+        dtype=torch.long,
+        device=device,
+    )
+    turns = torch.tensor(
+        [
+            [0, 0, 0, 0],
+            [3, 0, 1, 0],
+            [2, 0, 2, 0],
+            [1, 0, 3, 0],
+            [0, 3, 2, 1],
+            [2, 1, 0, 3],
+        ],
+        dtype=torch.long,
+        device=device,
+    )
 
-    The cubesphere layout is:
+    # Determine which face shift occurred (like healpix local2xy)
+    face_shift_x = torch.div(x, n, rounding_mode="floor")
+    face_shift_y = torch.div(y, n, rounding_mode="floor")
 
-        | 5 |
-        | 0 | 1 | 2 | 3 |
-        | 4 |
+    # direction lookup: (-1,0,1) shifts map to top/right/bottom/left, corners invalid
+    # order: 0=top, 1=right, 2=bottom, 3=left, -1=inside, -2=corner
+    direction_lookup = torch.tensor(
+        [
+            [-2, 2, -2],
+            [3, -1, 1],
+            [-2, 0, -2],
+        ],
+        device=device,
+    )
+    direction = direction_lookup[face_shift_x + 1, face_shift_y + 1]
+    inside = direction == -1
+    corner = direction == -2
 
-    Returns:
-        neighbors: Dictionary mapping face_id -> {direction -> (neighbor_id, neighbor_edge)}
-                  For each face, provides the neighbor face and which edge of that neighbor
-                  to use for padding in each direction (top, right, bottom, left).
-    """
-    return {
-        0: {
-            "top": (5, "bottom"),
-            "right": (1, "left"),
-            "bottom": (4, "top"),
-            "left": (3, "right"),
-        },
-        1: {
-            "top": (5, "right"),
-            "right": (2, "left"),
-            "bottom": (4, "right"),
-            "left": (0, "right"),
-        },
-        2: {
-            "top": (5, "top"),
-            "right": (3, "left"),
-            "bottom": (4, "bottom"),
-            "left": (1, "right"),
-        },
-        3: {
-            "top": (5, "left"),
-            "right": (0, "left"),
-            "bottom": (4, "left"),
-            "left": (2, "right"),
-        },
-        4: {  # South cap
-            "top": (0, "bottom"),
-            "right": (1, "bottom"),
-            "bottom": (2, "bottom"),
-            "left": (3, "bottom"),
-        },
-        5: {  # North cap
-            "top": (2, "top"),
-            "right": (1, "top"),
-            "bottom": (0, "top"),
-            "left": (3, "top"),
-        },
-    }
+    # Neighbor face and rotation for each point
+    nbr_face = neighbor_face[face, direction.clamp(min=0)]
+    rot = turns[face, direction.clamp(min=0)]
 
+    # Rotate and wrap into [0, n)
+    x_rot, y_rot = _rotate_tensor(n, rot, x, y)
+    x_src = x_rot % n
+    y_src = y_rot % n
 
-def _extract_edge_raw(face_data: torch.Tensor, edge: str, pad_width: int) -> torch.Tensor:
-    """
-    Extract edge strip from face data.
+    # Fill inside points
+    x_src = torch.where(inside, x, x_src)
+    y_src = torch.where(inside, y, y_src)
+    face_src = torch.where(inside, face, nbr_face)
 
-    Args:
-        face_data: Tensor with shape (..., x, y)
-        edge: One of "top", "bottom", "left", "right"
-        pad_width: Width of the strip to extract
+    # Mark corners invalid (filled later)
+    face_src = torch.where(
+        corner,
+        torch.tensor(6, device=device, dtype=face_src.dtype),
+        face_src,
+    )
+    x_src = torch.where(corner, x, x_src)
+    y_src = torch.where(corner, y, y_src)
 
-    Returns:
-        Strip tensor with shape:
-        - top/bottom: (..., pad_width, y)
-        - left/right: (..., x, pad_width)
-    """
-    if pad_width == 0:
-        *leading, x, y = face_data.shape
-        if edge in ("top", "bottom"):
-            out_shape = tuple(leading) + (0, y)
-        else:
-            out_shape = tuple(leading) + (x, 0)
-        return face_data.new_empty(out_shape)
-
-    if edge == "top":
-        return face_data[..., -pad_width:, :]
-    elif edge == "bottom":
-        return face_data[..., :pad_width, :]
-    elif edge == "left":
-        return face_data[..., :, :pad_width]
-    elif edge == "right":
-        return face_data[..., :, -pad_width:]
-    else:
-        raise ValueError(f"Unknown edge: {edge}")
-
-
-def _rotate_edge_to_canonical(strip_raw: torch.Tensor, edge: str) -> torch.Tensor:
-    """
-    Rotate edge strip to canonical orientation (pad_width, face_size) on last two dims.
-
-    Args:
-        strip_raw: Raw edge strip tensor
-        edge: Which edge the strip was extracted from
-
-    Returns:
-        Rotated strip tensor with shape (..., pad_width, face_size)
-    """
-    if edge == "bottom":
-        k = 0
-    elif edge == "left":
-        k = -1  # rot90 CCW
-    elif edge == "right":
-        k = 1  # rot90 CW
-    elif edge == "top":
-        k = 2
-    else:
-        raise ValueError(f"Unknown edge: {edge}")
-
-    if k == 0:
-        return strip_raw
-    return torch.rot90(strip_raw, k=k, dims=(-2, -1))
-
-
-def _rotate_canonical_to_halo(strip_canon: torch.Tensor, to_dir: str) -> torch.Tensor:
-    """
-    Rotate canonical strip to match target halo orientation.
-
-    Args:
-        strip_canon: Canonical strip tensor (..., pad_width, face_size)
-        to_dir: Target direction ("top", "bottom", "left", "right")
-
-    Returns:
-        Rotated strip tensor matching target halo shape
-    """
-    if to_dir == "top":
-        k = 0
-    elif to_dir == "right":
-        k = 1
-    elif to_dir == "left":
-        k = -1
-    elif to_dir == "bottom":
-        k = 2
-    else:
-        raise ValueError(f"Unknown direction: {to_dir}")
-
-    if k == 0:
-        return strip_canon
-    return torch.rot90(strip_canon, k=k, dims=(-2, -1))
+    return x_src, y_src, face_src
 
 
 def _fill_corners(padded: torch.Tensor, pad_width: int, face_size: int) -> None:
@@ -307,59 +265,32 @@ def pad(data: torch.Tensor, padding: int) -> torch.Tensor:
     face_size = face_size_x
     padded_size = face_size + 2 * padding
 
-    # Output shape
-    output_shape = tuple(leading_dims) + (6, padded_size, padded_size)
-    # Use NaN for float types, 0 for integer types
-    fill_value = float("nan") if data.dtype.is_floating_point else 0
-    padded = torch.full(output_shape, fill_value, dtype=data.dtype, device=data.device)
+    # Build padded coordinate grid
+    xs = torch.arange(-padding, face_size + padding, device=data.device)
+    ys = torch.arange(-padding, face_size + padding, device=data.device)
+    fs = torch.arange(6, device=data.device)
+    f_grid, x_grid, y_grid = torch.meshgrid(fs, xs, ys, indexing="ij")
 
-    neighbors = get_cubesphere_neighbors()
+    # Map to source coordinates using local2xy
+    x_src, y_src, f_src = local2xy(
+        face_size,
+        x_grid.reshape(-1),
+        y_grid.reshape(-1),
+        f_grid.reshape(-1),
+        padding=padding,
+    )
 
-    for face_id in range(6):
-        # Extract this face's data: shape (..., x, y)
-        face_data = data[..., face_id, :, :]
+    # Compute flat indices into source data
+    pix = f_src * (face_size * face_size) + x_src * face_size + y_src
 
-        # Place center data
-        padded[
-            ...,
-            face_id,
-            padding : padding + face_size,
-            padding : padding + face_size,
-        ] = face_data
+    # Handle invalid indices (corners)
+    invalid = f_src >= 6
+    pix = torch.where(invalid, torch.tensor(0, device=data.device, dtype=pix.dtype), pix)
 
-        # Fill halos from neighbors
-        for to_dir, (nbr_id, nbr_edge) in neighbors[face_id].items():
-            # Get neighbor face data
-            nbr_data = data[..., nbr_id, :, :]
-
-            # 1) Extract raw edge strip
-            strip_raw = _extract_edge_raw(nbr_data, nbr_edge, padding)
-
-            # 2) Rotate to canonical (pad_width, face_size) on last two dims
-            strip_canon = _rotate_edge_to_canonical(strip_raw, nbr_edge)
-
-            # 3) Rotate canonical strip to match target halo orientation
-            strip_place = _rotate_canonical_to_halo(strip_canon, to_dir)
-
-            # 4) Place into padded halo
-            if to_dir == "top":
-                padded[
-                    ...,
-                    face_id,
-                    padded_size - padding :,
-                    padding : padding + face_size,
-                ] = strip_place
-            elif to_dir == "bottom":
-                padded[..., face_id, :padding, padding : padding + face_size] = strip_place
-            elif to_dir == "left":
-                padded[..., face_id, padding : padding + face_size, :padding] = strip_place
-            elif to_dir == "right":
-                padded[
-                    ...,
-                    face_id,
-                    padding : padding + face_size,
-                    padded_size - padding :,
-                ] = strip_place
+    # Gather data
+    data_flat = data.reshape(*leading_dims, 6 * face_size * face_size)
+    padded_flat = data_flat[..., pix]
+    padded = padded_flat.reshape(*leading_dims, 6, padded_size, padded_size)
 
     # Fill corners
     _fill_corners(padded, padding, face_size)

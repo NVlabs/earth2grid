@@ -48,7 +48,7 @@ Example:
     >>> padded = cubesphere.pad(faces, padding=64)
 """
 
-from earth2grid.cubesphere._padding import get_cubesphere_neighbors, pad
+from earth2grid.cubesphere._padding import local2xy, pad
 from earth2grid.cubesphere.core import (
     XY,
     E3SMpgOrder,
@@ -58,7 +58,7 @@ from earth2grid.cubesphere.core import (
 __all__ = [
     # Padding
     "pad",
-    "get_cubesphere_neighbors",
+    "local2xy",
     # Pixel orderings
     "E3SMpgOrder",
     "XY",
