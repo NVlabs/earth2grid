@@ -17,6 +17,7 @@ import numpy as np
 import pytest
 import torch
 
+import earth2grid.healpix
 import earth2grid.healpix_bare
 
 
@@ -110,9 +111,21 @@ def test_ang2pix(lonlat):
     assert lat.item() == pytest.approx(lat_out.item(), rel=1e-4)
 
 
-def test_ring_info():
-    nside = 16
+@pytest.mark.parametrize("nside", [1, 2, 4, 8, 16, 32])
+def test_ring_info(nside):
     nrings = 4 * nside - 1
-    info = earth2grid.healpix_bare.get_ring_info(nside=nside)
-    assert info["startpix"].shape[0] == nrings  # torch.Size([number_of_rings])
-    assert info["ringpix"].sum().item() == 12 * nside * nside
+    info = earth2grid.healpix.get_ring_info(nside=nside)
+    assert info.startpix.shape[0] == nrings  # torch.Size([number_of_rings])
+    assert info.ringpix.sum().item() == 12 * nside * nside
+
+
+@pytest.mark.parametrize("nside", [1, 2, 4, 8, 16, 32])
+def test_ring_info_matches_cpp(nside):
+    """Python get_ring_info must match the C++ implementation field-by-field."""
+    py_info = earth2grid.healpix.get_ring_info(nside=nside)
+    cpp_info = earth2grid.healpix_bare._healpix_bare.get_ring_info(nside)
+
+    torch.testing.assert_close(py_info.startpix, cpp_info["startpix"])
+    torch.testing.assert_close(py_info.ringpix, cpp_info["ringpix"])
+    torch.testing.assert_close(py_info.theta, cpp_info["theta"])
+    torch.testing.assert_close(py_info.shifted, cpp_info["shifted"])

@@ -546,6 +546,87 @@ def ring_length(nside: int, i: ArrayT) -> ArrayT:
     return length
 
 
+@dataclass
+class RingInfo:
+    """Information about all rings in a HEALPix grid in RING pixel ordering.
+
+    A HEALPix grid with resolution parameter ``nside`` has ``4 * nside - 1``
+    rings of pixels, ordered by increasing colatitude from the north pole to
+    the south pole. Each ring is a set of equal-area pixels at the same
+    colatitude.
+
+    All fields are tensors of shape ``(4 * nside - 1,)``, one entry per ring.
+    """
+
+    startpix: torch.Tensor
+    """Starting pixel index (0-based, RING ordering) for each ring."""
+
+    ringpix: torch.Tensor
+    """Number of pixels in each ring. Polar cap rings have ``4 * northring``
+    pixels; equatorial rings have ``4 * nside``."""
+
+    theta: torch.Tensor
+    """Colatitude of each ring in radians. Ranges from near 0 (north pole) to
+    near pi (south pole)."""
+
+    shifted: torch.Tensor
+    """Whether each ring's pixels are shifted by half a pixel width in the
+    azimuthal direction (1 = shifted, 0 = not shifted). Polar cap rings are
+    always shifted; equatorial rings alternate."""
+
+
+def get_ring_info(nside: int) -> RingInfo:
+    """Get ring info for all rings in a HEALPix grid.
+
+    Args:
+        nside: HEALPix resolution parameter.
+
+    Returns:
+        A :class:`RingInfo` dataclass with fields ``startpix``, ``ringpix``,
+        ``theta``, and ``shifted``. All tensors have shape ``(4*nside - 1,)``.
+    """
+    num_rings = 4 * nside - 1
+    npix = 12 * nside * nside
+    ncap = 2 * nside * (nside - 1)
+    fact2 = 4.0 / npix
+    fact1 = 2 * nside * fact2
+
+    # 1-based ring indices (matching C++ convention)
+    ring = torch.arange(1, num_rings + 1, dtype=torch.int64)
+    is_south = ring > 2 * nside
+    northring = torch.where(is_south, 4 * nside - ring, ring)
+    is_polar = northring < nside
+    nr_float = northring.double()
+
+    # Polar cap path
+    tmp = nr_float * nr_float * fact2
+    theta_polar = torch.atan2(torch.sqrt(torch.clamp(tmp * (2.0 - tmp), min=0.0)), 1.0 - tmp)
+    ringpix_polar = 4 * northring
+    startpix_polar = 2 * northring * (northring - 1)
+
+    # Equatorial belt path
+    theta_equat = torch.acos(torch.clamp((2 * nside - nr_float) * fact1, -1.0, 1.0))
+    startpix_equat = ncap + (northring - nside) * (4 * nside)
+    shifted_equat = ((northring - nside) & 1) == 0
+
+    # Combine zones
+    theta = torch.where(is_polar, theta_polar, theta_equat)
+    ringpix = torch.where(is_polar, ringpix_polar, torch.tensor(4 * nside, dtype=torch.int64))
+    startpix = torch.where(is_polar, startpix_polar, startpix_equat)
+    shifted = torch.where(is_polar, torch.ones(num_rings, dtype=torch.uint8), shifted_equat.to(torch.uint8))
+
+    # Southern hemisphere mirror
+    theta = torch.where(is_south, math.pi - theta, theta)
+    startpix = torch.where(is_south, npix - startpix - ringpix, startpix)
+
+    return RingInfo(
+        startpix=startpix.to(torch.int64),
+        ringpix=ringpix.to(torch.int64),
+        theta=theta.to(torch.float64),
+        shifted=shifted.to(torch.uint8),
+    )
+
+
 def double2xy(nside, i, j):
     xp = _get_array_library(i)
     # make upper left corner j=-nside, i = 2 * nside

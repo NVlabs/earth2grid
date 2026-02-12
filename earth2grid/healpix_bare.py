@@ -18,7 +18,6 @@ from earth2grid import _healpix_bare
 from earth2grid._healpix_bare import (
     ang2ring,
     corners,
-    get_ring_info,
     hpc2loc,
     hpd2loc,
     nest2hpd,
@@ -34,7 +33,6 @@ __all__ = [
     "nest2ring",
     "hpc2loc",
     "corners",
-    "get_ring_info",
 ]
 
 
