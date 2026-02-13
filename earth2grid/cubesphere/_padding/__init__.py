@@ -33,7 +33,10 @@ Corner filling follows Appendix A2 of https://arxiv.org/abs/2311.06253
 
 import torch
 
+from earth2grid.cubesphere import core
+
 __all__ = ["pad"]
+
 
 def _fill_corners(padded: torch.Tensor, pad_width: int, face_size: int) -> None:
     """
@@ -170,7 +173,7 @@ def pad(data: torch.Tensor, padding: int) -> torch.Tensor:
     f_grid, x_grid, y_grid = torch.meshgrid(fs, xs, ys, indexing="ij")
 
     # Map to source coordinates using local2xy
-    x_src, y_src, f_src = local2xy(
+    x_src, y_src, f_src = core.local2xy(
         face_size,
         x_grid.reshape(-1),
         y_grid.reshape(-1),

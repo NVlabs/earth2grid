@@ -41,19 +41,19 @@ Example:
     Convert E3SM data to XY format for padding:
 
     >>> from earth2grid import cubesphere
-    >>> e3sm = cubesphere.E3SMpgOrder(ne=1024, npg=2)
+    >>> e3sm = cubesphere.E3SMpgOrder(num_elements=1024, num_pg_cells=2)
     >>> xy = cubesphere.XY(face_size=2048)
     >>> data = torch.randn(3, 6 * 1024 * 1024 * 2 * 2)
     >>> faces = cubesphere.reorder(data, src=e3sm, dest=xy)
     >>> padded = cubesphere.pad(faces, padding=64)
 """
 
-from earth2grid.cubesphere._padding import local2xy, pad
+from earth2grid.cubesphere._padding import pad
 from earth2grid.cubesphere.core import (
     XY,
     E3SMpgOrder,
-    reorder,
     local2xy,
+    reorder,
 )
 
 __all__ = [

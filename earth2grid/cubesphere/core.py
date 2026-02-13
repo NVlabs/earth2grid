@@ -304,7 +304,10 @@ def reorder(x: torch.Tensor, src: CubesphereOrderT, dest: CubesphereOrderT) -> t
 
     raise ValueError(f"Unsupported conversion from {type(src).__name__} to {type(dest).__name__}")
 
-def _rotate_tensor(n: int, rotations: torch.Tensor, x: torch.Tensor, y: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+
+def _rotate_tensor(
+    n: int, rotations: torch.Tensor, x: torch.Tensor, y: torch.Tensor
+) -> tuple[torch.Tensor, torch.Tensor]:
     """Vectorized rotation for tensor rotations in {0,1,2,3}."""
     x0, y0 = x, y
     x1, y1 = n - 1 - y, x
@@ -314,6 +317,7 @@ def _rotate_tensor(n: int, rotations: torch.Tensor, x: torch.Tensor, y: torch.Te
     x_out = torch.where(r == 0, x0, torch.where(r == 1, x1, torch.where(r == 2, x2, x3)))
     y_out = torch.where(r == 0, y0, torch.where(r == 1, y1, torch.where(r == 2, y2, y3)))
     return x_out, y_out
+
 
 def local2xy(
     face_size: int,
