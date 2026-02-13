@@ -1,5 +1,10 @@
 # Changelog
 
+# Latest
+
+New features
+- add padding routines for the E3SM cubed sphere grid. See `earth2grid.cubedsphere.e3sm`.
+
 ## 2025.11.1
 
 New features:
