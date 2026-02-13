@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Cubesphere Padding
-==================
+Cubed-sphere Padding
+===================
 
-This module provides padding functionality for cubesphere grids (specifically for E3SM physicsgrid).
+This module provides padding functionality for cubed-sphere grids (specifically for E3SM physicsgrid).
 
-The cubesphere grid consists of 6 faces arranged as:
+The cubed-sphere grid consists of 6 faces arranged as:
 
     | 5 |
     | 0 | 1 | 2 | 3 |
@@ -33,7 +33,7 @@ Corner filling follows Appendix A2 of https://arxiv.org/abs/2311.06253
 
 import torch
 
-from earth2grid.cubesphere import core
+from earth2grid.cubedsphere.e3sm import core
 
 __all__ = ["pad"]
 
@@ -127,7 +127,7 @@ def _fill_corners(padded: torch.Tensor, pad_width: int, face_size: int) -> None:
 
 def pad(data: torch.Tensor, padding: int) -> torch.Tensor:
     """
-    Pad each face consistently with its neighboring faces in the cubesphere grid.
+    Pad each face consistently with its neighboring faces in the cubed-sphere grid.
 
     Args:
         data: Input tensor of shape (..., 6, H, W) where the 6 faces are ordered as:
@@ -145,7 +145,7 @@ def pad(data: torch.Tensor, padding: int) -> torch.Tensor:
         torch.Size([1, 6, 72, 72])
 
     Notes:
-        The cubesphere layout is:
+        The cubed-sphere layout is:
 
             | 5 |
             | 0 | 1 | 2 | 3 |

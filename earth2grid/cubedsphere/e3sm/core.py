@@ -16,7 +16,7 @@
 Cubesphere Core Utilities
 =========================
 
-Functions for converting between different cubesphere data representations.
+Functions for converting between different cubed-sphere data representations.
 
 Pixel Orderings
 ---------------
@@ -146,7 +146,7 @@ class E3SMpgOrder:
 
 @dataclass(frozen=True)
 class XY:
-    """Standard 2D meshgrid ordering for cubesphere.
+    """Standard 2D meshgrid ordering for cubed-sphere.
 
     Data is arranged as a 2D grid on each face with shape (face_size, face_size).
     This format is suitable for image-like operations such as convolutions and padding.
@@ -168,7 +168,7 @@ class XY:
         return 6 * self.npix_per_face
 
 
-# Type alias for any cubesphere ordering
+# Type alias for any cubed-sphere ordering
 CubesphereOrderT = Union[E3SMpgOrder, XY]
 
 
@@ -224,7 +224,7 @@ def _xy_to_e3sm_single_face(array: torch.Tensor, order: E3SMpgOrder) -> torch.Te
 
 
 def reorder(x: torch.Tensor, src: CubesphereOrderT, dest: CubesphereOrderT) -> torch.Tensor:
-    """Reorder cubesphere data between different pixel orderings.
+    """Reorder cubed-sphere data between different pixel orderings.
 
     Args:
         x: Input tensor. Shape depends on source ordering:
