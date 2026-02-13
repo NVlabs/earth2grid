@@ -4,6 +4,7 @@
 
 New features
 - add padding routines for the E3SM cubed sphere grid. See `earth2grid.cubedsphere.e3sm`.
+- healpix: add `earth2grid.healpix.get_ring_info`
 
 ## 2025.11.1
 

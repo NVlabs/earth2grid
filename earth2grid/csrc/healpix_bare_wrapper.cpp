@@ -17,6 +17,8 @@
 // This NVIDIA code
 #include <vector>
 #include <torch/extension.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include "healpix_bare.c"
 #include "interpolation.h"
 #include <cmath>
@@ -228,6 +230,31 @@ std::vector<torch::Tensor> get_interp_weights(int nside, torch::Tensor lon, torc
   return std::vector{pix, weight};
 }
 
+pybind11::dict py_get_ring_info(int64_t nside) {
+  int64_t num_rings = 4 * nside - 1;
+  std::vector<int64_t> startpix_vec(num_rings);
+  std::vector<int64_t> ringpix_vec(num_rings);
+  std::vector<double> theta_vec(num_rings);
+  std::vector<uint8_t> shifted_vec(num_rings); // torch does not support bool tensor, use uint8
+
+  for (int64_t ring = 1; ring <= num_rings; ++ring) {
+    int64_t startpix, ringpix;
+    double theta;
+    bool shifted;
+    ring_info(ring, startpix, ringpix, theta, shifted, nside);
+    startpix_vec[ring - 1] = startpix;
+    ringpix_vec[ring - 1] = ringpix;
+    theta_vec[ring - 1] = theta;
+    shifted_vec[ring - 1] = static_cast<uint8_t>(shifted);
+  }
+
+  pybind11::dict result;
+  result["startpix"] = torch::tensor(startpix_vec, torch::dtype(torch::kInt64));
+  result["ringpix"] = torch::tensor(ringpix_vec, torch::dtype(torch::kInt64));
+  result["theta"] = torch::tensor(theta_vec, torch::dtype(torch::kFloat64));
+  result["shifted"] = torch::tensor(shifted_vec, torch::dtype(torch::kUInt8));
+  return result;
+}
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("return_1", &return_1, "First implementation.");
@@ -240,4 +267,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def("ang2ring", &ang2ring_wrapper, "ang2ring(nside, ang) -> pix");
   m.def("corners", &corners, "");
   m.def("get_interp_weights", &get_interp_weights, "");
+  m.def("get_ring_info", &py_get_ring_info, "Get ring info for all rings (structure of arrays, Torch tensors)",
+          pybind11::arg("nside"));
 };
