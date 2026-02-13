@@ -53,6 +53,7 @@ from earth2grid.cubesphere.core import (
     XY,
     E3SMpgOrder,
     reorder,
+    local2xy,
 )
 
 __all__ = [
