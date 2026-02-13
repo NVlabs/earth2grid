@@ -15,6 +15,6 @@
 """E3SM-facing cubed-sphere utilities."""
 
 from earth2grid.cubedsphere.e3sm._padding import pad
-from earth2grid.cubedsphere.e3sm.core import E3SMpgOrder, XY, local2xy, reorder
+from earth2grid.cubedsphere.e3sm.core import XY, E3SMpgOrder, local2xy, reorder
 
 __all__ = ["E3SMpgOrder", "XY", "local2xy", "pad", "reorder"]
