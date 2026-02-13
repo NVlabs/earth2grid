@@ -1,5 +1,10 @@
 # Changelog
 
+# Latest
+
+New features:
+- healpix: add `earth2grid.healpix.get_ring_info`
+
 ## 2025.11.1
 
 New features:
