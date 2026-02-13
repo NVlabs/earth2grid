@@ -53,7 +53,7 @@ def test_cubesphere_reorder(device):
         pytest.skip("CUDA not available.")
 
     ne, npg = 8, 2
-    e3sm = cubesphere.E3SMpgOrder(ne=ne, npg=npg)
+    e3sm = cubesphere.E3SMpgOrder(num_elements=ne, num_pg_cells=npg)
     xy = cubesphere.XY(face_size=ne * npg)
 
     data = torch.randn(1, 2, e3sm.total_pts, device=device)
