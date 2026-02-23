@@ -128,7 +128,7 @@ def pad_with_dim(x, padding, dim=1, pixel_order=core.XY()):
 def _take(x, index, dim):
     slicers = [slice(None)] * x.ndim
     slicers[dim] = index
-    return x[slicers]
+    return x[tuple(slicers)]
 
 
 def pad(x, padding):
