@@ -80,19 +80,16 @@ def _xy_with_filled_tile(nside, x1, y1, f1):
     return (x_west, y_west, f_west), (x_east, y_east, f_east)
 
 
-def pad_with_dim(x, padding, dim=1, pixel_order=core.XY()):
+def _get_indices(device, nside, padding, pixel_order=core.XY()):
     """
-    x[dim] is the spatial dim
+    Returns flat indices (xy_west, xy_east) for padding a healpix grid.
     """
-    dim = dim % x.ndim
     pad = padding
-    npix = x.shape[dim]
-    nside = core.npix2nside(npix)
 
     # setup padded grid
-    i = torch.arange(-pad, nside + pad, device=x.device)
-    j = torch.arange(-pad, nside + pad, device=x.device)
-    f = torch.arange(12, device=x.device)
+    i = torch.arange(-pad, nside + pad, device=device)
+    j = torch.arange(-pad, nside + pad, device=device)
+    f = torch.arange(12, device=device)
     f, j, i = torch.meshgrid(f, j, i, indexing="ij")
 
     # convert these ponints to origin=S, clockwise=False order
@@ -113,22 +110,43 @@ def pad_with_dim(x, padding, dim=1, pixel_order=core.XY()):
     f2 = f2.where(f2 < 12, -1)
     xy_west = torch.flatten(f1 * (nside * nside) + j1 * nside + i1)
     xy_east = torch.flatten(f2 * (nside * nside) + j2 * nside + i2)
+    index = torch.stack([xy_west, xy_east], dim=0)
+    return index
+
+
+def pad_with_dim(x, padding, dim=1, pixel_order=core.XY()):
+    """Pad a HEALPix grid along a spatial dimension.
+
+    x[dim] is the spatial dim (size 12 * nside**2).
+
+    Implementation notes:
+        The core operation is two index_select gathers weighted by a validity
+        mask, averaged where both sources are valid (ambiguous corner pixels).
+
+        Alternatives that were benchmarked and rejected:
+        - Sparse matmul (W @ x): ~4x slower uncompiled; cuSPARSE is optimized
+          for dense sparsity patterns, not 2-nonzeros-per-row matrices.
+        - Precomputed nn.Module (Pad): same speed uncompiled, slower compiled.
+          torch.compile constant-folds _get_indices (indices depend only on
+          nside/padding), so recomputing each call is free when compiled and
+          avoids loading index buffers from GPU memory.
+        - torch.where with zero-fill: replaced by index_select * weight, which
+          avoids materializing zero-filled intermediates and gives the compiler
+          a cleaner fuse target (~40% faster compiled).
+    """
+    dim = dim % x.ndim
+    nside = core.npix2nside(x.shape[dim])
+    index = _get_indices(x.device, nside, padding, pixel_order=pixel_order)
 
     shape = [1] * x.ndim
-    shape[dim] = xy_west.numel()
+    shape[dim] = index.shape[1]
 
-    # average the potential ambiguous regions
-    padded_from_west = torch.where(xy_west.reshape(shape) >= 0, _take(x, xy_west, dim), 0)
-    padded_from_east = torch.where(xy_east.reshape(shape) >= 0, _take(x, xy_east, dim), 0)
-    denom = (xy_west >= 0).int() + (xy_east >= 0).int()
-
-    return (padded_from_east + padded_from_west) / denom.reshape(shape)
-
-
-def _take(x, index, dim):
-    slicers = [slice(None)] * x.ndim
-    slicers[dim] = index
-    return x[tuple(slicers)]
+    valid = index >= 0  # [2, N]
+    index = index.clamp_min(0)
+    out = x.index_select(dim, index[0]) * valid[0].reshape(shape)
+    out = out + x.index_select(dim, index[1]) * valid[1].reshape(shape)
+    denom = (valid[0].int() + valid[1].int()).to(x.dtype).reshape(shape)
+    return out / denom
 
 
 def pad(x, padding):
