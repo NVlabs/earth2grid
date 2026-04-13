@@ -5,6 +5,19 @@ helps, and credit will always be given.
 
 ## Developer Certificate of Origin
 
+All contributions to this project must be accompanied by a "Sign-off" to
+indicate that the contributor has read and agrees to the Developer
+Certificate of Origin (DCO).
+
+To sign-off on a commit, use the `-s` or `--signoff` flag:
+
+```bash
+git commit -s -m "Commit message"
+```
+
+This will append `Signed-off-by: Your Name <your.email@example.com>` to the
+end of the commit message.
+
 ```
 Developer Certificate of Origin
 Version 1.1

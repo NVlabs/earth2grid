@@ -20,7 +20,17 @@ Grids currently supported:
 ## Install
 
 
-## From source (recommended)
+## From source with `uv` (recommended)
+
+If you use [uv](https://github.com/astral-sh/uv), you can set up the development environment with:
+
+```bash
+git clone https://github.com/NVlabs/earth2grid.git
+cd earth2grid
+uv sync --extra all
+```
+
+## From source with `pip`
 
 Pre-requisites:
 - [CUDA Installation that includes cuda compilers](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/)
