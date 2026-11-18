@@ -125,26 +125,22 @@ class BilinearInterpolator(torch.nn.Module):
         if torch.any(y_coords[1:] < y_coords[:-1]):
             raise ValueError("y_coords must be in non-decreasing order.")
 
-        # Find indices for the closest lower and upper bounds in x and y directions
-        x_l_idx = torch.searchsorted(x_coords, x_query, right=True) - 1
-        x_u_idx = x_l_idx + 1
-        y_l_idx = torch.searchsorted(y_coords, y_query, right=True) - 1
-        y_u_idx = y_l_idx + 1
+        def lower_index(coords, query):
+            index = torch.searchsorted(coords, query, right=True) - 1
+            if coords.numel() >= 2:
+                # At the upper edge, use the last cell with nonzero width.
+                last_cell = torch.searchsorted(coords, coords[-1]) - 1
+                index = torch.where(query == coords[-1], last_cell, index)
+            return index
 
-        # fill in nan outside mask
-        def isin(x, a, b):
-            return (x <= b) & (x >= a)
+        x_l_idx = lower_index(x_coords, x_query)
+        y_l_idx = lower_index(y_coords, y_query)
 
-        mask = (
-            isin(x_l_idx, 0, x_coords.size(0) - 2)
-            & isin(x_u_idx, 1, x_coords.size(0) - 1)
-            & isin(y_l_idx, 0, y_coords.size(0) - 2)
-            & isin(y_u_idx, 1, y_coords.size(0) - 1)
-        )
-        x_u_idx = x_u_idx[mask]
+        mask = (x_l_idx >= 0) & (x_l_idx < x_coords.size(0) - 1) & (y_l_idx >= 0) & (y_l_idx < y_coords.size(0) - 1)
         x_l_idx = x_l_idx[mask]
-        y_u_idx = y_u_idx[mask]
         y_l_idx = y_l_idx[mask]
+        x_u_idx = x_l_idx + 1
+        y_u_idx = y_l_idx + 1
         x_query = x_query[mask]
         y_query = y_query[mask]
 

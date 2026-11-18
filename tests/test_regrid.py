@@ -240,3 +240,15 @@ def test_NearestNeighborInterpolator(k):
     x = x.unsqueeze(0)
     out = interpolate(x)
     assert out.shape == (1, m)
+
+
+def test_bilinear_interpolation_at_upper_bounds():
+    x = torch.tensor([0, 2, 5])
+    y = torch.tensor([0, 4])
+    x_query = torch.tensor([0, 5, 1, 5, 6, -1, 3, 3])
+    y_query = torch.tensor([0, 2, 4, 4, 2, 2, 5, -1])
+    interpolate = BilinearInterpolator(x, y, x_query, y_query, fill_value=-99.0)
+
+    field = (x + 10 * y[:, None]).double()
+    expected = torch.tensor([0, 25, 41, 45, -99, -99, -99, -99]).double()
+    torch.testing.assert_close(interpolate(field), expected)
